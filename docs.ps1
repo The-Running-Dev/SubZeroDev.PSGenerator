@@ -3,8 +3,10 @@
     Build and run the Docusaurus docs site from docs/ using docs/Dockerfile.
 
 .DESCRIPTION
-    Copies the root README.md to docs/docs/index.md so the repository and
-    documentation site share one landing page, then builds the docs image.
+    Generates docs/docs/index.md from the root README.md so the repository and
+    documentation site share one landing page. The generated page receives stable
+    Docusaurus frontmatter and origin-relative documentation links before the docs
+    image is built.
 
     The image extends the published
     ghcr.io/the-running-dev/docs-template container image and overlays the docs/
@@ -67,8 +69,29 @@ if (-not (Test-Path -LiteralPath (Split-Path -Parent $index) -PathType Container
     throw "Documentation directory not found at $(Split-Path -Parent $index)"
 }
 
-Copy-Item -LiteralPath $readme -Destination $index -Force
-Write-Host "Copied README.md to docs/docs/index.md." -ForegroundColor Cyan
+$frontmatter = @(
+    '---'
+    'title: ContainerPSGenerator'
+    'description: Generate native PowerShell modules for containerized applications.'
+    'sidebar_position: 1'
+    '---'
+    ''
+) -join "`n"
+$readmeContent = (Get-Content -LiteralPath $readme -Raw) -replace "`r`n?", "`n"
+$indexBody = $readmeContent.Replace(
+    'https://psgenerator.subzerodev.com/',
+    '/'
+)
+$indexContent = $frontmatter + "`n" + $indexBody
+[IO.File]::WriteAllText(
+    $index,
+    $indexContent,
+    [Text.UTF8Encoding]::new($false)
+)
+Write-Host (
+    'Generated docs/docs/index.md from README.md with Docusaurus frontmatter ' +
+    'and origin-relative documentation links.'
+) -ForegroundColor Cyan
 
 Write-Host "Building '$Tag' from $context (base: $BaseImage) ..." -ForegroundColor Cyan
 docker build --build-arg "BASE_IMAGE=$BaseImage" -f $dockerfile -t $Tag $context
