@@ -16,11 +16,10 @@ Specification path relative to Repository, or an absolute path.
 Generation output path relative to Repository, or an absolute path.
 
 .PARAMETER Generate
-Runs Build-ContainerModule after model validation, globally imports the generated
-module for immediate testing, and returns the generated artifacts.
+Runs Build-ContainerModule after model validation and returns the generated artifacts.
 
 .PARAMETER ListCommands
-Generates and globally imports the module, then displays its exported commands.
+Generates and globally imports the module, then returns its exported commands.
 
 .PARAMETER NoInitialize
 Fails when Specification is missing and prevents refreshing an empty scaffold.
@@ -116,6 +115,12 @@ try {
 
     if ($Generate -or $ListCommands -or $specificationInitialized) {
         $artifact = Build-ContainerModule -Specification $Specification -Output $Output
+        if ($specificationInitialized -and -not $Generate -and -not $ListCommands) {
+            Write-Host "Generated inferred container module: $Output" -ForegroundColor Green
+        }
+    }
+
+    if ($ListCommands) {
         $model = Get-ContainerModuleModel -Specification $Specification
         $outputPath = if ([IO.Path]::IsPathRooted($Output)) {
             $Output
@@ -125,12 +130,6 @@ try {
         }
         $generatedManifest = Join-Path ([IO.Path]::GetFullPath($outputPath)) "$($model.ModuleName).psd1"
         $generatedModule = Import-Module $generatedManifest -Force -Global -PassThru -ErrorAction Stop
-        if ($specificationInitialized -and -not $Generate -and -not $ListCommands) {
-            Write-Host "Generated inferred container module: $Output" -ForegroundColor Green
-        }
-    }
-
-    if ($ListCommands) {
         $unmappedSourceCommands = @($model.Commands | Where-Object {
             $_.Definition.ContainsKey('SourcePath') -and
             $_.Definition['SourceKind'] -notin @('Script', 'ModuleFunction') -and

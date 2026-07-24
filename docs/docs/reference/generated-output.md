@@ -39,9 +39,8 @@ The manifest is validated before packaging completes.
 
 ## Module loader
 
-`<ModuleName>.psm1` records the current project directory when the module is
-imported, dot-sources every generated public command in deterministic name order,
-and exports the resulting functions.
+`<ModuleName>.psm1` dot-sources every generated public command in deterministic name
+order and exports the resulting functions.
 
 ## Public commands
 
@@ -89,11 +88,6 @@ Generated wrappers resolve their source relative to the installed module:
 - `SourceKind = 'Script'` invokes the packaged `.ps1`;
 - `SourceKind = 'ModuleFunction'` imports the packaged `.psm1` and invokes its
   explicitly exported function module-qualified.
-
-Packaged source runs from the project directory where the generated module was
-imported. This keeps relative defaults such as `ProjectDir = '.'` tied to the
-target repository even when the command is invoked later from another directory.
-The caller's current directory is restored after the command succeeds or fails.
 
 ## Determinism
 
