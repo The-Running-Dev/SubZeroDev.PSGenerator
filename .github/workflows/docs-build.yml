@@ -1,0 +1,107 @@
+name: Docs build
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/docs-build.yml'
+      - 'docs/**'
+      - 'docs.ps1'
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/docs-build.yml'
+      - 'docs/**'
+      - 'docs.ps1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build documentation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Build documentation image
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $image = 'containerpsgenerator-docs:${{ github.sha }}'
+
+          docker build `
+            --build-arg 'BASE_IMAGE=ghcr.io/the-running-dev/docs-template:latest' `
+            --file ./docs/Dockerfile `
+            --tag $image `
+            ./docs
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Building the documentation image failed with exit code $LASTEXITCODE."
+          }
+
+      - name: Build and copy static site
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $image = 'containerpsgenerator-docs:${{ github.sha }}'
+          $container = 'containerpsgenerator-docs-build'
+          $output = './artifacts/docs'
+
+          docker create --name $container $image sh -c 'pnpm run build' | Out-Null
+          if ($LASTEXITCODE -ne 0) {
+            throw "Creating the documentation build container failed with exit code $LASTEXITCODE."
+          }
+
+          docker start --attach $container
+          if ($LASTEXITCODE -ne 0) {
+            throw "Building the static documentation failed with exit code $LASTEXITCODE."
+          }
+
+          New-Item -ItemType Directory -Path $output -Force | Out-Null
+          docker cp "${container}:/template/artifacts/." $output
+          if ($LASTEXITCODE -ne 0) {
+            throw "Copying the static documentation failed with exit code $LASTEXITCODE."
+          }
+
+      - name: Remove documentation build container
+        if: ${{ always() }}
+        shell: pwsh
+        run: |
+          $container = docker ps --all `
+            --filter 'name=^/containerpsgenerator-docs-build$' `
+            --format '{{.Names}}'
+          if ($container) {
+            docker rm --force containerpsgenerator-docs-build
+          }
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: artifacts/docs
+
+  deploy:
+    name: Deploy documentation
+    if: ${{ github.ref == 'refs/heads/main' }}
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
