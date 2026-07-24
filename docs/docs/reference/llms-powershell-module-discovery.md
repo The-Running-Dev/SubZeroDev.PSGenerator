@@ -1,3 +1,9 @@
+---
+title: LLMs repository migration specification
+description: A repository-specific brief for exposing the LLMs PowerShell surface through ContainerPSGenerator.
+sidebar_position: 90
+---
+
 # LLMs Discoverable PowerShell Interface Specification
 
 ## Purpose

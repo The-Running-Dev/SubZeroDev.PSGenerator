@@ -2,7 +2,8 @@
 
 This roadmap is ordered by dependency and release risk. `Specifications.md` defines
 the Version 1 behavior contract and remaining boundary; `README.md` describes what
-is implemented today.
+is implemented today. User, contributor, and release documentation is tracked
+separately in [`docs/TODO.md`](docs/TODO.md).
 
 Completed implementation history is summarized below instead of occupying the active
 work queue.
@@ -43,8 +44,8 @@ work queue.
   threshold, and enforce it in CI.
 - [x] Raise generator and generated-module manifests to PowerShell 7.4 and validate
   that baseline explicitly on Windows and Linux.
-- [ ] Document macOS as best-effort and keep it outside the required Version 1 CI
-  matrix.
+- [x] Complete the release-blocking documentation journey in
+  [`docs/TODO.md`](docs/TODO.md).
 
 ## 3. Inspector hardening
 
@@ -59,8 +60,8 @@ Complete these in order so every inspector follows the same policy:
 - [ ] Apply focused malformed-input behavior to Dockerfiles, Compose files, project
   manifests, README files, workflows, NUKE configuration, schemas, and OpenAPI
   documents.
-- [ ] Document and test the supported Version 1 subset of Compose, GitHub Actions, and
-  OpenAPI YAML.
+- [ ] Test the supported Version 1 subset of Compose, GitHub Actions, and OpenAPI
+  YAML; its documentation is tracked separately.
 - [ ] Handle Dockerfile continuations, build arguments used by `FROM`, and additional
   instruction metadata.
 
@@ -71,22 +72,10 @@ Complete these in order so every inspector follows the same policy:
 - [ ] Exercise device and GPU mappings only on runners that expose the required host
   capabilities; do not make unavailable hardware an MVP blocker.
 
-## 5. Examples and operational documentation
+## 5. Release preparation
 
-- [ ] Add examples for every supported parameter mapping, validation, completion, and
-  help feature.
-- [ ] Add an example that exercises trusted repository plugins without presenting the
-  internal contract as a stable public SDK.
-- [ ] Document the shared plugin context and current internal contract without
-  promising Phase 2 compatibility.
-- [ ] Document every inspection metadata shape and its supported input subset.
-- [ ] Add troubleshooting guidance for Docker, PowerShell, `act`, plugin failures,
-  malformed repository artifacts, and installation failures.
-
-## 6. Release preparation
-
-- [ ] Add changelog, license, contribution, and security-reporting documents as
-  appropriate.
+- [ ] Complete contributor, policy, and release documentation in
+  [`docs/TODO.md`](docs/TODO.md).
 - [ ] Finalize module identity, versioning, tags, release notes, and distribution
   approach.
 - [ ] Produce a release candidate and run the complete success-criteria workflow from

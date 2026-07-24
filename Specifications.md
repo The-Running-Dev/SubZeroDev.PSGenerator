@@ -308,8 +308,8 @@ Generated modules execute correctly on all supported platforms.
 
 Windows and Linux are supported Version 1 platforms and are validated in CI. macOS is
 best-effort for Version 1 and is not a required CI platform. PowerShell 7.4 is the
-Version 1 support baseline. Raising every shipped and generated manifest declaration
-to enforce that baseline remains a release quality gate.
+Version 1 support baseline. Every shipped and generated manifest enforces that
+baseline, and CI validates it on Windows and Linux.
 
 The generator handles:
 
