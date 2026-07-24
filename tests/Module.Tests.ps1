@@ -783,6 +783,7 @@ Describe 'Project manifest inspection' {
     <PackageReference Include="Serilog" Version="3.1.1" />
     <PackageReference Include="Example.Package"><Version>1.2.3</Version></PackageReference>
     <ProjectReference Include="../Common/Common.csproj" Aliases="CommonAlias;SharedAlias" />
+    <ProjectReference Include="../../../outside.csproj" />
   </ItemGroup>
 </Project>
 '@

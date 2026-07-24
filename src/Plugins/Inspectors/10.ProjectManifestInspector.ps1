@@ -53,6 +53,10 @@ $manifestItems = @(
 
 $dotNetProjects = [System.Collections.Generic.List[object]]::new()
 $nodeProjects = [System.Collections.Generic.List[object]]::new()
+$repositoryPrefix = $Context.RepositoryPath.TrimEnd(
+    [IO.Path]::DirectorySeparatorChar,
+    [IO.Path]::AltDirectorySeparatorChar
+) + [IO.Path]::DirectorySeparatorChar
 
 foreach ($manifestItem in $manifestItems) {
     $relativePath = [System.IO.Path]::GetRelativePath($Context.RepositoryPath, $manifestItem.FullName).Replace('\', '/')
@@ -85,7 +89,21 @@ foreach ($manifestItem in $manifestItems) {
             foreach ($reference in $document.SelectNodes("//*[local-name()='ProjectReference']")) {
                 $include = $reference.GetAttribute('Include')
                 if ([string]::IsNullOrWhiteSpace($include)) { continue }
-                $resolvedPath = [IO.Path]::GetFullPath((Join-Path $manifestItem.DirectoryName $include))
+                try {
+                    $resolvedPath = [IO.Path]::GetFullPath((Join-Path $manifestItem.DirectoryName $include))
+                }
+                catch {
+                    continue
+                }
+                if (-not $resolvedPath.StartsWith(
+                    $repositoryPrefix,
+                    [StringComparison]::OrdinalIgnoreCase
+                )) {
+                    continue
+                }
+                if (-not (Test-ContainerModuleInspectionPath -Context $Context -Path $resolvedPath)) {
+                    continue
+                }
                 [ordered]@{
                     Path    = [IO.Path]::GetRelativePath($Context.RepositoryPath, $resolvedPath).Replace('\', '/')
                     Aliases = if ($reference.GetAttribute('Aliases')) {
