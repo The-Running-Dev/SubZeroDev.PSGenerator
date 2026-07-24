@@ -23,6 +23,24 @@ docs/                Docusaurus-compatible documentation
 `docs-template` is an external Docusaurus template checkout and is intentionally
 excluded from PowerShell analysis.
 
+## Documentation site
+
+Build the repository-specific Docusaurus image locally:
+
+```powershell
+./docs.ps1 -BuildOnly
+```
+
+Run `./docs.ps1` to serve a baked image, or `./docs.ps1 -Live` to bind-mount the
+authored Markdown and configuration for local editing.
+
+The `Docs build` GitHub Actions workflow authenticates to GHCR, verifies
+`ghcr.io/the-running-dev/docs-template:latest`, builds the production site, copies
+`/template/artifacts` from the build container, and uploads it for GitHub Pages.
+It prefers the repository secret `REGISTRY_TOKEN` and falls back to the workflow's
+`GITHUB_TOKEN`. `REGISTRY_TOKEN` must have `read:packages`; the fallback works only
+when the docs-template package grants this repository read access.
+
 ## Import the development module
 
 ```powershell

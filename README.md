@@ -38,23 +38,23 @@ Run the complete Docker lifecycle:
 
 ## Documentation
 
-The Docusaurus-compatible Markdown manual is under [`docs/`](docs/index.md):
+The Docusaurus-compatible Markdown manual is under [`docs/docs/`](docs/docs/index.md):
 
-- [Installation](docs/getting-started/installation.md)
-- [Build your first module](docs/getting-started/first-module.md)
-- [Script repository inference](docs/getting-started/script-repositories.md)
-- [Runtime mappings](docs/guides/runtime-mappings.md)
-- [Specification reference](docs/reference/specification.md)
-- [Command reference](docs/reference/commands.md)
-- [Repository inspection](docs/reference/inspection.md)
-- [Container packaging and installation](docs/guides/container-packaging.md)
-- [Architecture](docs/architecture/overview.md)
-- [Development and CI](docs/operations/development.md)
-- [Releases and GitHub Packages](docs/operations/releases.md)
-- [Troubleshooting](docs/operations/troubleshooting.md)
+- [Installation](docs/docs/getting-started/installation.md)
+- [Build your first module](docs/docs/getting-started/first-module.md)
+- [Script repository inference](docs/docs/getting-started/script-repositories.md)
+- [Runtime mappings](docs/docs/guides/runtime-mappings.md)
+- [Specification reference](docs/docs/reference/specification.md)
+- [Command reference](docs/docs/reference/commands.md)
+- [Repository inspection](docs/docs/reference/inspection.md)
+- [Container packaging and installation](docs/docs/guides/container-packaging.md)
+- [Architecture](docs/docs/architecture/overview.md)
+- [Development and CI](docs/docs/operations/development.md)
+- [Releases and GitHub Packages](docs/docs/operations/releases.md)
+- [Troubleshooting](docs/docs/operations/troubleshooting.md)
 
 See [the engineering roadmap](TODO.md) and
-[the documentation roadmap](docs/TODO.md) for remaining work.
+[the documentation roadmap](docs/docs/TODO.md) for remaining work.
 
 ## Core workflow
 
