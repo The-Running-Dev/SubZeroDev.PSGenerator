@@ -3015,6 +3015,8 @@ Export-ModuleMember -Function @('Test-RepositoryTool')
             Should -BeTrue
         Test-Path -LiteralPath (Join-Path $repositoryPath 'artifacts' 'PSModule' 'Public' 'Test-RepositoryTool.ps1') |
             Should -BeTrue
+        (Get-Command -Name Invoke-InstallTool -ErrorAction Stop).ModuleName |
+            Should -Be 'InferredRepository'
         (Get-Location).Path | Should -Be $originalLocation.Path
     }
 
@@ -3258,7 +3260,7 @@ function Write-SourceResult {
         Set-Content -LiteralPath $sourcePath -Value @'
 param([Parameter(Mandatory)][string] $Value, [Parameter(Mandatory)][string] $ResultPath)
 . (Join-Path $PSScriptRoot 'modules/Common.ps1')
-Write-SourceResult -Path $ResultPath -Value $Value
+Write-SourceResult -Path $ResultPath -Value "$Value|$($PWD.Path)"
 '@
         $specificationPath = Join-Path $specificationDirectory 'PSModule.psd1'
         Set-Content -LiteralPath $specificationPath -Value @'
@@ -3278,12 +3280,19 @@ Write-SourceResult -Path $ResultPath -Value $Value
         $outputPath = Join-Path $repositoryPath 'artifacts'
 
         Build-ContainerModule -Specification $specificationPath -Output $outputPath | Out-Null
-        $module = Import-Module (Join-Path $outputPath 'SourceExample.psd1') -Force -PassThru
+        Push-Location -LiteralPath $repositoryPath
+        try {
+            $module = Import-Module (Join-Path $outputPath 'SourceExample.psd1') -Force -PassThru
+        }
+        finally {
+            Pop-Location
+        }
         $generatedCommandSource = Get-Content -LiteralPath (
             Join-Path $outputPath 'Public' 'Invoke-SourceExample.ps1'
         ) -Raw
         function global:docker { throw 'Docker must not be called for a discovered script.' }
         try {
+            $callerPath = $PWD.Path
             $verboseOutput = Invoke-SourceExample -Value 'executed' -ResultPath $resultPath -Verbose 4>&1
 
             Test-Path -LiteralPath (Join-Path $outputPath 'Scripts' 'run-source.ps1') |
@@ -3300,8 +3309,11 @@ Write-SourceResult -Path $ResultPath -Value $Value
                 [regex]::Escape("Join-Path `$moduleRoot '$expectedPackagedPath'")
             )
             $generatedCommandSource | Should -Not -Match [regex]::Escape($repositoryPath)
-            Get-Content -LiteralPath $resultPath -Raw | Should -Match '^executed'
+            (Get-Content -LiteralPath $resultPath -Raw).TrimEnd() |
+                Should -BeExactly "executed|$repositoryPath"
+            $PWD.Path | Should -BeExactly $callerPath
             $verboseOutput -join "`n" | Should -Match 'Invoking discovered PowerShell source'
+            $verboseOutput -join "`n" | Should -Match 'Using project directory'
             $verboseOutput -join "`n" | Should -Match 'PowerShell source finished after'
         }
         finally {

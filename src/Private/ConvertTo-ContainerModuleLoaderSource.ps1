@@ -5,6 +5,8 @@ function ConvertTo-ContainerModuleLoaderSource {
     @'
 Set-StrictMode -Version 3.0
 
+$script:ContainerModuleInvocationRoot = $PWD.Path
+
 $publicPath = Join-Path $PSScriptRoot 'Public'
 $publicFunctions = @(
     if (Test-Path -LiteralPath $publicPath -PathType Container) {

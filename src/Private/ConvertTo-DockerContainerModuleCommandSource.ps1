@@ -132,18 +132,25 @@ function ConvertTo-DockerContainerModuleCommandSource {
         $lines.Add('    }')
         $lines.Add('')
         $lines.Add("    Write-Verbose `"Invoking discovered PowerShell source: `$sourcePath`"")
+        $lines.Add('    Write-Verbose "Using project directory: $script:ContainerModuleInvocationRoot"')
         $lines.Add('    $sourceStopwatch = [System.Diagnostics.Stopwatch]::StartNew()')
+        $lines.Add('    Push-Location -LiteralPath $script:ContainerModuleInvocationRoot')
+        $lines.Add('    try {')
         if ($SourceKind -eq 'Script') {
-            $lines.Add('    & $sourcePath @sourceParameters')
+            $lines.Add('        & $sourcePath @sourceParameters')
         }
         else {
             $escapedCommandName = $Command.Name.Replace("'", "''")
-            $lines.Add('    $sourceModule = Import-Module $sourcePath -Force -PassThru -ErrorAction Stop')
-            $lines.Add("    `$sourceCommand = Get-Command -Module `$sourceModule.Name -Name '$escapedCommandName' -ErrorAction Stop")
-            $lines.Add('    & $sourceCommand @sourceParameters')
+            $lines.Add('        $sourceModule = Import-Module $sourcePath -Force -PassThru -ErrorAction Stop')
+            $lines.Add("        `$sourceCommand = Get-Command -Module `$sourceModule.Name -Name '$escapedCommandName' -ErrorAction Stop")
+            $lines.Add('        & $sourceCommand @sourceParameters')
         }
-        $lines.Add('    $sourceStopwatch.Stop()')
-        $lines.Add('    Write-Verbose ("PowerShell source finished after {0:N2}s." -f $sourceStopwatch.Elapsed.TotalSeconds)')
+        $lines.Add('    }')
+        $lines.Add('    finally {')
+        $lines.Add('        Pop-Location')
+        $lines.Add('        $sourceStopwatch.Stop()')
+        $lines.Add('        Write-Verbose ("PowerShell source finished after {0:N2}s." -f $sourceStopwatch.Elapsed.TotalSeconds)')
+        $lines.Add('    }')
         $lines.Add('}')
         return ($lines -join "`n") + "`n"
     }
