@@ -2,6 +2,8 @@
 
 [![Test](https://github.com/The-Running-Dev/SubZeroDev.ContainerPSGenerator/actions/workflows/test.yml/badge.svg)](https://github.com/The-Running-Dev/SubZeroDev.ContainerPSGenerator/actions/workflows/test.yml)
 [![Publish](https://github.com/The-Running-Dev/SubZeroDev.ContainerPSGenerator/actions/workflows/publish.yml/badge.svg)](https://github.com/The-Running-Dev/SubZeroDev.ContainerPSGenerator/actions/workflows/publish.yml)
+[![Docs build](https://github.com/The-Running-Dev/SubZeroDev.ContainerPSGenerator/actions/workflows/docs-build.yml/badge.svg)](https://github.com/The-Running-Dev/SubZeroDev.ContainerPSGenerator/actions/workflows/docs-build.yml)
+[![Documentation](https://img.shields.io/badge/docs-psgenerator.subzerodev.com-blue)](https://psgenerator.subzerodev.com/)
 
 SubZeroDev.ContainerPSGenerator is a PowerShell 7.4+ build tool that generates
 repository-specific PowerShell modules for containerized applications.
@@ -38,23 +40,43 @@ Run the complete Docker lifecycle:
 
 ## Documentation
 
-The Docusaurus-compatible Markdown manual is under [`docs/docs/`](docs/docs/index.md):
+The complete manual is published at
+[psgenerator.subzerodev.com](https://psgenerator.subzerodev.com/).
 
-- [Installation](docs/docs/getting-started/installation.md)
-- [Build your first module](docs/docs/getting-started/first-module.md)
-- [Script repository inference](docs/docs/getting-started/script-repositories.md)
-- [Runtime mappings](docs/docs/guides/runtime-mappings.md)
-- [Specification reference](docs/docs/reference/specification.md)
-- [Command reference](docs/docs/reference/commands.md)
-- [Repository inspection](docs/docs/reference/inspection.md)
-- [Container packaging and installation](docs/docs/guides/container-packaging.md)
-- [Architecture](docs/docs/architecture/overview.md)
-- [Development and CI](docs/docs/operations/development.md)
-- [Releases and GitHub Packages](docs/docs/operations/releases.md)
-- [Troubleshooting](docs/docs/operations/troubleshooting.md)
+### Get started
 
-See [the engineering roadmap](TODO.md) and
-[the documentation roadmap](docs/docs/TODO.md) for remaining work.
+- [Installation](https://psgenerator.subzerodev.com/getting-started/installation)
+- [Build your first module](https://psgenerator.subzerodev.com/getting-started/first-module)
+- [Infer commands from a script repository](https://psgenerator.subzerodev.com/getting-started/script-repositories)
+
+### Build and package modules
+
+- [Runtime mappings](https://psgenerator.subzerodev.com/guides/runtime-mappings)
+- [Validation, completion, and help](https://psgenerator.subzerodev.com/guides/validation-completion-help)
+- [Container packaging and installation](https://psgenerator.subzerodev.com/guides/container-packaging)
+- [Trusted plugins](https://psgenerator.subzerodev.com/guides/trusted-plugins)
+
+### Reference
+
+- [Specification](https://psgenerator.subzerodev.com/reference/specification)
+- [Commands](https://psgenerator.subzerodev.com/reference/commands)
+- [Repository inspection](https://psgenerator.subzerodev.com/reference/inspection)
+- [Generated output](https://psgenerator.subzerodev.com/reference/generated-output)
+
+### Project
+
+- [Architecture](https://psgenerator.subzerodev.com/architecture/overview)
+- [Plugin pipeline](https://psgenerator.subzerodev.com/architecture/plugins)
+- [Development and CI](https://psgenerator.subzerodev.com/operations/development)
+- [Releases and GitHub Packages](https://psgenerator.subzerodev.com/operations/releases)
+- [Security](https://psgenerator.subzerodev.com/operations/security)
+- [Troubleshooting](https://psgenerator.subzerodev.com/operations/troubleshooting)
+
+See the
+[engineering roadmap](https://github.com/The-Running-Dev/SubZeroDev.ContainerPSGenerator/blob/main/TODO.md)
+and
+[documentation roadmap](https://psgenerator.subzerodev.com/TODO)
+for remaining work.
 
 ## Core workflow
 
@@ -111,7 +133,8 @@ running the generator.
 
 The GitHub Packages workflow runs only when a GitHub Release is published with a tag
 matching `v<ModuleVersion>`. Merging the workflow does not itself create a package.
-See [Releases and GitHub Packages](docs/operations/releases.md).
+See
+[Releases and GitHub Packages](https://psgenerator.subzerodev.com/operations/releases).
 
 ## License
 

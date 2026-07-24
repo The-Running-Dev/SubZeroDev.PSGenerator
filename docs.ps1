@@ -3,6 +3,9 @@
     Build and run the Docusaurus docs site from docs/ using docs/Dockerfile.
 
 .DESCRIPTION
+    Copies the root README.md to docs/docs/index.md so the repository and
+    documentation site share one landing page, then builds the docs image.
+
     The image extends the base docs-template (ghcr.io/the-running-dev/docs-template)
     and overlays the docs/ build context — our docusaurus.config.ts, sidebar.ts, and
     the markdown under docs/docs — over /template (Dockerfile `COPY . .`). That overlay
@@ -47,6 +50,8 @@ $ErrorActionPreference = 'Stop'
 $root    = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $context = Join-Path $root 'docs'
 $dockerfile = Join-Path $context 'Dockerfile'
+$readme = Join-Path $root 'README.md'
+$index = Join-Path $context 'docs' 'index.md'
 
 if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
     throw "docker not found on PATH. Install/launch Docker Desktop first."
@@ -54,6 +59,15 @@ if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
 if (-not (Test-Path $dockerfile)) {
     throw "Dockerfile not found at $dockerfile"
 }
+if (-not (Test-Path -LiteralPath $readme -PathType Leaf)) {
+    throw "README not found at $readme"
+}
+if (-not (Test-Path -LiteralPath (Split-Path -Parent $index) -PathType Container)) {
+    throw "Documentation directory not found at $(Split-Path -Parent $index)"
+}
+
+Copy-Item -LiteralPath $readme -Destination $index -Force
+Write-Host "Copied README.md to docs/docs/index.md." -ForegroundColor Cyan
 
 Write-Host "Building '$Tag' from $context (base: $BaseImage) ..." -ForegroundColor Cyan
 docker build --build-arg "BASE_IMAGE=$BaseImage" -f $dockerfile -t $Tag $context

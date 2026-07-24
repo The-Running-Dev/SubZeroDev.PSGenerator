@@ -31,6 +31,10 @@ Build the repository-specific Docusaurus image locally:
 ./docs.ps1 -BuildOnly
 ```
 
+The script first copies the root `README.md` to `docs/docs/index.md`. The README is
+therefore the source of truth for both the GitHub repository landing page and the
+documentation homepage.
+
 Run `./docs.ps1` to serve a baked image, or `./docs.ps1 -Live` to bind-mount the
 authored Markdown and configuration for local editing.
 

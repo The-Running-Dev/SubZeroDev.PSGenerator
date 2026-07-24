@@ -45,6 +45,8 @@ append a subject, for example: **"generate documentation for runtime mappings"**
 
 - The Docusaurus project and Docker build context are `docs/`.
 - Authored Markdown lives under `docs/docs/`; category metadata lives beside it.
+- `README.md` is the documentation homepage source. `docs.ps1` copies it to
+  `docs/docs/index.md` before every image build; keep the generated index synchronized.
 - Local overrides are `docs/docusaurus.config.ts` and `docs/sidebar.ts`.
 - `docs/Dockerfile` overlays the local project onto the docs-template base image.
 - Run `./docs.ps1 -BuildOnly` to validate the image, `./docs.ps1` to serve a baked
