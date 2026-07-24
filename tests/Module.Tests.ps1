@@ -776,11 +776,26 @@ Describe 'Project manifest inspection' {
     <OutputType>Exe</OutputType>
     <AssemblyName>Example.Api</AssemblyName>
     <PackageId>Example.Api.Package</PackageId>
+    <NukeRootDirectory>../..</NukeRootDirectory>
+    <NukeScriptDirectory>../build</NukeScriptDirectory>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Serilog" Version="3.1.1" />
     <PackageReference Include="Example.Package"><Version>1.2.3</Version></PackageReference>
+    <ProjectReference Include="../Common/Common.csproj" Aliases="CommonAlias;SharedAlias" />
   </ItemGroup>
+</Project>
+'@
+        $commonPath = New-Item -Path (Join-Path $TestDrive 'src' 'Common') -ItemType Directory -Force
+        Set-Content -LiteralPath (Join-Path $commonPath.FullName 'Common.csproj') -Value @'
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><TargetFramework>net8.0</TargetFramework></PropertyGroup>
+</Project>
+'@
+        $testPath = New-Item -Path (Join-Path $TestDrive 'src' 'Api.Tests') -ItemType Directory -Force
+        Set-Content -LiteralPath (Join-Path $testPath.FullName 'Api.Tests.csproj') -Value @'
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><TargetFramework>net8.0</TargetFramework><IsTestProject>true</IsTestProject></PropertyGroup>
 </Project>
 '@
         $nodePath = New-Item -Path (Join-Path $TestDrive 'src' 'Web') -ItemType Directory -Force
@@ -801,12 +816,23 @@ Describe 'Project manifest inspection' {
         $artifact = Build-ContainerModule
         $metadata = Get-Content -LiteralPath $artifact.FullName -Raw | ConvertFrom-Json
 
-        $dotNet = $metadata.Inspection.DotNetProjects[0]
+        $dotNet = $metadata.Inspection.DotNetProjects | Where-Object Name -eq 'Example.Api'
         $dotNet.Path | Should -Be 'src/Api/Api.csproj'
+        $dotNet.Name | Should -Be 'Example.Api'
         $dotNet.Sdk | Should -Be 'Microsoft.NET.Sdk.Web'
         $dotNet.TargetFrameworks | Should -Be @('net8.0', 'net9.0')
+        $dotNet.IsExecutable | Should -BeTrue
+        $dotNet.IsTestProject | Should -BeFalse
+        $dotNet.NukeRootDirectory | Should -Be '../..'
+        $dotNet.NukeScriptDirectory | Should -Be '../build'
         $dotNet.PackageReferences.Name | Should -Be @('Serilog', 'Example.Package')
         $dotNet.PackageReferences.Version | Should -Be @('3.1.1', '1.2.3')
+        $dotNet.ProjectReferences.Path | Should -Be 'src/Common/Common.csproj'
+        $dotNet.ProjectReferences.Aliases | Should -Be @('CommonAlias', 'SharedAlias')
+
+        $testProject = $metadata.Inspection.DotNetProjects | Where-Object Name -eq 'Api.Tests'
+        $testProject.IsTestProject | Should -BeTrue
+        $testProject.IsExecutable | Should -BeFalse
 
         $node = $metadata.Inspection.NodeProjects[0]
         $node.Path | Should -Be 'src/Web/package.json'
@@ -916,7 +942,47 @@ jobs:
 '@
 
         $nuke = New-Item -Path (Join-Path $TestDrive '.nuke') -ItemType Directory -Force
-        Set-Content -LiteralPath (Join-Path $nuke.FullName 'parameters.json') -Value '{ "Configuration": "Release", "Verbosity": "Normal" }'
+        Set-Content -LiteralPath (Join-Path $nuke.FullName 'parameters.json') -Value @'
+{ "$schema": "build.schema.json", "Configuration": "Release" }
+'@
+        Set-Content -LiteralPath (Join-Path $nuke.FullName 'build.schema.json') -Value @'
+{
+  "definitions": {
+    "ExecutableTarget": { "type": "string", "enum": ["Test", "Build"] },
+    "Configuration": { "type": "string", "enum": ["Debug", "Release"] },
+    "NukeBuild": {
+      "properties": {
+        "Configuration": {
+          "description": "Build configuration.",
+          "$ref": "#/definitions/Configuration"
+        },
+        "Target": {
+          "type": "array",
+          "description": "Targets to execute.",
+          "items": { "$ref": "#/definitions/ExecutableTarget" }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "properties": {
+        "RegistryToken": {
+          "type": "string",
+          "description": "Registry token.",
+          "default": "Secrets must be entered separately"
+        },
+        "Tags": {
+          "type": "array",
+          "description": "Image tags.",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    { "$ref": "#/definitions/NukeBuild" }
+  ]
+}
+'@
         $build = New-Item -Path (Join-Path $TestDrive 'build') -ItemType Directory -Force
         Set-Content -LiteralPath (Join-Path $build.FullName 'Build.csproj') -Value @'
 <Project Sdk="Microsoft.NET.Sdk"><ItemGroup><PackageReference Include="Nuke.Common" Version="8.0.0" /></ItemGroup></Project>
@@ -953,11 +1019,24 @@ jobs:
         $inspection.GitHubActions[0].Jobs | Should -Be @('test')
 
         $inspection.Nuke.IsConfigured | Should -BeTrue
-        $inspection.Nuke.ParameterNames | Should -Be @('Configuration', 'Verbosity')
+        $inspection.Nuke.SchemaPath | Should -Be '.nuke/build.schema.json'
+        $inspection.Nuke.ParameterNames | Should -Be @('Configuration', 'RegistryToken', 'Tags', 'Target')
+        $inspection.Nuke.ConfiguredParameterNames | Should -Be @('Configuration')
+        $inspection.Nuke.Targets | Should -Be @('Build', 'Test')
         $inspection.Nuke.ProjectPaths | Should -Be @('build/Build.csproj')
         $inspection.Nuke.BuildScripts | Should -Be @('build/build.ps1')
+        $configurationParameter = $inspection.Nuke.Parameters |
+            Where-Object Name -eq 'Configuration'
+        $configurationParameter.Type | Should -Be 'string'
+        $configurationParameter.Enum | Should -Be @('Debug', 'Release')
+        $targetParameter = $inspection.Nuke.Parameters | Where-Object Name -eq 'Target'
+        $targetParameter.Type | Should -Be 'array'
+        $targetParameter.ItemType | Should -Be 'string'
+        $targetParameter.ItemEnum | Should -Be @('Test', 'Build')
+        ($inspection.Nuke.Parameters | Where-Object Name -eq 'Tags').ItemType |
+            Should -Be 'string'
 
-        $schema = $inspection.ConfigurationSchemas[0]
+        $schema = $inspection.ConfigurationSchemas | Where-Object Id -eq 'example.settings'
         $schema.Id | Should -Be 'example.settings'
         $schema.Required | Should -Be @('name')
         $schema.Properties | Should -Be @('name', 'port')
@@ -3061,11 +3140,29 @@ Describe 'Maintained repository integration fixtures' {
             $inspection.Data.Dockerfiles[0].Stages[0].Image |
                 Should -Be 'mcr.microsoft.com/dotnet/sdk:8.0'
             $inspection.Data.DotNetProjects[0].PackageReferences.Name |
-                Should -Contain 'Nuke.Common'
+                Should -Contain 'Microsoft.NET.Test.Sdk'
+            $buildProject = $inspection.Data.DotNetProjects |
+                Where-Object Path -eq 'src/Build/Build.csproj'
+            $buildProject.IsExecutable | Should -BeTrue
+            $buildProject.IsTestProject | Should -BeFalse
+            $buildProject.ProjectReferences.Path | Should -Be 'src/Common/Common.csproj'
+            ($inspection.Data.DotNetProjects |
+                Where-Object Path -eq 'src/Build.Tests/Build.Tests.csproj').IsTestProject |
+                Should -BeTrue
             $inspection.Data.GitHubActions[0].Name | Should -Be 'Build'
             $inspection.Data.GitHubActions[0].Jobs | Should -Be 'build'
             $inspection.Data.Nuke.IsConfigured | Should -BeTrue
-            $inspection.Data.Nuke.ProjectPaths | Should -Be 'src/Build/Build.csproj'
+            $inspection.Data.Nuke.ProjectPaths | Should -Be @(
+                'src/Build/Build.csproj'
+                'src/Common/Common.csproj'
+            )
+            $inspection.Data.Nuke.ConfiguredParameterNames | Should -Be 'Configuration'
+            $inspection.Data.Nuke.ParameterNames | Should -Be @(
+                'Configuration'
+                'RegistryToken'
+                'Target'
+            )
+            $inspection.Data.Nuke.Targets | Should -Be @('Build', 'Pack', 'Test')
             $commands.Name | Should -Contain 'Invoke-BuildAgent'
             (Get-Command Invoke-BuildAgent -ErrorAction Stop).ModuleName |
                 Should -Be 'BuildAgentFixture'

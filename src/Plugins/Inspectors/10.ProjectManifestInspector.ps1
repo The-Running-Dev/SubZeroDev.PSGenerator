@@ -81,15 +81,44 @@ foreach ($manifestItem in $manifestItems) {
                 }
             }
         )
+        $projectReferences = @(
+            foreach ($reference in $document.SelectNodes("//*[local-name()='ProjectReference']")) {
+                $include = $reference.GetAttribute('Include')
+                if ([string]::IsNullOrWhiteSpace($include)) { continue }
+                $resolvedPath = [IO.Path]::GetFullPath((Join-Path $manifestItem.DirectoryName $include))
+                [ordered]@{
+                    Path    = [IO.Path]::GetRelativePath($Context.RepositoryPath, $resolvedPath).Replace('\', '/')
+                    Aliases = if ($reference.GetAttribute('Aliases')) {
+                        @($reference.GetAttribute('Aliases') -split '[,;]' |
+                            ForEach-Object { $_.Trim() } | Where-Object { $_ })
+                    }
+                    else { @() }
+                }
+            }
+        )
+        $projectReferences = @($projectReferences | Sort-Object Path)
+
+        $outputType = Get-FirstXmlValue -Document $document -Name 'OutputType'
+        $assemblyName = Get-FirstXmlValue -Document $document -Name 'AssemblyName'
+        $isTestProjectValue = Get-FirstXmlValue -Document $document -Name 'IsTestProject'
+        $packageReferenceNames = @($packageReferences | ForEach-Object { $_.Name })
+        $isTestProject = $isTestProjectValue -eq 'true' -or
+            $packageReferenceNames -contains 'Microsoft.NET.Test.Sdk'
 
         $dotNetProjects.Add([ordered] @{
             Path              = $relativePath
+            Name              = if ($assemblyName) { $assemblyName } else { $manifestItem.BaseName }
             Sdk               = $document.DocumentElement.GetAttribute('Sdk')
             TargetFrameworks  = @($targetFrameworks -split ';' | Where-Object { $_ } | ForEach-Object { $_.Trim() })
-            OutputType        = Get-FirstXmlValue -Document $document -Name 'OutputType'
-            AssemblyName      = Get-FirstXmlValue -Document $document -Name 'AssemblyName'
+            OutputType        = $outputType
+            IsExecutable      = $outputType -in @('Exe', 'WinExe')
+            IsTestProject     = $isTestProject
+            AssemblyName      = $assemblyName
             PackageId         = Get-FirstXmlValue -Document $document -Name 'PackageId'
+            NukeRootDirectory = Get-FirstXmlValue -Document $document -Name 'NukeRootDirectory'
+            NukeScriptDirectory = Get-FirstXmlValue -Document $document -Name 'NukeScriptDirectory'
             PackageReferences = $packageReferences
+            ProjectReferences = $projectReferences
         })
         continue
     }
