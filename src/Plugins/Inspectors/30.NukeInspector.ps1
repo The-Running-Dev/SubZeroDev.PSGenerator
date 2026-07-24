@@ -60,9 +60,11 @@ if (Test-Path -LiteralPath $schemaPath -PathType Leaf) {
             Name        = $name
             Type        = Get-JsonProperty -Object $resolvedDefinition -Name 'type'
             Description = Get-JsonProperty -Object $definition -Name 'description'
-            Enum        = @(Get-JsonProperty -Object $resolvedDefinition -Name 'enum')
+            Enum        = @(@(Get-JsonProperty -Object $resolvedDefinition -Name 'enum') |
+                Where-Object { $null -ne $_ })
             ItemType    = Get-JsonProperty -Object $itemDefinition -Name 'type'
-            ItemEnum    = @(Get-JsonProperty -Object $itemDefinition -Name 'enum')
+            ItemEnum    = @(@(Get-JsonProperty -Object $itemDefinition -Name 'enum') |
+                Where-Object { $null -ne $_ })
             Default     = Get-JsonProperty -Object $definition -Name 'default'
         })
     }

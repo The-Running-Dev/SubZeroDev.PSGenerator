@@ -2983,14 +2983,18 @@ docker run --rm ghcr.io/example/inferred:latest
 param([string] $Tag)
 '@
         Set-Content -LiteralPath (Join-Path $scriptsPath 'install-tool.ps1') -Value @'
-param([Parameter(Mandatory)][string] $Name, [switch] $Force)
+param(
+    [Parameter(Mandatory)][string] $Name,
+    [Parameter(Mandatory = $false)][string] $Optional,
+    [switch] $Force
+)
 '@
         Set-Content -LiteralPath (Join-Path $modulesPath 'Tools.psm1') -Value @'
 function Test-RepositoryTool { param([string] $Path) }
 Export-ModuleMember -Function @('Test-RepositoryTool')
 '@
 
-        & $scriptPath -Repository $repositoryPath | Out-Null
+        & $scriptPath -Repository ($repositoryPath + [IO.Path]::DirectorySeparatorChar) | Out-Null
 
         $specificationPath = Join-Path $repositoryPath 'PSModule' 'PSModule.psd1'
         $definition = Import-PowerShellDataFile $specificationPath
@@ -2999,9 +3003,10 @@ Export-ModuleMember -Function @('Test-RepositoryTool')
         $definition.ContainerImage | Should -Be 'ghcr.io/example/inferred:latest'
         $definition.Commands.Name | Should -Be @('Invoke-InstallTool', 'Test-RepositoryTool')
         $definition.Commands[0].SourceKind | Should -Be 'Script'
-        $definition.Commands[0].Parameters.Name | Should -Be @('Name', 'Force')
+        $definition.Commands[0].Parameters.Name | Should -Be @('Name', 'Optional', 'Force')
         $definition.Commands[0].Parameters[0].Mandatory | Should -BeTrue
-        $definition.Commands[0].Parameters[1].Type | Should -Be 'switch'
+        $definition.Commands[0].Parameters[1].Mandatory | Should -BeFalse
+        $definition.Commands[0].Parameters[2].Type | Should -Be 'switch'
         $definition.Commands[1].SourceKind | Should -Be 'ModuleFunction'
         Test-Path -LiteralPath (Join-Path $repositoryPath 'artifacts' 'PSModule' 'Public' 'Invoke-ContainerTool.ps1') |
             Should -BeFalse
