@@ -111,12 +111,12 @@ tests before their task is considered complete.
 ## 4. Documentation delivery and quality
 
 - [x] Define the documentation navigation and map existing Markdown files into the
-  `docs-template` Docusaurus structure without duplicating the root README.
-- [ ] Integrate the documentation content with `docs-template` while preserving a
-  readable GitHub Markdown experience.
+  Docusaurus structure with the root README as the shared homepage source.
+- [x] Build the documentation from the published docs-template container image
+  without a template checkout or Git submodule.
 - [ ] Add automated Markdown link validation and spelling or terminology checks with
   focused exclusions for code, generated references, and product names.
-- [ ] Add a CI build for the documentation site and fail on broken navigation,
+- [x] Add a CI build for the documentation site and fail on broken navigation,
   unresolved links, or Docusaurus compilation errors.
 - [ ] Publish versioned documentation for the first release and link it from the
   README, GitHub repository description, and GitHub Release.

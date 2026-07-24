@@ -17,11 +17,12 @@ build/               Local build and CI entry points
 tests/               Pester unit and integration tests
 tests-e2e/           Real Docker end-to-end tests
 examples/Minimal/    Maintained runnable example
-docs/                Docusaurus-compatible documentation
+docs/                Docusaurus project and authored documentation
 ```
 
-`docs-template` is an external Docusaurus template checkout and is intentionally
-excluded from PowerShell analysis.
+The documentation build pulls the published docs-template container image from GHCR.
+It does not require a template repository checkout, Git submodule initialization, or
+Node dependency setup in this repository.
 
 ## Documentation site
 
@@ -31,6 +32,12 @@ Build the repository-specific Docusaurus image locally:
 ./docs.ps1 -BuildOnly
 ```
 
+The script generates `docs/docs/index.md` from the root `README.md`. It prepends
+stable Docusaurus title, description, and sidebar metadata, then rewrites
+`https://psgenerator.subzerodev.com/` to `/` in the generated page. The README
+therefore remains the homepage source of truth while local and staging links stay on
+their current origin.
+
 Run `./docs.ps1` to serve a baked image, or `./docs.ps1 -Live` to bind-mount the
 authored Markdown and configuration for local editing.
 
@@ -39,7 +46,7 @@ The `Docs build` GitHub Actions workflow authenticates to GHCR, verifies
 `/template/artifacts` from the build container, and uploads it for GitHub Pages.
 It prefers the repository secret `REGISTRY_TOKEN` and falls back to the workflow's
 `GITHUB_TOKEN`. `REGISTRY_TOKEN` must have `read:packages`; the fallback works only
-when the docs-template package grants this repository read access.
+when the published package grants this repository read access.
 
 ## Import the development module
 

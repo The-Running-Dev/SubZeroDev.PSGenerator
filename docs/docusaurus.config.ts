@@ -7,9 +7,9 @@ const config: Config = {
   title: 'SubZeroDev.ContainerPSGenerator',
   tagline: 'Generate native PowerShell modules for containerized applications',
   url: isProduction
-    ? 'https://the-running-dev.github.io'
+    ? 'https://psgenerator.subzerodev.com'
     : 'http://localhost:3000',
-  baseUrl: isProduction ? '/SubZeroDev.ContainerPSGenerator/' : '/',
+  baseUrl: '/',
   organizationName: 'The-Running-Dev',
   projectName: 'SubZeroDev.ContainerPSGenerator',
   trailingSlash: false,

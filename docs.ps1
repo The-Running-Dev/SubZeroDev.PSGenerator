@@ -3,10 +3,16 @@
     Build and run the Docusaurus docs site from docs/ using docs/Dockerfile.
 
 .DESCRIPTION
-    The image extends the base docs-template (ghcr.io/the-running-dev/docs-template)
-    and overlays the docs/ build context — our docusaurus.config.ts, sidebar.ts, and
-    the markdown under docs/docs — over /template (Dockerfile `COPY . .`). That overlay
-    is what overwrites the base image's default config and sidebar with the local ones.
+    Generates docs/docs/index.md from the root README.md so the repository and
+    documentation site share one landing page. The generated page receives stable
+    Docusaurus frontmatter and origin-relative documentation links before the docs
+    image is built.
+
+    The image extends the published
+    ghcr.io/the-running-dev/docs-template container image and overlays the docs/
+    build context — our docusaurus.config.ts, sidebar.ts, and the markdown under
+    docs/docs — over /template (Dockerfile `COPY . .`). No template repository
+    checkout or Git submodule is required.
 
 .PARAMETER Live
     Bind-mount docs/ over the running container so editing markdown or config
@@ -47,6 +53,8 @@ $ErrorActionPreference = 'Stop'
 $root    = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $context = Join-Path $root 'docs'
 $dockerfile = Join-Path $context 'Dockerfile'
+$readme = Join-Path $root 'README.md'
+$index = Join-Path $context 'docs' 'index.md'
 
 if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
     throw "docker not found on PATH. Install/launch Docker Desktop first."
@@ -54,6 +62,36 @@ if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
 if (-not (Test-Path $dockerfile)) {
     throw "Dockerfile not found at $dockerfile"
 }
+if (-not (Test-Path -LiteralPath $readme -PathType Leaf)) {
+    throw "README not found at $readme"
+}
+if (-not (Test-Path -LiteralPath (Split-Path -Parent $index) -PathType Container)) {
+    throw "Documentation directory not found at $(Split-Path -Parent $index)"
+}
+
+$frontmatter = @(
+    '---'
+    'title: ContainerPSGenerator'
+    'description: Generate native PowerShell modules for containerized applications.'
+    'sidebar_position: 1'
+    '---'
+    ''
+) -join "`n"
+$readmeContent = (Get-Content -LiteralPath $readme -Raw) -replace "`r`n?", "`n"
+$indexBody = $readmeContent.Replace(
+    'https://psgenerator.subzerodev.com/',
+    '/'
+)
+$indexContent = $frontmatter + "`n" + $indexBody
+[IO.File]::WriteAllText(
+    $index,
+    $indexContent,
+    [Text.UTF8Encoding]::new($false)
+)
+Write-Host (
+    'Generated docs/docs/index.md from README.md with Docusaurus frontmatter ' +
+    'and origin-relative documentation links.'
+) -ForegroundColor Cyan
 
 Write-Host "Building '$Tag' from $context (base: $BaseImage) ..." -ForegroundColor Cyan
 docker build --build-arg "BASE_IMAGE=$BaseImage" -f $dockerfile -t $Tag $context

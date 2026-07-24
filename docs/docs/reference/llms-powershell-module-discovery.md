@@ -15,7 +15,7 @@ discover.
 
 This specification is based on the complete documentation set in the pinned
 LLMs checkout, including the root documentation, `setup/docs`, repository
-instructions and roadmap, and the nested `docs-template` documentation.
+instructions and roadmap, and its documentation-site sources.
 
 The work must preserve the existing setup architecture. It is not a rewrite of
 the provisioning or project-generation implementation.
@@ -74,7 +74,7 @@ Do not expose these implementation categories:
 - documentation build scripts
 - functions from `Common.ps1`
 - the 14 implementation functions exported by `ProjectSetup.psm1`
-- any PowerShell file in the `docs-template` submodule
+- any PowerShell file used only by documentation infrastructure
 
 `ProjectSetup.psm1` uses `Export-ModuleMember` so its orchestrator can call a
 defined implementation API. That technical export list is not the documented
@@ -207,12 +207,9 @@ Adding this internal manifest is optional for the facade task.
 - The root `README.md` remains canonical.
 - `setup/docs` remains the authored detailed documentation set.
 - `setup/docs/index.md` remains a placeholder replaced from the root README.
-- `docs-template` remains a pinned Docusaurus template and generated
-  synchronization target.
-- Do not edit generated files in `docs-template`.
 - If the facade is documented, update the canonical README and an appropriate
-  authored page under `setup/docs`; let `setup/setup-docs.ps1` synchronize the
-  template.
+  authored page under `setup/docs`; let the documentation build generate its
+  rendered output.
 
 ## Discovery contract for ContainerPSGenerator
 
@@ -226,7 +223,7 @@ ContainerPSGenerator should be able to:
    `SupportsShouldProcess` from PowerShell AST.
 5. Ignore `PowerShell/Private`.
 6. Ignore the separate implementation tree under `setup`.
-7. Ignore `docs-template` as a Git submodule.
+7. Ignore documentation infrastructure outside the public PowerShell facade.
 8. Perform discovery without running setup, installers, project generation,
    Docker, package managers, or documentation synchronization.
 
@@ -263,7 +260,7 @@ Add non-invasive tests that:
    are not exported.
 7. Exercise command binding and `-WhatIf` only with mocks or a non-invasive
    delegation seam.
-8. Confirm no file in `docs-template` changed.
+8. Confirm no generated documentation output changed.
 
 ## Acceptance criteria
 
@@ -276,15 +273,15 @@ Add non-invasive tests that:
 - Discovery requires no code execution.
 - Tests perform no installation, registration, project creation, container
   start, or documentation synchronization.
-- Canonical documentation is updated without directly editing generated
-  `docs-template` content.
+- Canonical documentation is updated through authored sources rather than rendered
+  documentation output.
 
 ## Instruction to the implementing LLM
 
 Read the root README, Roadmap, every authored document under `setup/docs`, the
 current setup scripts, `ProjectSetup.psm1`, `Common.ps1`, the Dockerfile, and
 `container-entrypoint.ps1` before editing. Treat the root README as canonical
-and `docs-template` as generated/template-owned.
+and rendered documentation output as generated.
 
 Implement the smallest facade described here. Do not expose implementation
 components merely because they are scripts or technically exported from an

@@ -6,6 +6,7 @@ on:
       - '.github/workflows/docs-build.yml'
       - 'docs/**'
       - 'docs.ps1'
+      - 'README.md'
   push:
     branches:
       - main
@@ -13,6 +14,7 @@ on:
       - '.github/workflows/docs-build.yml'
       - 'docs/**'
       - 'docs.ps1'
+      - 'README.md'
   workflow_dispatch:
 
 permissions:
@@ -60,16 +62,7 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $image = 'containerpsgenerator-docs:${{ github.sha }}'
-
-          docker build `
-            --build-arg 'BASE_IMAGE=ghcr.io/the-running-dev/docs-template:latest' `
-            --file ./docs/Dockerfile `
-            --tag $image `
-            ./docs
-
-          if ($LASTEXITCODE -ne 0) {
-            throw "Building the documentation image failed with exit code $LASTEXITCODE."
-          }
+          ./docs.ps1 -BuildOnly -Tag $image
 
       - name: Build and copy static site
         shell: pwsh
