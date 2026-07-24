@@ -6,10 +6,11 @@
     Copies the root README.md to docs/docs/index.md so the repository and
     documentation site share one landing page, then builds the docs image.
 
-    The image extends the base docs-template (ghcr.io/the-running-dev/docs-template)
-    and overlays the docs/ build context — our docusaurus.config.ts, sidebar.ts, and
-    the markdown under docs/docs — over /template (Dockerfile `COPY . .`). That overlay
-    is what overwrites the base image's default config and sidebar with the local ones.
+    The image extends the published
+    ghcr.io/the-running-dev/docs-template container image and overlays the docs/
+    build context — our docusaurus.config.ts, sidebar.ts, and the markdown under
+    docs/docs — over /template (Dockerfile `COPY . .`). No template repository
+    checkout or Git submodule is required.
 
 .PARAMETER Live
     Bind-mount docs/ over the running container so editing markdown or config

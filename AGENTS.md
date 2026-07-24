@@ -7,7 +7,7 @@ When the user says **"do next todo"**, perform this workflow autonomously:
    wait for required checks, resolve the addressed threads, merge the pull request,
    and confirm it is closed.
 2. Preserve unrelated and uncommitted user work. Never stage, reset, clean, or
-   overwrite it. In particular, treat dirty submodules as user-owned work.
+   overwrite it.
 3. Fetch and safely synchronize the superproject with `origin/main`.
 4. Read `TODO.md`, inspect the relevant current implementation, and select the first
    unchecked, actionable Version 1 item unless the user names another item.
@@ -48,7 +48,8 @@ append a subject, for example: **"generate documentation for runtime mappings"**
 - `README.md` is the documentation homepage source. `docs.ps1` copies it to
   `docs/docs/index.md` before every image build; keep the generated index synchronized.
 - Local overrides are `docs/docusaurus.config.ts` and `docs/sidebar.ts`.
-- `docs/Dockerfile` overlays the local project onto the docs-template base image.
+- `docs/Dockerfile` overlays the local project onto the published docs-template
+  container image. No template checkout or Git submodule is required.
 - Run `./docs.ps1 -BuildOnly` to validate the image, `./docs.ps1` to serve a baked
   build, or `./docs.ps1 -Live` for bind-mounted authoring. Use `-Port`, `-Tag`, and
   `-BaseImage` only when an override is needed.

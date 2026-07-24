@@ -5,8 +5,7 @@ Runs the repository PowerShell static-analysis and formatting gate.
 .DESCRIPTION
 Runs the pinned PSScriptAnalyzer version against repository-owned PowerShell source,
 build tooling, examples, and tests. The shared settings file contains the enforced
-correctness, safety, and formatting rules. The external docs-template checkout is
-intentionally outside the analyzed roots.
+correctness, safety, and formatting rules.
 
 .PARAMETER InstallDependencies
 Installs the pinned PSScriptAnalyzer version for the current user when unavailable.
