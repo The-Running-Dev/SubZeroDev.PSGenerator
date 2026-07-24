@@ -3015,6 +3015,8 @@ Export-ModuleMember -Function @('Test-RepositoryTool')
             Should -BeTrue
         Test-Path -LiteralPath (Join-Path $repositoryPath 'artifacts' 'PSModule' 'Public' 'Test-RepositoryTool.ps1') |
             Should -BeTrue
+        (Get-Command -Name Invoke-InstallTool -ErrorAction Stop).ModuleName |
+            Should -Be 'InferredRepository'
         (Get-Location).Path | Should -Be $originalLocation.Path
     }
 
