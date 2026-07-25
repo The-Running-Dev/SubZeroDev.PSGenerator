@@ -231,6 +231,40 @@ Complete these in order so every inspector follows the same policy:
 - [x] Installable PowerShell NuGet package validation and release-driven publishing
   to GitHub Packages.
 
+## Documentation toolchain follow-ups
+
+Follow-up work from adopting the container-based documentation workflows
+(`.github/workflows/docs.yml`, `docs-ci.yml`, `docs-deploy.yml`). The reusable
+workflows and the `ghcr.io/the-running-dev/docs-template` base image are owned by
+[Docusaurus-Template](https://github.com/The-Running-Dev/Docusaurus-Template).
+The items below are the seams where this repository currently works around it.
+
+- [x] Fix the template's 404 links, then delete the local theme override.
+  Resolved upstream by
+  [Docusaurus-Template#33](https://github.com/The-Running-Dev/Docusaurus-Template/pull/33),
+  which made `Custom404`'s destinations a `links` prop defaulting to none instead
+  of hardcoding `to="/docs"` and `to="/demos"`. Those routes do not exist for a
+  consumer that serves docs from the site root via `routeBasePath: '/'` and
+  disables the pages plugin, and with `onBrokenLinks: 'throw'` they failed the
+  build. `docs/src/theme/NotFound/Content/index.tsx` existed only to work around
+  that and has been deleted.
+- [ ] Give `docs-build.ps1` a way to prune template files before the overlay.
+  It copies the caller's `docs/` over `/template` and never deletes, whereas the
+  removed `docs/Dockerfile` did `rm -rf ./docs ./src/pages ./src/theme/NotFound`.
+  The base image itself removes only `/template/docs`. A prune manifest honored
+  ahead of the overlay would let both `pages: false` in
+  `docs/docusaurus.config.ts` and the `NotFound` override go away.
+- [ ] Decide whether `docs/Dockerfile` and `docs/.dockerignore` should stay. The
+  root `docs.ps1` still needs the Dockerfile for local preview, but
+  `docs-build.ps1` also copies both into `/template` during CI, where nothing
+  reads them.
+- [ ] Reconsider the `.github/workflows/docs.yml` caller. It exists only to carry
+  the `pull_request` and `push` triggers that `docs-ci.yml` and `docs-deploy.yml`
+  deliberately omit, and it keeps those two files byte-identical to the template
+  so `setup-docs.ps1` can be re-run safely. Folding the triggers into the
+  installed workflows would remove a file but diverge from the template, and
+  `setup-docs-workflow.ps1 -Overwrite` would then silently revert them.
+
 ## Deferred to Phase 2
 
 - [ ] Public and stable plugin SDK.

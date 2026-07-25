@@ -37,7 +37,13 @@ if ($LASTEXITCODE -ne 0) {
     throw "Building the local CI runner image failed with exit code $LASTEXITCODE."
 }
 
-foreach ($job in @('powershell-baseline', 'quality', 'pester', 'nuget-package', 'container-e2e')) {
+foreach ($job in @(
+        'powershell-baseline',
+        'quality',
+        'documentation',
+        'pester',
+        'nuget-package',
+        'container-e2e')) {
     $actArguments = @(
         'pull_request'
         '--workflows', $workflowPath

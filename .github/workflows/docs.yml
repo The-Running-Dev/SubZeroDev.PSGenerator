@@ -1,0 +1,50 @@
+name: Docs
+
+# Trigger-carrying entry point for the documentation workflows. The reusable
+# docs-ci.yml / docs-deploy.yml are installed from the Docusaurus-Template
+# repository and declare workflow_call only, so this workflow decides when each
+# one runs.
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/docs.yml'
+      - '.github/workflows/docs-ci.yml'
+      - '.github/workflows/docs-deploy.yml'
+      - 'docs/**'
+      - 'docs.ps1'
+      - 'README.md'
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/docs.yml'
+      - '.github/workflows/docs-ci.yml'
+      - '.github/workflows/docs-deploy.yml'
+      - 'docs/**'
+      - 'docs.ps1'
+      - 'README.md'
+  workflow_dispatch:
+
+# A called workflow can never hold more permissions than its caller, so these
+# cover the superset required by docs-deploy.yml.
+permissions:
+  contents: read
+  packages: read
+  pages: write
+  id-token: write
+
+jobs:
+  verify:
+    name: Verify documentation
+    if: github.event_name != 'push'
+    # secrets: inherit passes REGISTRY_TOKEN through for the GHCR base image
+    # pull; reusable workflows receive no secrets without it.
+    uses: ./.github/workflows/docs-ci.yml
+    secrets: inherit
+
+  deploy:
+    name: Deploy documentation
+    if: github.event_name == 'push'
+    uses: ./.github/workflows/docs-deploy.yml
+    secrets: inherit

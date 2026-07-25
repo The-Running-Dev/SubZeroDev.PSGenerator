@@ -1,0 +1,8 @@
+{
+  "label": "Getting started",
+  "position": 2,
+  "link": {
+    "type": "generated-index",
+    "description": "Install the generator and build your first repository-specific module."
+  }
+}

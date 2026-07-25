@@ -3385,3 +3385,214 @@ Export-ModuleMember -Function Invoke-SourceTool
         } | Should -Throw "*must be beneath the repository's 'scripts' directory*"
     }
 }
+
+Describe 'Test-Documentation script' {
+    BeforeAll {
+        $documentationScript = Join-Path $PSScriptRoot '..' 'build' 'Test-Documentation.ps1'
+
+        function New-DocumentationFixture {
+            param (
+                [Parameter(Mandatory)]
+                [string] $Name,
+
+                [Parameter(Mandatory)]
+                [hashtable] $File
+            )
+
+            $root = Join-Path $TestDrive $Name
+            New-Item -Path $root -ItemType Directory -Force | Out-Null
+            foreach ($entry in $File.GetEnumerator()) {
+                $destination = Join-Path $root $entry.Key
+                $parent = Split-Path -Parent $destination
+                if (-not (Test-Path -LiteralPath $parent)) {
+                    New-Item -Path $parent -ItemType Directory -Force | Out-Null
+                }
+                Set-Content -LiteralPath $destination -Value $entry.Value -Encoding utf8
+            }
+
+            return $root
+        }
+
+        function Invoke-DocumentationGate {
+            param (
+                [Parameter(Mandatory)]
+                [string] $Path
+            )
+
+            $outputPath = Join-Path $TestDrive ('gate-{0}.txt' -f [guid]::NewGuid())
+            $failed = $false
+            try {
+                & $documentationScript -Path $Path 6> $outputPath
+            }
+            catch {
+                $failed = $true
+            }
+
+            $output = ''
+            if (Test-Path -LiteralPath $outputPath) {
+                $raw = Get-Content -LiteralPath $outputPath -Raw
+                if ($null -ne $raw) {
+                    $output = $raw
+                }
+            }
+
+            return [pscustomobject]@{
+                Failed = $failed
+                Output = $output
+            }
+        }
+    }
+
+    It 'passes a document with resolvable links and correct terminology' {
+        $root = New-DocumentationFixture -Name 'DocsClean' -File @{
+            'index.md' = @'
+# Clean Document
+
+PowerShell, GitHub, NuGet, and macOS are spelled correctly.
+
+See [the other page](./other.md) and [this section](#clean-document).
+'@
+            'other.md' = '# Other'
+        }
+
+        $result = Invoke-DocumentationGate -Path $root
+
+        $result.Failed | Should -BeFalse
+        $result.Output | Should -Match 'Documentation checks passed across 2 Markdown file\(s\)'
+    }
+
+    It 'reports a relative link whose target does not exist' {
+        $root = New-DocumentationFixture -Name 'DocsDanglingLink' -File @{
+            'index.md' = "# Title`n`nSee [the missing page](./missing.md)."
+        }
+
+        $result = Invoke-DocumentationGate -Path $root
+
+        $result.Failed | Should -BeTrue
+        $result.Output | Should -Match "MarkdownLink: Link target '\./missing\.md' does not exist"
+    }
+
+    It 'reports a fragment with no matching heading' {
+        $root = New-DocumentationFixture -Name 'DocsBadAnchor' -File @{
+            'index.md' = "# Title`n`nJump to [nowhere](#no-such-heading)."
+        }
+
+        $result = Invoke-DocumentationGate -Path $root
+
+        $result.Failed | Should -BeTrue
+        $result.Output | Should -Match "MarkdownAnchor: No heading in this document produces the anchor '#no-such-heading'"
+    }
+
+    It 'resolves fragments against headings in a linked document' {
+        $root = New-DocumentationFixture -Name 'DocsCrossAnchor' -File @{
+            'index.md' = "# Title`n`nSee [mappings](./guide.md#runtime-mappings) and [absent](./guide.md#absent)."
+            'guide.md' = "# Guide`n`n## Runtime Mappings"
+        }
+
+        $result = Invoke-DocumentationGate -Path $root
+
+        $result.Failed | Should -BeTrue
+        $result.Output | Should -Match "has no heading producing the anchor '#absent'"
+        $result.Output | Should -Not -Match "anchor '#runtime-mappings'"
+    }
+
+    It 'honors explicit heading identifiers and duplicate heading suffixes' {
+        $root = New-DocumentationFixture -Name 'DocsAnchorForms' -File @{
+            'index.md' = @'
+# Title
+
+## Custom Section {#custom-id}
+
+## Repeated
+
+## Repeated
+
+Links: [custom](#custom-id), [first](#repeated), [second](#repeated-1).
+'@
+        }
+
+        $result = Invoke-DocumentationGate -Path $root
+
+        $result.Failed | Should -BeFalse
+    }
+
+    It 'reports incorrect product-name casing in prose' {
+        $root = New-DocumentationFixture -Name 'DocsTerminology' -File @{
+            'index.md' = "# Title`n`nPowershell and Github are wrong."
+        }
+
+        $result = Invoke-DocumentationGate -Path $root
+
+        $result.Failed | Should -BeTrue
+        $result.Output | Should -Match "Terminology: Use 'PowerShell' instead of 'Powershell'"
+        $result.Output | Should -Match "Terminology: Use 'GitHub' instead of 'Github'"
+    }
+
+    It 'does not apply terminology rules inside fenced code blocks' {
+        $root = New-DocumentationFixture -Name 'DocsFencedCode' -File @{
+            'index.md' = @'
+# Title
+
+```powershell
+# Powershell and Github inside a fence are code, not prose
+Get-Item ./missing.md
+```
+'@
+        }
+
+        $result = Invoke-DocumentationGate -Path $root
+
+        $result.Failed | Should -BeFalse
+        $result.Output | Should -Not -Match 'Terminology'
+    }
+
+    It 'does not apply terminology rules to inline code, link targets, or URLs' {
+        $root = New-DocumentationFixture -Name 'DocsMaskedProse' -File @{
+            'index.md' = @'
+# Title
+
+Inline `Powershell` is code, and <https://github.com/Github/Nuget> is an address.
+
+See [the other page](./Powershell-Github.md).
+'@
+            'Powershell-Github.md' = '# Other'
+        }
+
+        $result = Invoke-DocumentationGate -Path $root
+
+        $result.Failed | Should -BeFalse
+    }
+
+    It 'does not resolve external or site-absolute link targets' {
+        $root = New-DocumentationFixture -Name 'DocsOutOfScope' -File @{
+            'index.md' = @'
+# Title
+
+[External](https://example.invalid/missing) and [route](/reference/commands) are
+validated elsewhere.
+'@
+        }
+
+        $result = Invoke-DocumentationGate -Path $root
+
+        $result.Failed | Should -BeFalse
+    }
+
+    It 'skips excluded path segments' {
+        $root = New-DocumentationFixture -Name 'DocsExcluded' -File @{
+            'index.md' = '# Title'
+            'node_modules/vendor.md' = 'Powershell [broken](./gone.md)'
+        }
+
+        $result = Invoke-DocumentationGate -Path $root
+
+        $result.Failed | Should -BeFalse
+        $result.Output | Should -Match 'across 1 Markdown file\(s\)'
+    }
+
+    It 'passes across the repository documentation set' {
+        $result = Invoke-DocumentationGate -Path (Join-Path $PSScriptRoot '..')
+
+        $result.Failed | Should -BeFalse
+    }
+}
