@@ -33,6 +33,11 @@ const config: Config = {
           routeBasePath: '/',
         },
         blog: false,
+        // The base image ships the template's own landing, portfolio, CV and
+        // demo pages under src/pages. This project serves its documentation
+        // from the site root and provides its own landing page, so the pages
+        // plugin is disabled rather than publishing that unrelated content.
+        pages: false,
       } satisfies Preset.Options,
     ],
   ],
