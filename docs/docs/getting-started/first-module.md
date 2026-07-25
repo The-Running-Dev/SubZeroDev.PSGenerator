@@ -127,11 +127,11 @@ Get-Content ./artifacts/PSModule/Documentation/Invoke-Hello.md
 Invoke-Hello -Message hello -WhatIf
 ```
 
-The preview shows the planned `docker run --rm` command without discovering or
-starting Docker:
+The preview carries the planned `docker run --rm` command inside PowerShell's
+standard `ShouldProcess` message, without discovering or starting Docker:
 
 ```text
-docker run --rm ghcr.io/example/hello-container:latest --message hello
+What if: Performing the operation "docker run --rm ghcr.io/example/hello-container:latest --message hello" on target "ghcr.io/example/hello-container:latest".
 ```
 
 Use verbose output for runtime discovery, the exact argument list, attachment

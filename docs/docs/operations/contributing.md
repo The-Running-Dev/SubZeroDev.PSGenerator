@@ -9,8 +9,8 @@ sidebar_position: 2
 ## Before starting
 
 1. Read the [Architecture overview](../architecture/overview.md).
-2. Check the engineering roadmap in `TODO.md`.
-3. Check documentation work in `docs/TODO.md`.
+2. Check the engineering roadmap in `TODO.md` at the repository root.
+3. Check documentation work in [`docs/docs/TODO.md`](../TODO.md).
 4. Confirm an open pull request does not already address the same change.
 
 ## Change scope
@@ -36,10 +36,18 @@ Use a `feature/` branch for planned work.
 - Never embed local absolute paths in generated source.
 - Keep `Build-ContainerModule` orchestration-only.
 
-Run:
+Run these from the repository root:
 
 ```powershell
 ./build/Invoke-Quality.ps1 -InstallDependencies
+```
+
+## Documentation checks
+
+Changes to any Markdown file should pass the link and terminology gate:
+
+```powershell
+./build/Test-Documentation.ps1
 ```
 
 ## Tests
@@ -101,6 +109,7 @@ Each category contains `_category_.json`.
 - [ ] New behavior has tests.
 - [ ] Public behavior has documentation.
 - [ ] Quality checks pass.
+- [ ] Documentation link and terminology checks pass.
 - [ ] Relevant Pester tests pass.
 - [ ] Docker or package checks pass when applicable.
 - [ ] No secrets, machine paths, or unrelated files are included.

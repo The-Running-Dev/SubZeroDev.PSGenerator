@@ -65,6 +65,18 @@ jobs:
         shell: pwsh
         run: ./build/Invoke-Quality.ps1 -InstallDependencies
 
+  documentation:
+    name: Documentation links and terminology
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Validate Markdown links and terminology
+        shell: pwsh
+        run: ./build/Test-Documentation.ps1
+
   pester:
     name: Pester (${{ matrix.os }})
     runs-on: ${{ matrix.os }}

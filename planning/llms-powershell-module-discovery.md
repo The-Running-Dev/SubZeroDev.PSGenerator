@@ -1,10 +1,9 @@
----
-title: LLMs repository migration specification
-description: A repository-specific brief for exposing the LLMs PowerShell surface through ContainerPSGenerator.
-sidebar_position: 90
----
-
 # LLMs Discoverable PowerShell Interface Specification
+
+> **Not published documentation.** This is a planning brief describing changes to
+> a *different* repository, `The-Running-Dev/LLMs`. It lives outside `docs/` so it
+> does not appear on the ContainerPSGenerator documentation site, where a reader
+> would reasonably mistake another project's `setup/` layout for this one's.
 
 ## Purpose
 

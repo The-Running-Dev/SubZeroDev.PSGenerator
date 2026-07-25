@@ -37,12 +37,22 @@ From a clean checkout:
 
 ```powershell
 ./build/Invoke-Quality.ps1 -InstallDependencies
+./build/Test-Documentation.ps1
 Invoke-Pester -Path ./tests -Output Detailed
 ./build/Test-GeneratorNuGetPackage.ps1 -InstallDependencies
 ```
 
-Run the PowerShell 7.4 baseline with an exact 7.4 runtime and run the Docker
-end-to-end suite.
+Run the PowerShell 7.4 baseline with an exact 7.4 runtime:
+
+```powershell
+./build/Test-PowerShellBaseline.ps1
+```
+
+Then run the Docker end-to-end suite:
+
+```powershell
+Invoke-Pester -Path ./tests-e2e -Output Detailed
+```
 
 Confirm:
 

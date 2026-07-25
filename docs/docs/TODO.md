@@ -94,7 +94,7 @@ tests before their task is considered complete.
   local `act` usage.
 - [x] Add a security guide with supported-version and private vulnerability-reporting
   guidance.
-- [ ] Select and add a `LICENSE`, then reference it from the README and package
+- [x] Select and add a `LICENSE`, then reference it from the README and package
   metadata.
 - [x] Add a changelog using a consistent release-note format and backfill the
   Version 1 implementation milestones.
@@ -114,13 +114,13 @@ tests before their task is considered complete.
   Docusaurus structure with the root README as the shared homepage source.
 - [x] Build the documentation from the published docs-template container image
   without a template checkout or Git submodule.
-- [ ] Add automated Markdown link validation and spelling or terminology checks with
+- [x] Add automated Markdown link validation and spelling or terminology checks with
   focused exclusions for code, generated references, and product names.
 - [x] Add a CI build for the documentation site and fail on broken navigation,
   unresolved links, or Docusaurus compilation errors.
 - [ ] Publish versioned documentation for the first release and link it from the
   README, GitHub repository description, and GitHub Release.
-- [ ] Perform a clean-reader review that follows the complete user journey without
+- [x] Perform a clean-reader review that follows the complete user journey without
   relying on source-code knowledge, then record and resolve every ambiguity found.
 
 ## Deferred documentation

@@ -36,6 +36,9 @@ unreleased and will be consolidated into the first Version 1 release notes.
   release-driven GitHub Packages publishing.
 - Docusaurus-compatible Version 1 user, author, reference, architecture, contributor,
   release, security, and troubleshooting documentation.
+- MIT license, referenced from the README and the module manifest's `LicenseUri`.
+- Markdown link, heading-anchor, and terminology gate enforced in CI by
+  `build/Test-Documentation.ps1`.
 
 ### Changed
 

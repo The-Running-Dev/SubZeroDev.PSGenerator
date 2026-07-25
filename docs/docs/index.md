@@ -144,4 +144,5 @@ See
 
 ## License
 
-No license has been selected yet.
+Released under the
+[MIT License](https://github.com/The-Running-Dev/SubZeroDev.ContainerPSGenerator/blob/main/LICENSE).

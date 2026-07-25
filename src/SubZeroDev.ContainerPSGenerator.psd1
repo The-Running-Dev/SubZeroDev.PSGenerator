@@ -25,6 +25,7 @@
         PSData = @{
             Tags       = @('PowerShell', 'Docker', 'Containers', 'CodeGeneration')
             ProjectUri = 'https://github.com/The-Running-Dev/SubZeroDev.ContainerPSGenerator'
+            LicenseUri = 'https://github.com/The-Running-Dev/SubZeroDev.ContainerPSGenerator/blob/main/LICENSE'
         }
     }
 }

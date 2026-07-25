@@ -71,6 +71,36 @@ After the dependency is installed:
 ./build/Invoke-Quality.ps1
 ```
 
+## Documentation links and terminology
+
+```powershell
+./build/Test-Documentation.ps1
+```
+
+The gate validates authored Markdown that the documentation site build never sees.
+Docusaurus already fails on unresolved links inside `docs/`, so this check covers
+the rest: root Markdown such as `README.md` and `TODO.md`, plus cross-file relative
+links and heading anchors everywhere.
+
+It reports two rule kinds:
+
+- `MarkdownLink` and `MarkdownAnchor` — a relative target that does not exist on
+  disk, or a `#fragment` with no matching heading in the target document. Explicit
+  `{#custom-id}` headings and duplicate-heading `-1` suffixes are both honored.
+- `Terminology` — product-name casing from `.config/DocumentationRules.psd1`.
+
+External and site-absolute links are reported as out of scope rather than fetched,
+so the gate never depends on network reachability. Terminology rules apply to prose
+only: fenced code, inline code, link targets, and bare URLs are masked first, so
+commands, file paths, and URLs are never flagged.
+
+Add terminology rules and path exclusions in `.config/DocumentationRules.psd1`.
+Pass `-Path` to scan a subset:
+
+```powershell
+./build/Test-Documentation.ps1 -Path ./docs/docs
+```
+
 ## Unit and integration tests
 
 ```powershell
@@ -137,6 +167,7 @@ The script builds `.act/Dockerfile` as a local runner and runs:
 
 - PowerShell 7.4 baseline on the Ubuntu matrix leg;
 - PowerShell quality;
+- documentation links and terminology;
 - Ubuntu Pester and coverage;
 - NuGet package verification; and
 - container end-to-end tests.
