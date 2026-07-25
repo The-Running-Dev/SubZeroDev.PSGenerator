@@ -5,6 +5,9 @@ function Get-ContainerModuleSpecificationCandidate {
         [string] $RepositoryPath
     )
 
+    $RepositoryPath = [IO.Path]::TrimEndingDirectorySeparator(
+        [IO.Path]::GetFullPath($RepositoryPath)
+    )
     $repositoryName = Split-Path $RepositoryPath -Leaf
     $moduleName = [regex]::Replace($repositoryName, '[^A-Za-z0-9]', '')
     if ([string]::IsNullOrWhiteSpace($moduleName) -or $moduleName[0] -notmatch '[A-Za-z]') {
@@ -58,7 +61,13 @@ function Get-ContainerModuleSpecificationCandidate {
                         Name        = $parameter.Name.VariablePath.UserPath
                         Type        = $type
                         Mandatory   = [bool]($parameter.Attributes |
-                            Where-Object { $_.TypeName.Name -eq 'Parameter' -and $_.Extent.Text -match '(?i)Mandatory' })
+                            Where-Object { $_.TypeName.Name -eq 'Parameter' } |
+                            ForEach-Object {
+                                $_.NamedArguments | Where-Object {
+                                    $_.ArgumentName -eq 'Mandatory' -and
+                                    ($_.ExpressionOmitted -or $_.Argument.SafeGetValue())
+                                }
+                            })
                         Description = "Discovered from $($parameter.Name.VariablePath.UserPath)."
                     }
                 }
@@ -74,7 +83,9 @@ function Get-ContainerModuleSpecificationCandidate {
         $relativePath = [IO.Path]::GetRelativePath($RepositoryPath, $file.FullName).Replace('\', '/')
         $tokens = $null
         $parseErrors = $null
-        $ast = [Management.Automation.Language.Parser]::ParseFile(
+        $source = Get-Content -LiteralPath $file.FullName -Raw -ErrorAction Stop
+        $ast = [Management.Automation.Language.Parser]::ParseInput(
+            $source,
             $file.FullName,
             [ref] $tokens,
             [ref] $parseErrors

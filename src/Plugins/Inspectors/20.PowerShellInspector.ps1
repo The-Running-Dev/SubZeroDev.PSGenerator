@@ -14,7 +14,13 @@ $items = @(
 $files = foreach ($item in $items) {
     $tokens = $null
     $errors = $null
-    $ast = [Management.Automation.Language.Parser]::ParseFile($item.FullName, [ref]$tokens, [ref]$errors)
+    $source = Get-Content -LiteralPath $item.FullName -Raw -ErrorAction Stop
+    $ast = [Management.Automation.Language.Parser]::ParseInput(
+        $source,
+        $item.FullName,
+        [ref]$tokens,
+        [ref]$errors
+    )
     $relativePath = [IO.Path]::GetRelativePath($Context.RepositoryPath, $item.FullName).Replace('\', '/')
     $isCommandCandidate = $item.Extension -eq '.ps1'
     $suggestedCommandName = $null
@@ -38,7 +44,13 @@ $files = foreach ($item in $items) {
                     Name      = $parameter.Name.VariablePath.UserPath
                     Type      = $type
                     Mandatory = [bool]($parameter.Attributes |
-                        Where-Object { $_.TypeName.Name -eq 'Parameter' -and $_.Extent.Text -match '(?i)Mandatory' })
+                        Where-Object { $_.TypeName.Name -eq 'Parameter' } |
+                        ForEach-Object {
+                            $_.NamedArguments | Where-Object {
+                                $_.ArgumentName -eq 'Mandatory' -and
+                                ($_.ExpressionOmitted -or $_.Argument.SafeGetValue())
+                            }
+                        })
                 }
             }
         }

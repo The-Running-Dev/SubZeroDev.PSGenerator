@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "definitions": {
+    "ExecutableTarget": {
+      "type": "string",
+      "enum": ["Build", "Test", "Pack"]
+    },
+    "Configuration": {
+      "type": "string",
+      "enum": ["Debug", "Release"]
+    },
+    "NukeBuild": {
+      "properties": {
+        "Configuration": {
+          "description": "Build configuration.",
+          "$ref": "#/definitions/Configuration"
+        },
+        "Target": {
+          "type": "array",
+          "description": "Targets to execute.",
+          "items": {
+            "$ref": "#/definitions/ExecutableTarget"
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "properties": {
+        "RegistryToken": {
+          "type": "string",
+          "description": "Registry authentication token.",
+          "default": "Secrets must be entered separately"
+        }
+      }
+    },
+    {
+      "$ref": "#/definitions/NukeBuild"
+    }
+  ]
+}

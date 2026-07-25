@@ -8,6 +8,8 @@ sidebar_position: 4
 
 `build/Test-LocalRepository.ps1` exercises this checkout of ContainerPSGenerator
 against another local repository without embedding that repository as a submodule.
+Whenever it generates a module, it imports that module globally so its commands can
+be invoked immediately from the caller's current project directory.
 
 ## Validate or initialize
 

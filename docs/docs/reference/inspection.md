@@ -89,18 +89,31 @@ extended forms are not resolved.
 ```text
 DotNetProjects[]:
   Path
+  Name
   Sdk
   TargetFrameworks[]
   OutputType
+  IsExecutable
+  IsTestProject
   AssemblyName
   PackageId
+  NukeRootDirectory
+  NukeScriptDirectory
   PackageReferences[]:
     Name
     Version
+  ProjectReferences[]:
+    Path
+    Aliases[]
 ```
 
 The first matching property group supplies scalar properties. Package references
-support a `Version` attribute or nested `Version` element.
+support a `Version` attribute or nested `Version` element. `Name` uses
+`AssemblyName` when authored and otherwise uses the project filename.
+`IsExecutable` recognizes `Exe` and `WinExe`; `IsTestProject` recognizes the
+corresponding MSBuild property or a `Microsoft.NET.Test.Sdk` package reference.
+Project-reference paths are resolved relative to the declaring project and then
+normalized relative to the repository.
 
 Malformed project XML currently terminates inspection.
 
@@ -190,6 +203,7 @@ anchors, or complete YAML semantics.
 **Inputs:**
 
 - `.nuke` directory;
+- `.nuke/build.schema.json`;
 - `.nuke/parameters.json`;
 - .NET projects referencing `Nuke.Common`; and
 - recursive `build.ps1`.
@@ -197,12 +211,33 @@ anchors, or complete YAML semantics.
 ```text
 Nuke:
   IsConfigured
+  SchemaPath
   ParameterNames[]
+  ConfiguredParameterNames[]
+  Parameters[]:
+    Name
+    Type
+    Description
+    Enum[]
+    ItemType
+    ItemEnum[]
+    Default
+  Targets[]
   ProjectPaths[]
   BuildScripts[]
 ```
 
-Malformed `.nuke/parameters.json` currently terminates inspection.
+When `build.schema.json` exists, `ParameterNames` and `Parameters` describe its
+resolved `allOf` properties, including local `#/definitions/...` references.
+Executable targets come from the `ExecutableTarget` definition.
+`parameters.json` is treated as configured values: metadata properties beginning
+with `$`, including `$schema`, are excluded from `ConfiguredParameterNames`. When
+no build schema exists, those configured names remain the backward-compatible
+`ParameterNames` fallback.
+
+This parser resolves only local definition references and does not evaluate external
+JSON Schema references or arbitrary composition keywords. Malformed NUKE JSON
+currently terminates inspection.
 
 ## Configuration schemas
 

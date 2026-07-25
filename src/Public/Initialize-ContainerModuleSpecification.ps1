@@ -44,7 +44,9 @@ function Initialize-ContainerModuleSpecification {
     if (-not (Test-Path -LiteralPath $Repository -PathType Container)) {
         throw [System.IO.DirectoryNotFoundException]::new("Repository was not found: '$Repository'.")
     }
-    $repositoryPath = (Resolve-Path -LiteralPath $Repository).ProviderPath
+    $repositoryPath = [IO.Path]::TrimEndingDirectorySeparator(
+        [IO.Path]::GetFullPath((Resolve-Path -LiteralPath $Repository).ProviderPath)
+    )
     $specificationPath = if ([IO.Path]::IsPathRooted($Specification)) {
         [IO.Path]::GetFullPath($Specification)
     }
@@ -60,6 +62,11 @@ function Initialize-ContainerModuleSpecification {
     if (-not $PSCmdlet.ShouldProcess($specificationPath, 'Create container module specification')) { return }
 
     $definition = Get-ContainerModuleSpecificationCandidate -RepositoryPath $repositoryPath
+    Write-Verbose (
+        "Discovered {0} command candidate(s) while initializing '{1}'." -f
+        @($definition.Commands).Count,
+        $repositoryPath
+    )
     $source = ConvertTo-ContainerModuleSpecificationSource -Specification $definition
     $directory = Split-Path $specificationPath -Parent
     $null = New-Item -Path $directory -ItemType Directory -Force
