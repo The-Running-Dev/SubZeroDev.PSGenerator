@@ -49,7 +49,7 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $baseImage = 'ghcr.io/the-running-dev/docs-template:latest'
 
-          docker buildx imagetools inspect $baseImage
+          & docker buildx imagetools inspect $baseImage
           if ($LASTEXITCODE -ne 0) {
             throw "Documentation template image '$baseImage' does not exist or is not accessible."
           }
@@ -72,18 +72,18 @@ jobs:
           $container = 'containerpsgenerator-docs-build'
           $output = './artifacts/docs'
 
-          docker create --name $container $image sh -c 'pnpm run build' | Out-Null
+          & docker create --name $container $image sh -c 'pnpm run build' | Out-Null
           if ($LASTEXITCODE -ne 0) {
             throw "Creating the documentation build container failed with exit code $LASTEXITCODE."
           }
 
-          docker start --attach $container
+          & docker start --attach $container
           if ($LASTEXITCODE -ne 0) {
             throw "Building the static documentation failed with exit code $LASTEXITCODE."
           }
 
           New-Item -ItemType Directory -Path $output -Force | Out-Null
-          docker cp "${container}:/template/artifacts/." $output
+          & docker cp "${container}:/template/artifacts/." $output
           if ($LASTEXITCODE -ne 0) {
             throw "Copying the static documentation failed with exit code $LASTEXITCODE."
           }
@@ -92,11 +92,11 @@ jobs:
         if: ${{ always() }}
         shell: pwsh
         run: |
-          $container = docker ps --all `
+          $container = & docker ps --all `
             --filter 'name=^/containerpsgenerator-docs-build$' `
             --format '{{.Names}}'
           if ($container) {
-            docker rm --force containerpsgenerator-docs-build
+            & docker rm --force containerpsgenerator-docs-build
           }
 
       - name: Upload GitHub Pages artifact
