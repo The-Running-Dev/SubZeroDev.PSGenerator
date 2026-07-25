@@ -31,6 +31,17 @@ const config: Config = {
         docs: {
           sidebarPath: './sidebar.ts',
           routeBasePath: '/',
+          // The newest released snapshot is served at the site root; the
+          // in-progress docs live under /next so an unreleased contract is
+          // never mistaken for shipped behaviour. Cut a new snapshot with
+          // `./docs.ps1 -CreateVersion <version>` as part of a release.
+          lastVersion: '1.0.0',
+          versions: {
+            current: {
+              label: 'Next (unreleased)',
+              path: 'next',
+            },
+          },
         },
         blog: false,
         // The base image ships the template's own landing, portfolio, CV and
@@ -47,6 +58,7 @@ const config: Config = {
       title: 'ContainerPSGenerator',
       items: [
         {type: 'docSidebar', sidebarId: 'docs', position: 'left', label: 'Docs'},
+        {type: 'docsVersionDropdown', position: 'right'},
         {
           href: 'https://github.com/The-Running-Dev/SubZeroDev.ContainerPSGenerator',
           label: 'GitHub',
