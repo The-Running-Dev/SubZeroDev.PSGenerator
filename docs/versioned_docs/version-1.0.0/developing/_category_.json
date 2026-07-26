@@ -1,9 +1,0 @@
-{
-  "label": "Developing",
-  "position": 3,
-  "link": {
-    "type": "generated-index",
-    "slug": "/developing",
-    "description": "How PSGenerator is built: architecture, inspection internals, the trust boundary, and the contributor workflow."
-  }
-}

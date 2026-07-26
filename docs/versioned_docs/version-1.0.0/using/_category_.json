@@ -1,9 +1,0 @@
-{
-  "label": "Using",
-  "position": 2,
-  "link": {
-    "type": "generated-index",
-    "slug": "/using",
-    "description": "Run PSGenerator, describe your container's commands, and package the module you get back."
-  }
-}

@@ -118,8 +118,11 @@ tests before their task is considered complete.
   focused exclusions for code, generated references, and product names.
 - [x] Add a CI build for the documentation site and fail on broken navigation,
   unresolved links, or Docusaurus compilation errors.
-- [x] Publish versioned documentation for the first release and link it from the
-  README, GitHub repository description, and GitHub Release.
+- [x] Publish the documentation for the first release and link it from the
+  README, GitHub repository description, and GitHub Release. Docusaurus
+  versioning was set up and then removed: there is one version of these docs and
+  the site serves it at the root, so per-release snapshots only added a frozen
+  copy to keep in step.
 - [x] Perform a clean-reader review that follows the complete user journey without
   relying on source-code knowledge, then record and resolve every ambiguity found.
 
