@@ -4,11 +4,11 @@ description: Remaining documentation delivery and review work.
 sidebar_position: 99
 ---
 
-# Documentation roadmap
+# Documentation Roadmap
 
-This backlog tracks user, repository-author, contributor, and release
+This backlog tracks user, directory-author, contributor, and release
 documentation separately from the engineering roadmap in
-[`TODO.md`](https://github.com/The-Running-Dev/SubZeroDev.ContainerPSGenerator/blob/main/TODO.md).
+[`TODO.md`](https://github.com/The-Running-Dev/SubZeroDev.PSGenerator/blob/main/TODO.md).
 It is ordered by the shortest path from a new user finding
 the project to successfully generating, testing, and publishing a container module.
 
@@ -16,24 +16,24 @@ Documentation must describe implemented Version 1 behavior only. Planned Phase 2
 contracts should be identified as proposals and must not be presented as stable
 features.
 
-## Definition of done
+## Definition of Done
 
-The Version 1 documentation is ready when a person unfamiliar with the repository
+The Version 1 documentation is ready when a person unfamiliar with the directory
 can use only the published documentation to:
 
 1. install the generator from GitHub Packages;
-2. author or infer a repository specification;
+2. author or infer a specification;
 3. generate and import a module;
 4. preview and test its commands locally;
 5. package the generated module in a container;
 6. diagnose common failures; and
 7. contribute a tested change to the generator.
 
-Every documented command must be copy-pasteable from the repository root or state
+Every documented command must be copy-pasteable from the directory or state
 its required working directory. Examples must be exercised manually or by automated
 tests before their task is considered complete.
 
-## 1. Release-blocking user journey
+## 1. Release-Blocking User Journey
 
 - [x] Restructure the root README as a concise landing page containing the project
   purpose, current status, installation command, five-minute example, supported
@@ -41,9 +41,9 @@ tests before their task is considered complete.
 - [x] Write a clean-machine getting-started guide covering GitHub Packages
   authentication, installation, import, specification creation, generation,
   command discovery, `-WhatIf`, and cleanup.
-- [x] Write a repository-author tutorial that starts with an empty repository and
+- [x] Write a directory-author tutorial that starts with an empty directory and
   produces a working `PSModule/PSModule.psd1`, generated module, and container image.
-- [x] Write a script-only repository tutorial covering automatic specification
+- [x] Write a script-only directory tutorial covering automatic specification
   initialization, the `scripts` directory boundary, inferred script commands,
   exported `.psm1` functions, refresh behavior, and runtime-mapping limitations.
 - [x] Create a complete Version 1 specification reference for root properties,
@@ -65,11 +65,11 @@ tests before their task is considered complete.
 - [x] Document Windows and Linux support and clearly identify macOS as unvalidated,
   best-effort Version 1 behavior.
 
-## 2. Reference documentation
+## 2. Reference Documentation
 
 - [x] Document each public generator command with purpose, syntax, parameters,
   outputs, side effects, examples, failure behavior, and links to related guides.
-- [x] Document every inspection metadata shape and the repository files from which
+- [x] Document every inspection metadata shape and the directory files from which
   it is produced.
 - [x] Document the supported Version 1 input subset and malformed-input behavior for
   Dockerfiles, Docker Compose, .NET, Node, README, PowerShell ASTs, GitHub Actions,
@@ -82,15 +82,15 @@ tests before their task is considered complete.
 - [x] Document the shared plugin context, stage ordering, discovery convention,
   diagnostics, trust boundary, and current internal contract without promising
   Phase 2 compatibility.
-- [x] Add a trusted repository-plugin example spanning at least one inspection stage
+- [x] Add a trusted directory-plugin example spanning at least one inspection stage
   and one generation or packaging stage.
 - [x] Document deterministic output guarantees and which artifacts are suitable for
   source control, CI artifacts, container layers, and package feeds.
 
-## 3. Contributor and release operations
+## 3. Contributor and Release Operations
 
 - [x] Add a contributor guide with environment setup, branch and PR expectations,
-  repository layout, formatting, Pester, coverage, Docker end-to-end tests, and
+  directory layout, formatting, Pester, coverage, Docker end-to-end tests, and
   local `act` usage.
 - [x] Add a security guide with supported-version and private vulnerability-reporting
   guidance.
@@ -108,7 +108,7 @@ tests before their task is considered complete.
   publishing workflow permissions, and which hosted checks cannot be reproduced
   faithfully with `act`.
 
-## 4. Documentation delivery and quality
+## 4. Documentation Delivery and Quality
 
 - [x] Define the documentation navigation and map existing Markdown files into the
   Docusaurus structure with the root README as the shared homepage source.
@@ -123,7 +123,7 @@ tests before their task is considered complete.
 - [x] Perform a clean-reader review that follows the complete user journey without
   relying on source-code knowledge, then record and resolve every ambiguity found.
 
-## Deferred documentation
+## Deferred Documentation
 
 - [ ] Public third-party plugin SDK documentation.
 - [ ] Additional runtime documentation, including Podman.

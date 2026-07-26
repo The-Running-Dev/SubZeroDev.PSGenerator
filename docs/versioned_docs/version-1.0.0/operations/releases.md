@@ -8,12 +8,12 @@ sidebar_position: 3
 
 Publishing is release-driven. Merging code into `main` does not create a package.
 
-## Version contract
+## Version Contract
 
 The module version is declared in:
 
 ```text
-src/SubZeroDev.ContainerPSGenerator.psd1
+src/SubZeroDev.PSGenerator.psd1
 ```
 
 GitHub Release tags must use:
@@ -22,16 +22,16 @@ GitHub Release tags must use:
 v<ModuleVersion>
 ```
 
-For `ModuleVersion = '0.1.0'`, the tag is:
+For `ModuleVersion = '1.0.0'`, the tag is:
 
 ```text
-v0.1.0
+v1.0.0
 ```
 
 The publishing workflow accepts three numeric version components and rejects a tag
 that does not exactly match the manifest.
 
-## Pre-release validation
+## Pre-release Validation
 
 From a clean checkout:
 
@@ -64,7 +64,7 @@ Confirm:
 - required checks pass on `main`; and
 - the version has never been published.
 
-## Documentation versions
+## Documentation Versions
 
 The site publishes one snapshot per released version plus the in-progress docs:
 
@@ -130,24 +130,24 @@ The `Publish` GitHub Actions workflow then:
 The workflow uses its short-lived `GITHUB_TOKEN` with `contents: read` and
 `packages: write`. No long-lived publishing token is stored.
 
-## Package identity and linkage
+## Package Identity and Linkage
 
 The package ID is:
 
 ```text
-SubZeroDev.ContainerPSGenerator
+SubZeroDev.PSGenerator
 ```
 
 The package contains Git repository metadata linking it to:
 
 ```text
-https://github.com/The-Running-Dev/SubZeroDev.ContainerPSGenerator.git
+https://github.com/The-Running-Dev/SubZeroDev.PSGenerator.git
 ```
 
 GitHub may initially create the package with private visibility. A package
-administrator controls visibility and repository access in package settings.
+administrator controls visibility and directory access in package settings.
 
-## Consumer verification
+## Consumer Verification
 
 After the workflow succeeds, follow
 [Installation](../getting-started/installation.md) from a clean user profile.
@@ -155,14 +155,14 @@ After the workflow succeeds, follow
 Verify:
 
 ```powershell
-Get-InstalledPSResource SubZeroDev.ContainerPSGenerator
-Import-Module SubZeroDev.ContainerPSGenerator -Force
-Get-Command -Module SubZeroDev.ContainerPSGenerator
+Get-InstalledPSResource SubZeroDev.PSGenerator
+Import-Module SubZeroDev.PSGenerator -Force
+Get-Command -Module SubZeroDev.PSGenerator
 ```
 
 Then validate and build the minimal example.
 
-## Failed publication
+## Failed Publication
 
 If validation fails, fix the source and create a new release version. NuGet package
 versions are immutable. Do not overwrite or silently reuse a published version.

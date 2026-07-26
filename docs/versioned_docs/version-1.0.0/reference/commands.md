@@ -1,23 +1,23 @@
 ---
 title: Command reference
-description: Public ContainerPSGenerator command syntax, parameters, and outputs.
+description: Public PSGenerator command syntax, parameters, and outputs.
 sidebar_position: 2
 ---
 
-# Command reference
+# Command Reference
 
 Import the generator before using these commands:
 
 ```powershell
-Import-Module ./src/SubZeroDev.ContainerPSGenerator.psd1 -Force
+Import-Module ./src/SubZeroDev.PSGenerator.psd1 -Force
 ```
 
-## Build-ContainerModule
+## Build-PSModule
 
 Runs all seven ordered stages and writes a complete module.
 
 ```powershell
-Build-ContainerModule `
+Build-PSModule `
     [-Specification <string>] `
     [-Output <string>] `
     [-PluginPath <string[]>]
@@ -25,7 +25,7 @@ Build-ContainerModule `
 
 | Parameter | Default | Description |
 | --- | --- | --- |
-| `Specification` | `PSModule/PSModule.psd1` | Repository PSD1 |
+| `Specification` | `PSModule/PSModule.psd1` | Directory PSD1 |
 | `Output` | `artifacts/PSModule` | Generated module directory |
 | `PluginPath` | Conventional sibling `Plugins` | Additional trusted plugin roots |
 
@@ -35,37 +35,37 @@ present.
 
 Returns the generated `Metadata/model.json` `FileInfo`.
 
-## Test-ContainerModuleSpecification
+## Test-PSModuleSpecification
 
 Runs built-in Version 1 validators without generating output:
 
 ```powershell
-Test-ContainerModuleSpecification `
+Test-PSModuleSpecification `
     [-Specification <string>]
 ```
 
 Returns `True` or throws a terminating error.
 
-## Get-ContainerModuleModel
+## Get-PSModuleModel
 
 Validates and normalizes a specification:
 
 ```powershell
-Get-ContainerModuleModel `
+Get-PSModuleModel `
     [-Specification <string>]
 ```
 
-Returns `SubZeroDev.ContainerPSGenerator.Model` with module identity, container
+Returns `SubZeroDev.PSGenerator.Model` with module identity, container
 image, commands, parameters, validations, completions, mappings, and original
 definition objects.
 
-## Initialize-ContainerModuleSpecification
+## Initialize-PSModuleSpecification
 
-Inspects a repository and writes an initial scaffold:
+Inspects a directory and writes an initial scaffold:
 
 ```powershell
-Initialize-ContainerModuleSpecification `
-    [-Repository <string>] `
+Initialize-PSModuleSpecification `
+    [-Directory <string>] `
     [-Specification <string>] `
     [-Force] `
     [-PassThru] `
@@ -74,54 +74,54 @@ Initialize-ContainerModuleSpecification `
 
 | Parameter | Default | Description |
 | --- | --- | --- |
-| `Repository` | `.` | Repository to inspect |
+| `Directory` | `.` | Directory to inspect |
 | `Specification` | `PSModule/PSModule.psd1` | Relative or absolute destination |
 | `Force` | False | Replace an existing specification |
 | `PassThru` | False | Return the created `FileInfo` |
 
 Without `-PassThru`, successful creation has no pipeline output.
 
-## Get-ContainerModuleInspection
+## Get-PSModuleInspection
 
 Runs inspector plugins without generating a module:
 
 ```powershell
-Get-ContainerModuleInspection `
+Get-PSModuleInspection `
     [-Specification <string>] `
     [-PluginPath <string[]>]
 ```
 
-Returns `SubZeroDev.ContainerPSGenerator.InspectionResult`:
+Returns `SubZeroDev.PSGenerator.InspectionResult`:
 
 | Property | Meaning |
 | --- | --- |
-| `RepositoryPath` | Resolved repository root |
+| `DirectoryPath` | Resolved directory |
 | `SpecificationPath` | Resolved PSD1 |
 | `Data` | Ordered inspection dictionary |
 | `PluginExecutions` | Ordered execution records |
 
-## Get-ContainerModuleDiagnostic
+## Get-PSModuleDiagnostic
 
 Formats execution records from an inspection or runs inspection directly:
 
 ```powershell
-Get-ContainerModuleDiagnostic `
+Get-PSModuleDiagnostic `
     [-Specification <string>] `
     [-PluginPath <string[]>] `
     [-Detailed]
 
-$inspection | Get-ContainerModuleDiagnostic [-Detailed]
+$inspection | Get-PSModuleDiagnostic [-Detailed]
 ```
 
 The concise output contains stage, execution order, plugin, duration, and success.
 `-Detailed` adds path, start time, and error text.
 
-## Get-ContainerModulePlugin
+## Get-PSModulePlugin
 
 Discovers plugins without executing them:
 
 ```powershell
-Get-ContainerModulePlugin `
+Get-PSModulePlugin `
     -Path <string[]> `
     [-Stage <string[]>]
 ```
@@ -140,12 +140,12 @@ Returns deterministic plugin metadata including stage, execution order, numeric
 prefix, name, filename, and resolved path. Roots must be unique and filenames must
 match `<numeric-prefix>.<name>.ps1`.
 
-## Install-ContainerModule
+## Install-PSModule
 
 Copies and validates `/PSModule` from an image:
 
 ```powershell
-Install-ContainerModule `
+Install-PSModule `
     -Image <string> `
     [-Destination <string>] `
     [-Force] `
@@ -160,7 +160,7 @@ Install-ContainerModule `
 
 Returns the installed directory as `DirectoryInfo`.
 
-## Generated commands
+## Generated Commands
 
 Generated container-backed commands:
 

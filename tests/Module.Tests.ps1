@@ -2942,7 +2942,7 @@ Describe 'Install-PSModule' {
     }
 }
 
-Describe 'Test-Directory script' {
+Describe 'Test-LocalDirectory script' {
     BeforeAll {
         $directoryPath = Join-Path $TestDrive 'Directory'
         $specificationDirectory = Join-Path $directoryPath 'PSModule'
@@ -2950,7 +2950,7 @@ Describe 'Test-Directory script' {
         Set-Content -LiteralPath (Join-Path $specificationDirectory 'PSModule.psd1') -Value @'
 @{ Commands = @(@{ Name = 'Invoke-ExternalDirectory'; Parameters = @() }) }
 '@
-        $scriptPath = Join-Path $PSScriptRoot '..' 'build' 'Test-Directory.ps1'
+        $scriptPath = Join-Path $PSScriptRoot '..' 'build' 'Test-LocalDirectory.ps1'
     }
 
     It 'returns the target directory model and restores the caller location' {
@@ -3100,7 +3100,7 @@ Export-ModuleMember -Function @('Test-DirectoryTool')
 Describe 'Maintained directory integration fixtures' {
     BeforeAll {
         $fixtureRoot = Join-Path $PSScriptRoot 'fixtures' 'directories'
-        $localDirectoryScript = Join-Path $PSScriptRoot '..' 'build' 'Test-Directory.ps1'
+        $localDirectoryScript = Join-Path $PSScriptRoot '..' 'build' 'Test-LocalDirectory.ps1'
     }
 
     It 'initializes, packages, imports, and invokes the script-only fixture' {

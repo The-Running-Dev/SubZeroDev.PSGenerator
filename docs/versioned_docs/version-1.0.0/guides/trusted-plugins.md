@@ -1,23 +1,23 @@
 ---
-title: Trusted repository plugins
-description: Add repository-specific inspection and packaging behavior with internal Version 1 plugins.
+title: Trusted local plugins
+description: Add inspection and packaging behavior for one directory with internal Version 1 plugins.
 sidebar_position: 5
 ---
 
-# Trusted repository plugins
+# Trusted Local Plugins
 
-Version 1 repository plugins are useful when a repository needs build-time behavior
+Version 1 local plugins are useful when a directory needs build-time behavior
 that does not belong in the declarative specification.
 
 :::warning
 
 Plugins are trusted, unsandboxed PowerShell and use an internal contract that may
-change before a public SDK exists. Keep them in the repository, review them like
+change before a public SDK exists. Keep them in the directory, review them like
 build code, and test them against the generator version used by CI.
 
 :::
 
-This example reads a repository policy during inspection and writes it into the
+This example reads a directory policy during inspection and writes it into the
 generated module during packaging.
 
 ## Layout
@@ -27,18 +27,18 @@ PSModule/
 ├── PSModule.psd1
 └── Plugins/
     ├── Inspectors/
-    │   └── 90.RepositoryPolicyInspector.ps1
+    │   └── 90.DirectoryPolicyInspector.ps1
     └── PackagingProviders/
-        └── 90.RepositoryPolicyPackagingProvider.ps1
-repository-policy.json
+        └── 90.DirectoryPolicyPackagingProvider.ps1
+directory-policy.json
 ```
 
-The built-in packaging provider validates the core package before the repository's
+The built-in packaging provider validates the core package before the directory's
 `90` provider adds supplemental metadata.
 
-## Repository input
+## Directory Input
 
-Create `repository-policy.json`:
+Create `directory-policy.json`:
 
 ```json
 {
@@ -49,7 +49,7 @@ Create `repository-policy.json`:
 
 ## Inspector
 
-Create `PSModule/Plugins/Inspectors/90.RepositoryPolicyInspector.ps1`:
+Create `PSModule/Plugins/Inspectors/90.DirectoryPolicyInspector.ps1`:
 
 ```powershell
 param (
@@ -57,8 +57,8 @@ param (
     [psobject] $Context
 )
 
-$policyPath = Join-Path $Context.RepositoryPath 'repository-policy.json'
-$Context.Inspection['RepositoryPolicy'] = if (
+$policyPath = Join-Path $Context.DirectoryPath 'directory-policy.json'
+$Context.Inspection['DirectoryPolicy'] = if (
     Test-Path -LiteralPath $policyPath -PathType Leaf
 ) {
     Get-Content -LiteralPath $policyPath -Raw |
@@ -69,13 +69,13 @@ else {
 }
 ```
 
-The inspector always publishes the `RepositoryPolicy` key, using `$null` when the
+The inspector always publishes the `DirectoryPolicy` key, using `$null` when the
 optional file is absent.
 
-## Packaging provider
+## Packaging Provider
 
 Create
-`PSModule/Plugins/PackagingProviders/90.RepositoryPolicyPackagingProvider.ps1`:
+`PSModule/Plugins/PackagingProviders/90.DirectoryPolicyPackagingProvider.ps1`:
 
 ```powershell
 param (
@@ -83,55 +83,55 @@ param (
     [psobject] $Context
 )
 
-if ($null -eq $Context.Inspection['RepositoryPolicy']) {
+if ($null -eq $Context.Inspection['DirectoryPolicy']) {
     return
 }
 
 $metadataDirectory = Join-Path $Context.OutputPath 'Metadata'
-$policyOutput = Join-Path $metadataDirectory 'repository-policy.json'
+$policyOutput = Join-Path $metadataDirectory 'directory-policy.json'
 $null = New-Item -Path $metadataDirectory -ItemType Directory -Force
 
-$Context.Inspection['RepositoryPolicy'] |
+$Context.Inspection['DirectoryPolicy'] |
     ConvertTo-Json -Depth 10 |
     Set-Content -LiteralPath $policyOutput -Encoding utf8NoBOM -NoNewline
 
-$Context.Artifacts['RepositoryPolicy'] = Get-Item -LiteralPath $policyOutput
+$Context.Artifacts['DirectoryPolicy'] = Get-Item -LiteralPath $policyOutput
 ```
 
 The provider writes only under the validated output directory and publishes the
 result through `Artifacts`.
 
-## Inspect before building
+## Inspect Before Building
 
 ```powershell
-$inspection = Get-ContainerModuleInspection `
+$inspection = Get-PSModuleInspection `
     -Specification ./PSModule/PSModule.psd1
 
-$inspection.Data.RepositoryPolicy
-$inspection | Get-ContainerModuleDiagnostic -Detailed
+$inspection.Data.DirectoryPolicy
+$inspection | Get-PSModuleDiagnostic -Detailed
 ```
 
-## Generate and verify
+## Generate and Verify
 
 ```powershell
-Build-ContainerModule `
+Build-PSModule `
     -Specification ./PSModule/PSModule.psd1 `
     -Output ./artifacts/PSModule
 
-Get-Content ./artifacts/PSModule/Metadata/repository-policy.json
+Get-Content ./artifacts/PSModule/Metadata/directory-policy.json
 ```
 
 Because the plugins are beside the specification, no explicit `-PluginPath` is
 needed.
 
-## Testing guidance
+## Testing Guidance
 
 Test:
 
 - the file-present case;
 - the file-absent case;
 - malformed JSON behavior;
-- deterministic JSON property and array ordering required by the repository;
+- deterministic JSON property and array ordering required by the directory;
 - plugin discovery order;
 - the generated relative path; and
 - detailed diagnostics on failure.

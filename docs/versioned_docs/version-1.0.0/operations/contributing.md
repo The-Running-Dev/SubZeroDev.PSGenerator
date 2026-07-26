@@ -6,14 +6,14 @@ sidebar_position: 2
 
 # Contributing
 
-## Before starting
+## Before Starting
 
 1. Read the [Architecture overview](../architecture/overview.md).
-2. Check the engineering roadmap in `TODO.md` at the repository root.
+2. Check the engineering roadmap in `TODO.md` at the directory.
 3. Check documentation work in [`docs/docs/TODO.md`](../TODO.md).
 4. Confirm an open pull request does not already address the same change.
 
-## Change scope
+## Change Scope
 
 Keep pull requests reviewable:
 
@@ -21,11 +21,11 @@ Keep pull requests reviewable:
 - tests beside behavior changes;
 - documentation beside public contract changes;
 - no unrelated formatting churn; and
-- no generated artifacts unless the repository explicitly tracks them.
+- no generated artifacts unless the directory explicitly tracks them.
 
 Use a `feature/` branch for planned work.
 
-## PowerShell style
+## PowerShell Style
 
 - Target PowerShell 7.4.
 - Use approved verbs and `Verb-Noun` public names.
@@ -34,15 +34,15 @@ Use a `feature/` branch for planned work.
 - Preserve deterministic ordinal ordering.
 - Emit UTF-8 without BOM for generated text.
 - Never embed local absolute paths in generated source.
-- Keep `Build-ContainerModule` orchestration-only.
+- Keep `Build-PSModule` orchestration-only.
 
-Run these from the repository root:
+Run these from the directory:
 
 ```powershell
 ./build/Invoke-Quality.ps1 -InstallDependencies
 ```
 
-## Documentation checks
+## Documentation Checks
 
 Changes to any Markdown file should pass the link and terminology gate:
 
@@ -68,11 +68,11 @@ container installation should also run the relevant scripts:
 
 Run the Docker end-to-end suite when container behavior changes.
 
-## Inspector changes
+## Inspector Changes
 
 For an inspector:
 
-- define the exact repository input boundary;
+- define the exact directory input boundary;
 - sort inputs and outputs deterministically;
 - respect common path exclusions;
 - preserve relative `/`-separated paths;
@@ -83,13 +83,13 @@ For an inspector:
 Do not imply full YAML, JSON Schema, OpenAPI, Dockerfile, or project-system support
 when the parser intentionally implements a subset.
 
-## Plugin changes
+## Plugin Changes
 
-The plugin context is internal in Version 1. Built-in and repository plugin changes
+The plugin context is internal in Version 1. Built-in and local plugin changes
 must preserve stage boundaries and provide actionable execution diagnostics. Do not
 present a new context field as stable public API.
 
-## Documentation changes
+## Documentation Changes
 
 Documentation pages use:
 
@@ -103,7 +103,7 @@ Documentation pages use:
 
 Each category contains `_category_.json`.
 
-## Pull request checklist
+## Pull Request Checklist
 
 - [ ] Scope is focused.
 - [ ] New behavior has tests.

@@ -4,7 +4,7 @@ description: Add native PowerShell ergonomics to generated commands.
 sidebar_position: 2
 ---
 
-# Validation, completion, and help
+# Validation, Completion, and Help
 
 The specification generates native PowerShell attributes and help. Validation runs
 before Docker, and help works without the container runtime.
@@ -62,7 +62,7 @@ Multiple validations are rendered in declaration order:
 }
 ```
 
-## Static completion
+## Static Completion
 
 Completion suggests values without restricting the caller:
 
@@ -82,7 +82,7 @@ order and rendered with PowerShell's native `ArgumentCompletions` attribute.
 Use `ValidateSet` when other values must be rejected. Use static completion when the
 list is helpful but not exhaustive.
 
-## Command help
+## Command Help
 
 Commands may define:
 
@@ -96,14 +96,14 @@ Commands may define:
 ```powershell
 @{
     Name        = 'Invoke-BuildAgent'
-    Synopsis    = 'Runs a repository build.'
+    Synopsis    = 'Runs a directory build.'
     Description = 'Runs the selected target inside the build-agent image.'
     Notes       = 'Docker must be available unless using -WhatIf.'
 
     Examples = @(
         @{
-            Code = 'Invoke-BuildAgent -Repository . -Task Test'
-            Description = 'Runs tests for the current repository.'
+            Code = 'Invoke-BuildAgent -Directory . -Task Test'
+            Description = 'Runs tests for the current directory.'
         }
     )
 }
@@ -114,28 +114,28 @@ When `Synopsis` is omitted, `Description` supplies compatibility synopsis text.
 
 Each example requires non-empty `Code` and `Description` strings.
 
-## Parameter help
+## Parameter Help
 
 ```powershell
 @{
-    Name        = 'Repository'
+    Name        = 'Directory'
     Type        = 'DirectoryInfo'
     Mandatory   = $true
-    Description = 'Repository directory mounted at /repository.'
+    Description = 'Directory directory mounted at /directory.'
 }
 ```
 
 Generated help includes the type, mandatory state, description, validation, and
 accepted pipeline behavior from the generated declaration.
 
-## Generated outputs
+## Generated Outputs
 
 The same normalized help model produces:
 
 - comment-based help returned by `Get-Help`; and
 - deterministic Markdown under `Documentation/<CommandName>.md`.
 
-Check both during repository review:
+Check both during directory review:
 
 ```powershell
 Get-Help Invoke-BuildAgent -Full

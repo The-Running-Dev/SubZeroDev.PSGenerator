@@ -1,19 +1,19 @@
 ---
 title: Architecture overview
-description: How repository inputs become a self-contained PowerShell module.
+description: How directory inputs become a self-contained PowerShell module.
 sidebar_position: 1
 ---
 
-# Architecture overview
+# Architecture Overview
 
-ContainerPSGenerator separates build-time analysis from generated-module runtime
+PSGenerator separates build-time analysis from generated-module runtime
 execution.
 
 ```text
-Repository inputs
+Directory inputs
       │
       ▼
-Build-ContainerModule
+Build-PSModule
       │
       ├── Inspectors
       ├── Validators
@@ -30,14 +30,14 @@ Self-contained PowerShell module
       └── embed at /PSModule
 ```
 
-## Repository is the source of truth
+## The Directory Is the Source of Truth
 
-The authored PSD1 defines the public command surface. Inspectors add repository
+The authored PSD1 defines the public command surface. Inspectors add directory
 facts, but Version 1 does not guess container mappings from file names or paths.
 
 Generated output is reproducible build output, not the authoritative definition.
 
-## Build context
+## Build Context
 
 Every stage receives one mutable context:
 
@@ -45,23 +45,23 @@ Every stage receives one mutable context:
 | --- | --- |
 | `SpecificationPath` | Resolved source PSD1 |
 | `OutputPath` | Resolved generation directory |
-| `RepositoryPath` | Repository root inferred from specification location |
+| `DirectoryPath` | Inspected directory, inferred from the specification location |
 | `Specification` | Imported data-file dictionary |
-| `Inspection` | Ordered repository metadata |
+| `Inspection` | Ordered directory metadata |
 | `Model` | Validated normalized model |
 | `Artifacts` | Published generated files and package |
 | `RenderRequests` | Source payloads awaiting rendering |
 | `PluginExecutions` | Ordered timing and failure records |
 
-When the specification is directly beneath `PSModule`, the repository root is its
+When the specification is directly beneath `PSModule`, the inspected directory is its
 parent. For an alternate specification location, that file's directory is the
 inspection root.
 
-## Stage responsibilities
+## Stage Responsibilities
 
 ### Inspectors
 
-Read repository artifacts and add typed, ordered metadata to `Inspection`. They do
+Read directory artifacts and add typed, ordered metadata to `Inspection`. They do
 not create build output.
 
 ### Validators
@@ -69,32 +69,32 @@ not create build output.
 Reject invalid identity, command, parameter, help, object ID, validation, completion,
 mapping, and runtime definitions.
 
-### Object model processors
+### Object Model Processors
 
 Create the normalized `Model`. The orchestrator fails immediately if this stage does
 not produce one.
 
-### Runtime adapters
+### Runtime Adapters
 
 Select and attach runtime behavior. Version 1 uses Docker for container-backed
 commands and preserves packaged local execution for inferred PowerShell sources.
 
-### Code generators
+### Code Generators
 
 Reset the validated output destination and generate in-memory source and metadata
 requests. Output reset happens only after validation and model creation.
 
-### Template renderers
+### Template Renderers
 
 Write metadata, command source, Markdown references, loader, and manifest. The
 orchestrator requires the metadata artifact before packaging begins.
 
-### Packaging providers
+### Packaging Providers
 
 Verify required files, command pages, command source, artifact paths, and manifest
 validity, then publish the completed package artifact.
 
-## Deterministic boundaries
+## Deterministic Boundaries
 
 Determinism comes from:
 
@@ -104,12 +104,12 @@ Determinism comes from:
 - UTF-8 output conventions; and
 - a full output reset at the generation boundary.
 
-Plugin behavior and changing external repository inputs can affect output, so
+Plugin behavior and changing external directory inputs can affect output, so
 trusted plugins must impose their own deterministic ordering.
 
-## Runtime behavior
+## Runtime Behavior
 
-Generated modules contain no dependency on ContainerPSGenerator.
+Generated modules contain no dependency on PSGenerator.
 
 Container-backed commands:
 
@@ -123,9 +123,9 @@ Container-backed commands:
 Inferred PowerShell commands resolve and execute packaged local source beneath the
 module's `Scripts` directory.
 
-## Installation architecture
+## Installation Architecture
 
-`Install-ContainerModule` uses `docker create`, not `docker run`, so application
+`Install-PSModule` uses `docker create`, not `docker run`, so application
 entry points are not started. It copies `/PSModule` into a staging directory,
 validates the manifest, replaces the destination only when safe, and always attempts
 to remove the temporary container.

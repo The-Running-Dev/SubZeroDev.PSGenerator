@@ -1,20 +1,20 @@
 ---
-title: ContainerPSGenerator
+title: PSGenerator
 description: Generate native PowerShell modules for containerized applications.
 sidebar_position: 1
 ---
 
-# SubZeroDev.ContainerPSGenerator
+# PSGenerator
 
-[![Test](https://github.com/The-Running-Dev/SubZeroDev.ContainerPSGenerator/actions/workflows/test.yml/badge.svg)](https://github.com/The-Running-Dev/SubZeroDev.ContainerPSGenerator/actions/workflows/test.yml)
-[![Publish](https://github.com/The-Running-Dev/SubZeroDev.ContainerPSGenerator/actions/workflows/publish.yml/badge.svg)](https://github.com/The-Running-Dev/SubZeroDev.ContainerPSGenerator/actions/workflows/publish.yml)
-[![Docs build](https://github.com/The-Running-Dev/SubZeroDev.ContainerPSGenerator/actions/workflows/docs-build.yml/badge.svg)](https://github.com/The-Running-Dev/SubZeroDev.ContainerPSGenerator/actions/workflows/docs-build.yml)
+[![Test](https://github.com/The-Running-Dev/SubZeroDev.PSGenerator/actions/workflows/test.yml/badge.svg)](https://github.com/The-Running-Dev/SubZeroDev.PSGenerator/actions/workflows/test.yml)
+[![Publish](https://github.com/The-Running-Dev/SubZeroDev.PSGenerator/actions/workflows/publish.yml/badge.svg)](https://github.com/The-Running-Dev/SubZeroDev.PSGenerator/actions/workflows/publish.yml)
+[![Docs build](https://github.com/The-Running-Dev/SubZeroDev.PSGenerator/actions/workflows/docs-build.yml/badge.svg)](https://github.com/The-Running-Dev/SubZeroDev.PSGenerator/actions/workflows/docs-build.yml)
 [![Documentation](https://img.shields.io/badge/docs-psgenerator.subzerodev.com-blue)](/)
 
-SubZeroDev.ContainerPSGenerator is a PowerShell 7.4+ build tool that generates
-repository-specific PowerShell modules for containerized applications.
+SubZeroDev.PSGenerator is a PowerShell 7.4+ build tool that generates
+PowerShell modules for containerized applications.
 
-Repositories define native commands, parameters, validation, completion, help, and
+Directories define native commands, parameters, validation, completion, help, and
 Docker runtime mappings in `PSModule/PSModule.psd1`. The generator produces a
 self-contained module that can be embedded at `/PSModule` in an image and installed
 locally.
@@ -22,20 +22,20 @@ locally.
 > **Status:** The Version 1 MVP workflow is implemented. Documentation, release
 > policy, inspector hardening, and the first published package remain in progress.
 
-## Quick start
+## Quick Start
 
 ```powershell
-Import-Module ./src/SubZeroDev.ContainerPSGenerator.psd1 -Force
+Import-Module ./src/SubZeroDev.PSGenerator.psd1 -Force
 
-Test-ContainerModuleSpecification `
+Test-PSModuleSpecification `
     -Specification ./examples/Minimal/PSModule/PSModule.psd1
 
-Build-ContainerModule `
+Build-PSModule `
     -Specification ./examples/Minimal/PSModule/PSModule.psd1 `
     -Output ./artifacts/PSModule
 
 Import-Module ./artifacts/PSModule/ExampleContainer.psd1 -Force
-Invoke-Example -Repository . -Message hello -WhatIf
+Invoke-Example -Directory . -Message hello -WhatIf
 ```
 
 Run the complete Docker lifecycle:
@@ -49,13 +49,13 @@ Run the complete Docker lifecycle:
 The complete manual is published at
 [psgenerator.subzerodev.com](/).
 
-### Get started
+### Get Started
 
 - [Installation](/getting-started/installation)
 - [Build your first module](/getting-started/first-module)
-- [Infer commands from a script repository](/getting-started/script-repositories)
+- [Infer commands from a script directory](/getting-started/script-directories)
 
-### Build and package modules
+### Build and Package Modules
 
 - [Runtime mappings](/guides/runtime-mappings)
 - [Validation, completion, and help](/guides/validation-completion-help)
@@ -66,7 +66,7 @@ The complete manual is published at
 
 - [Specification](/reference/specification)
 - [Commands](/reference/commands)
-- [Repository inspection](/reference/inspection)
+- [Directory inspection](/reference/inspection)
 - [Generated output](/reference/generated-output)
 
 ### Project
@@ -79,18 +79,18 @@ The complete manual is published at
 - [Troubleshooting](/operations/troubleshooting)
 
 See the
-[engineering roadmap](https://github.com/The-Running-Dev/SubZeroDev.ContainerPSGenerator/blob/main/TODO.md)
+[engineering roadmap](https://github.com/The-Running-Dev/SubZeroDev.PSGenerator/blob/main/TODO.md)
 and
 [documentation roadmap](/TODO)
 for remaining work.
 
-## Core workflow
+## Core Workflow
 
 ```text
-Repository specification
+Specification
         │
         ▼
-Build-ContainerModule
+Build-PSModule
         │
         ▼
 Generated PowerShell module
@@ -99,7 +99,7 @@ Generated PowerShell module
         └── copy to /PSModule in the image
                     │
                     ▼
-             Install-ContainerModule
+             Install-PSModule
 ```
 
 Generated commands support native PowerShell types, `ValidateSet`,
@@ -107,10 +107,10 @@ Generated commands support native PowerShell types, `ValidateSet`,
 references, `-WhatIf`, verbose tracing, and ordered Docker argument rendering.
 
 Inference can expose standalone scripts and explicitly exported module functions
-beneath a repository's `scripts` directory without turning unrelated PowerShell
+beneath a directory's `scripts` directory without turning unrelated PowerShell
 files into commands.
 
-## Development checks
+## Development Checks
 
 ```powershell
 ./build/Invoke-Quality.ps1 -InstallDependencies
@@ -127,15 +127,15 @@ With Docker and `act` installed:
 Hosted CI validates PowerShell 7.4 on Windows and Linux, Pester tests, coverage,
 static analysis, NuGet packaging, and a real container end-to-end workflow.
 
-## Platform and trust boundary
+## Platform and Trust Boundary
 
 PowerShell 7.4 is the minimum runtime. Windows and Linux are supported and tested.
 macOS is best-effort for Version 1.
 
-Repository plugins are trusted, unsandboxed PowerShell code. Review them before
+Local plugins are trusted, unsandboxed PowerShell code. Review them before
 running the generator.
 
-## Package publication
+## Package Publication
 
 The GitHub Packages workflow runs only when a GitHub Release is published with a tag
 matching `v<ModuleVersion>`. Merging the workflow does not itself create a package.
@@ -145,4 +145,4 @@ See
 ## License
 
 Released under the
-[MIT License](https://github.com/The-Running-Dev/SubZeroDev.ContainerPSGenerator/blob/main/LICENSE).
+[MIT License](https://github.com/The-Running-Dev/SubZeroDev.PSGenerator/blob/main/LICENSE).

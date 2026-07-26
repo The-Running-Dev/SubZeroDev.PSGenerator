@@ -4,7 +4,7 @@ description: Map native PowerShell parameters to Docker runtime arguments.
 sidebar_position: 1
 ---
 
-# Runtime mappings
+# Runtime Mappings
 
 A mapping connects one generated PowerShell parameter to one or more Docker runtime
 arguments. Mappings are emitted only when the caller binds the parameter.
@@ -79,20 +79,20 @@ docker run --rm -e CONFIGURATION=Release example/build-agent
 A parameter can map to both environment and command arguments when the container
 interface requires both.
 
-## Bind mount
+## Bind Mount
 
 `Mount` resolves the caller-provided host path to an absolute path. `Target` is the
 container path. `Access` is `ReadOnly` or `ReadWrite`:
 
 ```powershell
 @{
-    Name = 'Repository'
+    Name = 'Directory'
     Type = 'DirectoryInfo'
     Mandatory = $true
     Mappings = @(
         @{
             Type   = 'Mount'
-            Target = '/repository'
+            Target = '/directory'
             Access = 'ReadOnly'
         }
     )
@@ -100,13 +100,13 @@ container path. `Access` is `ReadOnly` or `ReadWrite`:
 ```
 
 ```text
---mount type=bind,source=<absolute-host-path>,target=/repository,readonly
+--mount type=bind,source=<absolute-host-path>,target=/directory,readonly
 ```
 
 Use `FileInfo`, `DirectoryInfo`, or `string` when the bound value can be resolved as
 a host path.
 
-## Named volume
+## Named Volume
 
 The parameter value is the Docker volume name. `Target` must be an absolute
 container path without commas:
@@ -149,7 +149,7 @@ optional and defaults to `tcp`:
 
 Host ports outside 1 through 65535 are rejected at invocation time.
 
-## Working directory
+## Working Directory
 
 A command may contain at most one `WorkingDirectory` mapping:
 
@@ -165,7 +165,7 @@ A command may contain at most one `WorkingDirectory` mapping:
 
 Empty bound values are rejected.
 
-## Generic runtime option
+## Generic Runtime Option
 
 `Name` must be a lowercase long Docker option such as `--network`:
 
@@ -233,7 +233,7 @@ Runtime values accept:
 
 GPU execution requires a compatible host and container runtime configuration.
 
-## Resource limits
+## Resource Limits
 
 Memory uses a string:
 
@@ -295,7 +295,7 @@ An optional `Target` overrides the absolute container path:
 Version 1 implements secrets as read-only bind mounts because standalone
 `docker run` does not use the Swarm secret flag.
 
-## Multiple mappings
+## Multiple Mappings
 
 A parameter can define multiple mappings. They run in declaration order within the
 runtime model:
