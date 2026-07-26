@@ -1,8 +1,0 @@
-{
-  "label": "Guides",
-  "position": 3,
-  "link": {
-    "type": "generated-index",
-    "description": "Task-oriented guides for authoring, packaging, and testing generated modules."
-  }
-}

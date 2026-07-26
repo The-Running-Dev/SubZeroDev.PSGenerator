@@ -3,7 +3,7 @@
 This roadmap is ordered by dependency and release risk. `Specifications.md` defines
 the Version 1 behavior contract and remaining boundary; `README.md` describes what
 is implemented today. User, contributor, and release documentation is tracked
-separately in [`docs/docs/TODO.md`](docs/docs/TODO.md).
+separately in [`docs/docs/developing/TODO.md`](docs/docs/developing/TODO.md).
 
 Completed implementation history is summarized below instead of occupying the active
 work queue.
@@ -45,7 +45,7 @@ work queue.
 - [x] Raise generator and generated-module manifests to PowerShell 7.4 and validate
   that baseline explicitly on Windows and Linux.
 - [x] Complete the release-blocking documentation journey in
-  [`docs/docs/TODO.md`](docs/docs/TODO.md).
+  [`docs/docs/developing/TODO.md`](docs/docs/developing/TODO.md).
 
 ## 3. Docker-BuildAgent compatibility
 
@@ -191,7 +191,7 @@ Complete these in order so every inspector follows the same policy:
 ## 6. Release preparation
 
 - [x] Complete contributor, policy, and release documentation in
-  [`docs/docs/TODO.md`](docs/docs/TODO.md).
+  [`docs/docs/developing/TODO.md`](docs/docs/developing/TODO.md).
 - [x] Finalize module identity, versioning, tags, release notes, and distribution
   approach. The module is `SubZeroDev.PSGenerator` at `1.0.0`, tagged
   `v<ModuleVersion>`, distributed through GitHub Packages, with the release-note
