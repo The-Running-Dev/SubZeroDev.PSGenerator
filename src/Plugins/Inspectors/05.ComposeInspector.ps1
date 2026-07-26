@@ -19,7 +19,7 @@ function ConvertFrom-ComposeScalar {
 
 $composeNames = @('compose.yaml', 'compose.yml', 'docker-compose.yaml', 'docker-compose.yml')
 $composeItems = @(
-    Get-ChildItem -LiteralPath $Context.RepositoryPath -File |
+    Get-ChildItem -LiteralPath $Context.DirectoryPath -File |
         Where-Object { $_.Name -in $composeNames }
 )
 [Array]::Sort(

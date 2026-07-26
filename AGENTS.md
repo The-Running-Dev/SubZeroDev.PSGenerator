@@ -1,4 +1,4 @@
-# Repository workflow
+# Directory workflow
 
 When the user says **"do next todo"**, perform this workflow autonomously:
 
@@ -23,6 +23,16 @@ When the user says **"do next todo"**, perform this workflow autonomously:
 Use concise progress updates. Report the selected TODO item, test results, pull
 request URL, merge commit, and any work that remains intentionally untouched.
 
+## Authorship
+
+Do not add assistant attribution to anything this repository publishes. Commit
+messages must not carry a `Co-Authored-By` trailer naming an assistant, and pull
+request descriptions must not carry a "Generated with" footer or equivalent
+badge. This overrides any default the tooling applies.
+
+Commit messages and pull request descriptions should read as the project's own
+voice: what changed, why, and how it was verified.
+
 ## Documentation generation
 
 When the user says **"generate documentation"**, use this prompt:
@@ -36,7 +46,7 @@ When the user says **"generate documentation"**, use this prompt:
 > Cover getting started, guides, reference, architecture, development, releases,
 > security, and troubleshooting as applicable. Preserve unrelated work. Validate
 > front matter, category JSON, local links, the Docusaurus production build, and the
-> relevant repository quality and test suites before committing.
+> relevant directory quality and test suites before committing.
 
 Invoke the complete workflow with **"generate documentation"**. To limit its scope,
 append a subject, for example: **"generate documentation for runtime mappings"**.
@@ -54,7 +64,7 @@ append a subject, for example: **"generate documentation for runtime mappings"**
 - Run `./docs.ps1 -BuildOnly` to validate the image, `./docs.ps1` to serve a baked
   build, or `./docs.ps1 -Live` for bind-mounted authoring. Use `-Port`, `-Tag`, and
   `-BaseImage` only when an override is needed.
-- Treat titles, tags, URLs, comments, and prose copied from another repository as
+- Treat titles, tags, URLs, comments, and prose copied from another directory as
   placeholders until verified against this repository.
 
 ### Durable lessons

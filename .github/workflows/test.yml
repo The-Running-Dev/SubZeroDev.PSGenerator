@@ -104,9 +104,9 @@ jobs:
       - name: Run tests
         shell: pwsh
         run: |
-          $packageRoot = './artifacts/module/SubZeroDev.ContainerPSGenerator'
+          $packageRoot = './artifacts/module/SubZeroDev.PSGenerator'
           $packagedManifest = ./build/New-GeneratorModulePackage.ps1 -Output $packageRoot
-          $env:CONTAINERPSGENERATOR_MODULE_PATH = $packagedManifest.FullName
+          $env:PSGENERATOR_MODULE_PATH = $packagedManifest.FullName
 
           $reportDirectory = './artifacts/test-results/${{ matrix.os }}'
           New-Item -ItemType Directory -Path $reportDirectory -Force | Out-Null

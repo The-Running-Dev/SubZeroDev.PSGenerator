@@ -4,7 +4,7 @@ This example exercises the complete local lifecycle: generate a module, build an
 image containing it at `/PSModule`, install and import it, invoke its generated
 command, read its help, and clean up.
 
-Docker must be running and PowerShell 7 must be available. From the repository root,
+Docker must be running and PowerShell 7 must be available. From the directory,
 run:
 
 ```powershell
@@ -24,18 +24,18 @@ standard runners do not expose that hardware.
 ## Run each step manually
 
 ```powershell
-Import-Module ./src/SubZeroDev.ContainerPSGenerator.psd1 -Force
+Import-Module ./src/SubZeroDev.PSGenerator.psd1 -Force
 
-Build-ContainerModule `
+Build-PSModule `
     -Specification ./examples/Minimal/PSModule/PSModule.psd1 `
     -Output ./examples/Minimal/artifacts/PSModule
 
 docker build `
-    --tag subzerodev-containerpsgenerator-minimal:local `
+    --tag subzerodev-psgenerator-minimal:local `
     ./examples/Minimal
 
-Install-ContainerModule `
-    subzerodev-containerpsgenerator-minimal:local `
+Install-PSModule `
+    subzerodev-psgenerator-minimal:local `
     -Destination ./examples/Minimal/artifacts/Installed/ExampleContainer
 
 Import-Module `
@@ -43,7 +43,7 @@ Import-Module `
     -Force
 
 Invoke-Example `
-    -Repository ./examples/Minimal `
+    -Directory ./examples/Minimal `
     -Message 'hello-from-minimal'
 
 Get-Help Invoke-Example -Full
@@ -55,6 +55,6 @@ Clean up the imported module, image, and generated files:
 
 ```powershell
 Remove-Module ExampleContainer -Force
-docker image rm --force subzerodev-containerpsgenerator-minimal:local
+docker image rm --force subzerodev-psgenerator-minimal:local
 Remove-Item ./examples/Minimal/artifacts -Recurse -Force
 ```

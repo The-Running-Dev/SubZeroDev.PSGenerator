@@ -37,10 +37,10 @@ function Get-JsonPropertyValue {
 }
 
 $manifestItems = @(
-    Get-ChildItem -LiteralPath $Context.RepositoryPath -Recurse -File |
+    Get-ChildItem -LiteralPath $Context.DirectoryPath -Recurse -File |
         Where-Object {
             ($_.Extension -eq '.csproj' -or $_.Name -eq 'package.json') -and
-            (Test-ContainerModuleInspectionPath -Context $Context -Path $_.FullName)
+            (Test-PSModuleInspectionPath -Context $Context -Path $_.FullName)
         }
 )
 [Array]::Sort(
@@ -53,13 +53,13 @@ $manifestItems = @(
 
 $dotNetProjects = [System.Collections.Generic.List[object]]::new()
 $nodeProjects = [System.Collections.Generic.List[object]]::new()
-$repositoryPrefix = $Context.RepositoryPath.TrimEnd(
+$directoryPrefix = $Context.DirectoryPath.TrimEnd(
     [IO.Path]::DirectorySeparatorChar,
     [IO.Path]::AltDirectorySeparatorChar
 ) + [IO.Path]::DirectorySeparatorChar
 
 foreach ($manifestItem in $manifestItems) {
-    $relativePath = [System.IO.Path]::GetRelativePath($Context.RepositoryPath, $manifestItem.FullName).Replace('\', '/')
+    $relativePath = [System.IO.Path]::GetRelativePath($Context.DirectoryPath, $manifestItem.FullName).Replace('\', '/')
 
     if ($manifestItem.Extension -eq '.csproj') {
         [xml] $document = Get-Content -LiteralPath $manifestItem.FullName -Raw
@@ -96,16 +96,16 @@ foreach ($manifestItem in $manifestItems) {
                     continue
                 }
                 if (-not $resolvedPath.StartsWith(
-                    $repositoryPrefix,
+                    $directoryPrefix,
                     [StringComparison]::OrdinalIgnoreCase
                 )) {
                     continue
                 }
-                if (-not (Test-ContainerModuleInspectionPath -Context $Context -Path $resolvedPath)) {
+                if (-not (Test-PSModuleInspectionPath -Context $Context -Path $resolvedPath)) {
                     continue
                 }
                 [ordered]@{
-                    Path    = [IO.Path]::GetRelativePath($Context.RepositoryPath, $resolvedPath).Replace('\', '/')
+                    Path    = [IO.Path]::GetRelativePath($Context.DirectoryPath, $resolvedPath).Replace('\', '/')
                     Aliases = if ($reference.GetAttribute('Aliases')) {
                         @($reference.GetAttribute('Aliases') -split '[,;]' |
                             ForEach-Object { $_.Trim() } | Where-Object { $_ })

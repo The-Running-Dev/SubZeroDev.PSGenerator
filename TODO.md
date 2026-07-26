@@ -3,7 +3,7 @@
 This roadmap is ordered by dependency and release risk. `Specifications.md` defines
 the Version 1 behavior contract and remaining boundary; `README.md` describes what
 is implemented today. User, contributor, and release documentation is tracked
-separately in [`docs/docs/TODO.md`](docs/docs/TODO.md).
+separately in [`docs/docs/developing/TODO.md`](docs/docs/developing/TODO.md).
 
 Completed implementation history is summarized below instead of occupying the active
 work queue.
@@ -13,24 +13,24 @@ work queue.
 - PowerShell 7.4 is the minimum supported version.
 - Windows and Linux are supported and validated in CI. macOS is best-effort for
   Version 1 and is not a required CI platform.
-- Malformed optional repository artifacts should emit actionable warnings and allow
+- Malformed optional directory artifacts should emit actionable warnings and allow
   inspection to continue. Explicitly authoritative inputs, such as files named
   `*.schema.json`, should fail when malformed.
 - Version 1 will document and test the supported subset of Compose, GitHub Actions,
   and OpenAPI YAML instead of adding a shared YAML dependency.
-- Runtime mappings that depend on repository-specific invocation intent must be
+- Runtime mappings that depend on directory-specific invocation intent must be
   authored explicitly. Inference must not guess intent from names or paths.
 
 ## 1. MVP blockers
 
-- [x] Make `Build-ContainerModule` orchestration-only and keep it as the single public
+- [x] Make `Build-PSModule` orchestration-only and keep it as the single public
   build command.
 - [x] Add deterministic package regression tests that prove repeated builds produce
   identical files without changing current behavior.
 - [x] Build and test a packaged copy of the generator module from a clean location
   instead of testing only the development module under `src/`.
 - [x] Add maintained integration fixtures for representative script-only and
-  build-agent repositories without embedding external source checkouts.
+  build-agent directories without embedding external source checkouts.
 - [x] Expand `examples/Minimal` into a buildable, runnable container example covering
   generate, build, install, import, invoke, help, and cleanup.
 - [x] Verify generated Markdown documentation in the packaged module end-to-end.
@@ -45,13 +45,13 @@ work queue.
 - [x] Raise generator and generated-module manifests to PowerShell 7.4 and validate
   that baseline explicitly on Windows and Linux.
 - [x] Complete the release-blocking documentation journey in
-  [`docs/docs/TODO.md`](docs/docs/TODO.md).
+  [`docs/docs/developing/TODO.md`](docs/docs/developing/TODO.md).
 
 ## 3. Docker-BuildAgent compatibility
 
-This work is based on the repository structure and generation flow in
+This work is based on the directory structure and generation flow in
 Docker-BuildAgent. It must remain convention-based and reusable: do not hardcode
-that repository's name, paths, build types, image, or commands.
+that directory's name, paths, build types, image, or commands.
 
 Observed source contracts:
 
@@ -97,7 +97,7 @@ Implement the compatibility path in this order:
   parameter classes. Preserve source path and evidence kind on every inferred value.
 - [x] Expand .NET project inspection with effective project name, executable and
   test-project classification, NUKE/MSBuild properties, and normalized
-  `ProjectReference` edges. Resolve references only within the inspected repository
+  `ProjectReference` edges. Resolve references only within the inspected directory
   and keep test projects out of command inference.
 - [x] Replace the NUKE `parameters.json` name scan with a parser for
   `.nuke/build.schema.json` definitions and `allOf` properties. Capture executable
@@ -105,14 +105,14 @@ Implement the compatibility path in this order:
   default, and provenance; treat `parameters.json` only as optional configured
   values and ignore metadata keys such as `$schema`.
 - [ ] Add a focused C# NUKE source inspector for the syntax used by SDK-style NUKE
-  projects. Port the proven, repository-independent behavior of
+  projects. Port the proven, directory-independent behavior of
   `Update-ModuleParameters.ps1` into an internal parser: parameter-class discovery,
   `Params` name normalization, public-property extraction, XML summaries,
   nullable/array/generic types, recursive inheritance, deterministic merging, and
   cycle detection. Extend that baseline with build entry classes, generic
   `Base<TParams, ...>` relationships, `[Parameter]`, `[Secret]`, and initial values.
   Discover source roots from inspected projects instead of hardcoding
-  `Forge/Common/Parameters`, and never execute a repository-provided extraction
+  `Forge/Common/Parameters`, and never execute a directory-provided extraction
   script during inspection.
 - [ ] When an existing generated PowerShell-module `parameters.json` is present,
   inspect its build configurations and parameter definitions as derived evidence.
@@ -141,14 +141,14 @@ Implement the compatibility path in this order:
   weaker evidence silently.
 - [ ] Add an explicit specification/model contract for ordered static container
   arguments before mapped parameter arguments. Render and validate commands such as
-  `build docker --image-tag value` without embedding repository-specific strings in
+  `build docker --image-tag value` without embedding directory-specific strings in
   templates or generators.
 - [ ] Extend specification initialization to materialize high-confidence normalized
   build-command candidates and report lower-confidence candidates for review. Infer
   as much as the combined evidence proves: command names, static command prefixes,
   parameters, descriptions, defaults, validation/completion data, secret handling,
   kebab-case `Argument` mappings, and repeated collection arguments. Preserve
-  ambiguous defaults, Boolean semantics, and repository-specific runtime mappings
+  ambiguous defaults, Boolean semantics, and runtime mappings specific to the inspected directory
   as explicit review items rather than inventing behavior.
 - [ ] Exercise the complete fixture flow: initialize, inspect, generate, import,
   list commands, render help, preview with `-WhatIf`, and assert deterministic
@@ -171,7 +171,7 @@ Complete these in order so every inspector follows the same policy:
   artifacts, but fail for explicitly authoritative malformed inputs.
 - [ ] Confirm recursive inspectors never traverse generated output, dependency,
   cache, or source-control directories.
-- [ ] Add fixtures for multi-project repositories, alternate casing, spaces in paths,
+- [ ] Add fixtures for multi-project directories, alternate casing, spaces in paths,
   and symbolic links.
 - [ ] Apply focused malformed-input behavior to Dockerfiles, Compose files, project
   manifests, README files, workflows, NUKE configuration, schemas, and OpenAPI
@@ -190,19 +190,21 @@ Complete these in order so every inspector follows the same policy:
 
 ## 6. Release preparation
 
-- [ ] Complete contributor, policy, and release documentation in
-  [`docs/docs/TODO.md`](docs/docs/TODO.md).
-- [ ] Finalize module identity, versioning, tags, release notes, and distribution
-  approach.
+- [x] Complete contributor, policy, and release documentation in
+  [`docs/docs/developing/TODO.md`](docs/docs/developing/TODO.md).
+- [x] Finalize module identity, versioning, tags, release notes, and distribution
+  approach. The module is `SubZeroDev.PSGenerator` at `1.0.0`, tagged
+  `v<ModuleVersion>`, distributed through GitHub Packages, with the release-note
+  process recorded in the changelog.
 - [ ] Produce a release candidate and run the complete success-criteria workflow from
   a clean machine or runner.
 
 ## Version 1 definition of done
 
-- [x] A repository author can define `PSModule/PSModule.psd1` and generate a complete
+- [x] A module author can define `PSModule/PSModule.psd1` and generate a complete
   module package.
 - [x] The generated module is embedded at `/PSModule` in a real image.
-- [x] A user can install it with `Install-ContainerModule`, import it, invoke generated
+- [x] A user can install it with `Install-PSModule`, import it, invoke generated
   commands, and use `Get-Help` without manually constructing `docker run` arguments.
 - [x] Built-in stages execute through the ordered internal plugin pipeline and expose
   actionable execution diagnostics.
@@ -215,7 +217,7 @@ Complete these in order so every inspector follows the same policy:
 
 ## Completed milestones
 
-- [x] Repository inspection and typed developer diagnostics.
+- [x] Directory inspection and typed developer diagnostics.
 - [x] Validation errors with specification IDs and source context.
 - [x] Ordered validator, object-model processor, code-generator,
   template-renderer, Docker runtime-adapter, and packaging-provider plugins.
@@ -225,8 +227,8 @@ Complete these in order so every inspector follows the same policy:
 - [x] `/PSModule` container packaging, installation, import, invocation, and cleanup.
 - [x] Hosted unit, end-to-end, and code-coverage reporting.
 - [x] Missing-specification initialization and PowerShell command inference limited
-  to the repository's `scripts` directory.
-- [x] Packaging of the complete `scripts` tree and local-repository command testing.
+  to the directory's `scripts` directory.
+- [x] Packaging of the complete `scripts` tree and local-directory command testing.
 - [x] Empty-module support and malformed JSON Schema handling.
 - [x] Installable PowerShell NuGet package validation and release-driven publishing
   to GitHub Packages.
@@ -237,7 +239,7 @@ Follow-up work from adopting the container-based documentation workflows
 (`.github/workflows/docs.yml`, `docs-ci.yml`, `docs-deploy.yml`). The reusable
 workflows and the `ghcr.io/the-running-dev/docs-template` base image are owned by
 [Docusaurus-Template](https://github.com/The-Running-Dev/Docusaurus-Template).
-The items below are the seams where this repository currently works around it.
+The items below are the seams where this directory currently works around it.
 
 - [x] Fix the template's 404 links, then delete the local theme override.
   Resolved upstream by

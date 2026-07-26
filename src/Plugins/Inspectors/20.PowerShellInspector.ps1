@@ -1,11 +1,11 @@
 param ([Parameter(Mandatory)] [psobject] $Context)
 
-$scriptsPath = Join-Path $Context.RepositoryPath 'scripts'
+$scriptsPath = Join-Path $Context.DirectoryPath 'scripts'
 $items = @(
     if (Test-Path -LiteralPath $scriptsPath -PathType Container) {
         Get-ChildItem -LiteralPath $scriptsPath -Recurse -File | Where-Object {
             $_.Extension -in @('.ps1', '.psm1', '.psd1') -and
-            (Test-ContainerModuleInspectionPath -Context $Context -Path $_.FullName)
+            (Test-PSModuleInspectionPath -Context $Context -Path $_.FullName)
         }
     }
 )
@@ -21,14 +21,11 @@ $files = foreach ($item in $items) {
         [ref]$tokens,
         [ref]$errors
     )
-    $relativePath = [IO.Path]::GetRelativePath($Context.RepositoryPath, $item.FullName).Replace('\', '/')
+    $relativePath = [IO.Path]::GetRelativePath($Context.DirectoryPath, $item.FullName).Replace('\', '/')
     $isCommandCandidate = $item.Extension -eq '.ps1'
     $suggestedCommandName = $null
     if ($isCommandCandidate) {
-        $words = [regex]::Matches($item.BaseName, '[A-Za-z0-9]+') | ForEach-Object {
-            [char]::ToUpperInvariant($_.Value[0]) + $_.Value.Substring(1)
-        }
-        $suggestedCommandName = "Invoke-$($words -join '')"
+        $suggestedCommandName = ConvertTo-PSModuleCommandName -FileBaseName $item.BaseName
     }
     $parameters = @(
         if ($isCommandCandidate -and $ast.ParamBlock) {

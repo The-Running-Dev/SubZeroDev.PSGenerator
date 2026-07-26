@@ -22,7 +22,7 @@ if ($LASTEXITCODE -ne 0) {
 $repositoryRoot = Split-Path $PSScriptRoot -Parent
 $workflowPath = Join-Path $repositoryRoot '.github' 'workflows' 'test.yml'
 $runnerDockerfile = Join-Path $repositoryRoot '.act' 'Dockerfile'
-$runnerImage = 'subzerodev-containerpsgenerator-act:latest'
+$runnerImage = 'subzerodev-psgenerator-act:latest'
 
 $dockerBuildArguments = @(
     'build'

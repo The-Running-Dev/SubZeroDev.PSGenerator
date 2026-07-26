@@ -3,4 +3,4 @@ param (
     [psobject] $Context
 )
 
-$Context.Artifacts['Package'] = Complete-ContainerModulePackage -Context $Context
+$Context.Artifacts['Package'] = Complete-PSModulePackage -Context $Context

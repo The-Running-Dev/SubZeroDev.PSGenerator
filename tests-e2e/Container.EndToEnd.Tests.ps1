@@ -1,15 +1,15 @@
 BeforeAll {
-    $repositoryRoot = Split-Path $PSScriptRoot -Parent
-    $generatorManifest = Join-Path $repositoryRoot 'src' 'SubZeroDev.ContainerPSGenerator.psd1'
-    $fixtureSource = Join-Path $repositoryRoot 'examples' 'Minimal'
+    $directoryRoot = Split-Path $PSScriptRoot -Parent
+    $generatorManifest = Join-Path $directoryRoot 'src' 'SubZeroDev.PSGenerator.psd1'
+    $fixtureSource = Join-Path $directoryRoot 'examples' 'Minimal'
     $fixturePath = Join-Path $TestDrive 'Minimal'
     $generatedModulePath = Join-Path $fixturePath 'artifacts' 'PSModule'
     $installedModulePath = Join-Path $TestDrive 'Installed' 'ExampleContainer'
     $isAct = $env:ACT -eq 'true'
-    $mountedRepositoryPath = if ($isAct) { '/tmp' } else { Join-Path $TestDrive 'Repository' }
+    $mountedDirectoryPath = if ($isAct) { '/tmp' } else { Join-Path $TestDrive 'Directory' }
     $secretPath = Join-Path $TestDrive 'api-token.txt'
-    $volumeName = 'containerpsgenerator-e2e-' + [guid]::NewGuid().ToString('N')
-    $image = 'subzerodev-containerpsgenerator-minimal:local'
+    $volumeName = 'psgenerator-e2e-' + [guid]::NewGuid().ToString('N')
+    $image = 'subzerodev-psgenerator-minimal:local'
 
     if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
         throw 'Docker is required for the container end-to-end tests.'
@@ -24,7 +24,7 @@ BeforeAll {
 
     Push-Location $fixturePath
     try {
-        $null = Build-ContainerModule -Specification './PSModule/PSModule.psd1' -Output './artifacts/PSModule'
+        $null = Build-PSModule -Specification './PSModule/PSModule.psd1' -Output './artifacts/PSModule'
     }
     finally {
         Pop-Location
@@ -35,12 +35,12 @@ BeforeAll {
         throw "Building the end-to-end fixture image failed with exit code $LASTEXITCODE."
     }
 
-    $null = Install-ContainerModule $image -Destination $installedModulePath
+    $null = Install-PSModule $image -Destination $installedModulePath
     Import-Module (Join-Path $installedModulePath 'ExampleContainer.psd1') -Force
 
     if (-not $isAct) {
-        $null = New-Item -Path $mountedRepositoryPath -ItemType Directory -Force
-        Set-Content -LiteralPath (Join-Path $mountedRepositoryPath 'README.md') `
+        $null = New-Item -Path $mountedDirectoryPath -ItemType Directory -Force
+        Set-Content -LiteralPath (Join-Path $mountedDirectoryPath 'README.md') `
             -Value 'mounted-content' -NoNewline
     }
     Set-Content -LiteralPath $secretPath -Value 'secret-from-e2e' -NoNewline
@@ -48,7 +48,7 @@ BeforeAll {
 
 AfterAll {
     Remove-Module ExampleContainer -Force -ErrorAction SilentlyContinue
-    Remove-Module SubZeroDev.ContainerPSGenerator -Force -ErrorAction SilentlyContinue
+    Remove-Module SubZeroDev.PSGenerator -Force -ErrorAction SilentlyContinue
     & docker image rm --force $image 2>&1 | Out-Null
     & docker volume rm --force $volumeName 2>&1 | Out-Null
 }
@@ -75,11 +75,11 @@ Describe 'Container module end-to-end workflow' {
         $markdown | Should -Match '^# Invoke-Example\n'
         $markdown | Should -Match 'Runs the example container\.'
         $markdown | Should -Match '## Syntax'
-        $markdown | Should -Match '### `-Repository`'
+        $markdown | Should -Match '### `-Directory`'
         $markdown | Should -Match '### `-Message`'
         $markdown | Should -Match '## Examples'
         $markdown | Should -Match ([regex]::Escape(
-            "Invoke-Example -Repository . -Message 'hello'"
+            "Invoke-Example -Directory . -Message 'hello'"
         ))
         $markdown | Should -Match '## Notes'
         $markdown | Should -Match 'Docker must be available on PATH unless using -WhatIf\.'
@@ -87,7 +87,7 @@ Describe 'Container module end-to-end workflow' {
 
     It 'runs the generated command through Docker with arguments, environment, and a mount' {
         $result = Invoke-Example `
-            -Repository (Get-Item -LiteralPath $mountedRepositoryPath) `
+            -Directory (Get-Item -LiteralPath $mountedDirectoryPath) `
             -Message 'hello-from-e2e' |
             ConvertFrom-Json
 
@@ -112,7 +112,7 @@ Describe 'Container module end-to-end workflow' {
         }
 
         $result = Invoke-Example `
-            -Repository (Get-Item -LiteralPath $mountedRepositoryPath) `
+            -Directory (Get-Item -LiteralPath $mountedDirectoryPath) `
             -Message 'mapping-e2e' `
             -HostPort $hostPort `
             -WorkingDirectory '/app' `
@@ -130,7 +130,7 @@ Describe 'Container module end-to-end workflow' {
 
     It 'mounts a host secret through Docker' -Skip:$isAct {
         $result = Invoke-Example `
-            -Repository (Get-Item -LiteralPath $mountedRepositoryPath) `
+            -Directory (Get-Item -LiteralPath $mountedDirectoryPath) `
             -Message 'secret-e2e' `
             -SecretFile (Get-Item -LiteralPath $secretPath) |
             ConvertFrom-Json
@@ -143,7 +143,7 @@ Describe 'Container module end-to-end workflow' {
 
         $previewResult = @(
             Invoke-Example `
-                -Repository (Get-Item -LiteralPath $mountedRepositoryPath) `
+                -Directory (Get-Item -LiteralPath $mountedDirectoryPath) `
                 -Message 'preview' `
                 -WhatIf
         )

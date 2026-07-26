@@ -27,7 +27,7 @@ Set-StrictMode -Version 3.0
 $ErrorActionPreference = 'Stop'
 
 $requiredPSResourceGetVersion = [version] '1.1.1'
-$repositoryUrl = 'https://github.com/The-Running-Dev/SubZeroDev.ContainerPSGenerator.git'
+$repositoryUrl = 'https://github.com/The-Running-Dev/SubZeroDev.PSGenerator.git'
 $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $sourceRoot = Join-Path $repositoryRoot 'src'
 $outputPath = [IO.Path]::GetFullPath(
@@ -78,15 +78,15 @@ if (-not $compressCommand) {
 
 $null = New-Item -Path $outputPath -ItemType Directory -Force
 $temporaryRoot = Join-Path ([IO.Path]::GetTempPath()) (
-    'SubZeroDev.ContainerPSGenerator.Package.{0}' -f [guid]::NewGuid()
+    'SubZeroDev.PSGenerator.Package.{0}' -f [guid]::NewGuid()
 )
 
 try {
-    $moduleRoot = Join-Path $temporaryRoot 'SubZeroDev.ContainerPSGenerator'
+    $moduleRoot = Join-Path $temporaryRoot 'SubZeroDev.PSGenerator'
     $manifest = & (Join-Path $PSScriptRoot 'New-GeneratorModulePackage.ps1') -Output $moduleRoot
     $manifestData = Test-ModuleManifest -Path $manifest.FullName -ErrorAction Stop
     $packagePath = Join-Path $outputPath (
-        'SubZeroDev.ContainerPSGenerator.{0}.nupkg' -f $manifestData.Version
+        'SubZeroDev.PSGenerator.{0}.nupkg' -f $manifestData.Version
     )
 
     if (Test-Path -LiteralPath $packagePath -PathType Leaf) {

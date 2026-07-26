@@ -4,7 +4,7 @@ param (
 )
 
 $readmeItems = @(
-    Get-ChildItem -LiteralPath $Context.RepositoryPath -File |
+    Get-ChildItem -LiteralPath $Context.DirectoryPath -File |
         Where-Object { $_.Name -match '^(?i:readme)(?:\.(?:md|markdown|txt))?$' }
 )
 [Array]::Sort(

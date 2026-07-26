@@ -26,7 +26,7 @@
     Host port to publish (container serves on 3000). Default 3000.
 
 .PARAMETER Tag
-    Image tag to build. Default 'containerpsgenerator-docs'.
+    Image tag to build. Default 'psgenerator-docs'.
 
 .PARAMETER BaseImage
     Base image passed as the Dockerfile BASE_IMAGE build-arg.
@@ -61,7 +61,7 @@ param(
     [switch]$Live,
     [switch]$BuildOnly,
     [int]$Port = 3000,
-    [string]$Tag = 'containerpsgenerator-docs',
+    [string]$Tag = 'psgenerator-docs',
     [string]$BaseImage = 'ghcr.io/the-running-dev/docs-template:latest',
     [string]$CreateVersion
 )
@@ -90,7 +90,7 @@ if (-not (Test-Path -LiteralPath (Split-Path -Parent $index) -PathType Container
 
 $frontmatter = @(
     '---'
-    'title: ContainerPSGenerator'
+    'title: PSGenerator'
     'description: Generate native PowerShell modules for containerized applications.'
     'sidebar_position: 1'
     '---'

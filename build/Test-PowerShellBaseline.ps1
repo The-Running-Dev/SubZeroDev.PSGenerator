@@ -28,7 +28,7 @@ if (
 $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $temporaryRoot = Join-Path (
     [IO.Path]::GetTempPath()
-) ('SubZeroDev.ContainerPSGenerator.Baseline.' + [guid]::NewGuid().ToString('N'))
+) ('SubZeroDev.PSGenerator.Baseline.' + [guid]::NewGuid().ToString('N'))
 $generatorModule = $null
 $generatedModule = $null
 
@@ -47,7 +47,7 @@ try {
     $generatorModule = Import-Module $packagedManifest.FullName -Force -PassThru -ErrorAction Stop
     $generatedModulePath = Join-Path $temporaryRoot 'Generated'
     $specificationPath = Join-Path $repositoryRoot 'examples' 'Minimal' 'PSModule' 'PSModule.psd1'
-    Build-ContainerModule `
+    Build-PSModule `
         -Specification $specificationPath `
         -Output $generatedModulePath |
         Out-Null

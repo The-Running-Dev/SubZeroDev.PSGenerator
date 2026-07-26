@@ -1,90 +1,87 @@
-# SubZeroDev.ContainerPSGenerator
+# PSGenerator
 
-[![Test](https://github.com/The-Running-Dev/SubZeroDev.ContainerPSGenerator/actions/workflows/test.yml/badge.svg)](https://github.com/The-Running-Dev/SubZeroDev.ContainerPSGenerator/actions/workflows/test.yml)
-[![Publish](https://github.com/The-Running-Dev/SubZeroDev.ContainerPSGenerator/actions/workflows/publish.yml/badge.svg)](https://github.com/The-Running-Dev/SubZeroDev.ContainerPSGenerator/actions/workflows/publish.yml)
-[![Docs build](https://github.com/The-Running-Dev/SubZeroDev.ContainerPSGenerator/actions/workflows/docs-build.yml/badge.svg)](https://github.com/The-Running-Dev/SubZeroDev.ContainerPSGenerator/actions/workflows/docs-build.yml)
+[![Test](https://github.com/The-Running-Dev/SubZeroDev.PSGenerator/actions/workflows/test.yml/badge.svg)](https://github.com/The-Running-Dev/SubZeroDev.PSGenerator/actions/workflows/test.yml)
+[![Docs](https://github.com/The-Running-Dev/SubZeroDev.PSGenerator/actions/workflows/docs.yml/badge.svg)](https://github.com/The-Running-Dev/SubZeroDev.PSGenerator/actions/workflows/docs.yml)
+[![Container](https://github.com/The-Running-Dev/SubZeroDev.PSGenerator/actions/workflows/container.yml/badge.svg)](https://github.com/The-Running-Dev/SubZeroDev.PSGenerator/actions/workflows/container.yml)
 [![Documentation](https://img.shields.io/badge/docs-psgenerator.subzerodev.com-blue)](https://psgenerator.subzerodev.com/)
 
-SubZeroDev.ContainerPSGenerator is a PowerShell 7.4+ build tool that generates
-repository-specific PowerShell modules for containerized applications.
+Give PSGenerator a container image and a description of the commands it should
+expose, and it writes you a PowerShell module. Your users then run
+`Invoke-Thing -Message hello` instead of remembering a `docker run` line.
 
-Repositories define native commands, parameters, validation, completion, help, and
-Docker runtime mappings in `PSModule/PSModule.psd1`. The generator produces a
-self-contained module that can be embedded at `/PSModule` in an image and installed
-locally.
+> **Status:** Version 1. The generator, the container packaging contract, and the
+> documentation are complete. The first published package is still pending.
 
-> **Status:** The Version 1 MVP workflow is implemented. Documentation, release
-> policy, inspector hardening, and the first published package remain in progress.
+## Run It
 
-## Quick start
+Two ways, both fine. Pick one.
 
-```powershell
-Import-Module ./src/SubZeroDev.ContainerPSGenerator.psd1 -Force
-
-Test-ContainerModuleSpecification `
-    -Specification ./examples/Minimal/PSModule/PSModule.psd1
-
-Build-ContainerModule `
-    -Specification ./examples/Minimal/PSModule/PSModule.psd1 `
-    -Output ./artifacts/PSModule
-
-Import-Module ./artifacts/PSModule/ExampleContainer.psd1 -Force
-Invoke-Example -Repository . -Message hello -WhatIf
-```
-
-Run the complete Docker lifecycle:
+**Container image** — nothing to install, PowerShell and the module are already
+inside:
 
 ```powershell
-./examples/Minimal/Run-Example.ps1
+docker run --rm -it `
+    -v ${PWD}:/workspace `
+    ghcr.io/the-running-dev/subzerodev.psgenerator:latest
 ```
+
+**PowerShell module** — if you already have PowerShell 7.4 or later:
+
+```powershell
+Import-Module SubZeroDev.PSGenerator
+```
+
+Installing the module from GitHub Packages needs one-time authentication; see
+[Installation](https://psgenerator.subzerodev.com/using/installation) for that and
+for running from a source checkout.
+
+## Your First Module
+
+Describe a command in `PSModule/PSModule.psd1`, then:
+
+```powershell
+Test-PSModuleSpecification -Specification ./PSModule/PSModule.psd1
+Build-PSModule -Specification ./PSModule/PSModule.psd1 -Output ./artifacts/PSModule
+
+Import-Module ./artifacts/PSModule/YourModule.psd1 -Force
+Get-Help Invoke-YourCommand -Full
+```
+
+[Build Your First Module](https://psgenerator.subzerodev.com/using/first-module)
+walks through it end to end. To try the complete Docker lifecycle against a real
+image, run `./examples/Minimal/Run-Example.ps1` from a source checkout.
 
 ## Documentation
 
-The complete manual is published at
+The manual lives at
 [psgenerator.subzerodev.com](https://psgenerator.subzerodev.com/).
 
-### Get started
+**[Using](https://psgenerator.subzerodev.com/using/)** — install it, describe your
+commands, package the result:
 
-- [Installation](https://psgenerator.subzerodev.com/getting-started/installation)
-- [Build your first module](https://psgenerator.subzerodev.com/getting-started/first-module)
-- [Infer commands from a script repository](https://psgenerator.subzerodev.com/getting-started/script-repositories)
+- [Installation](https://psgenerator.subzerodev.com/using/installation)
+- [Build Your First Module](https://psgenerator.subzerodev.com/using/first-module)
+- [Script Directory Inference](https://psgenerator.subzerodev.com/using/script-directories)
+- [Runtime Mappings](https://psgenerator.subzerodev.com/using/runtime-mappings)
+- [Container Packaging](https://psgenerator.subzerodev.com/using/container-packaging)
+- [Specification Reference](https://psgenerator.subzerodev.com/using/specification)
+- [Troubleshooting](https://psgenerator.subzerodev.com/using/troubleshooting)
 
-### Build and package modules
+**[Developing](https://psgenerator.subzerodev.com/developing/)** — how PSGenerator
+itself is built:
 
-- [Runtime mappings](https://psgenerator.subzerodev.com/guides/runtime-mappings)
-- [Validation, completion, and help](https://psgenerator.subzerodev.com/guides/validation-completion-help)
-- [Container packaging and installation](https://psgenerator.subzerodev.com/guides/container-packaging)
-- [Trusted plugins](https://psgenerator.subzerodev.com/guides/trusted-plugins)
+- [Architecture Overview](https://psgenerator.subzerodev.com/developing/overview)
+- [Internal Plugin System](https://psgenerator.subzerodev.com/developing/plugins)
+- [Security Model](https://psgenerator.subzerodev.com/developing/security)
+- [Contributing](https://psgenerator.subzerodev.com/developing/contributing)
 
-### Reference
-
-- [Specification](https://psgenerator.subzerodev.com/reference/specification)
-- [Commands](https://psgenerator.subzerodev.com/reference/commands)
-- [Repository inspection](https://psgenerator.subzerodev.com/reference/inspection)
-- [Generated output](https://psgenerator.subzerodev.com/reference/generated-output)
-
-### Project
-
-- [Architecture](https://psgenerator.subzerodev.com/architecture/overview)
-- [Plugin pipeline](https://psgenerator.subzerodev.com/architecture/plugins)
-- [Development and CI](https://psgenerator.subzerodev.com/operations/development)
-- [Releases and GitHub Packages](https://psgenerator.subzerodev.com/operations/releases)
-- [Security](https://psgenerator.subzerodev.com/operations/security)
-- [Troubleshooting](https://psgenerator.subzerodev.com/operations/troubleshooting)
-
-See the
-[engineering roadmap](https://github.com/The-Running-Dev/SubZeroDev.ContainerPSGenerator/blob/main/TODO.md)
-and
-[documentation roadmap](https://psgenerator.subzerodev.com/TODO)
-for remaining work.
-
-## Core workflow
+## How It Works
 
 ```text
-Repository specification
+Specification
         │
         ▼
-Build-ContainerModule
+Build-PSModule
         │
         ▼
 Generated PowerShell module
@@ -93,50 +90,26 @@ Generated PowerShell module
         └── copy to /PSModule in the image
                     │
                     ▼
-             Install-ContainerModule
+             Install-PSModule
 ```
 
-Generated commands support native PowerShell types, `ValidateSet`,
-`ValidateRange`, `ValidatePattern`, static completion, comment-based help, Markdown
-references, `-WhatIf`, verbose tracing, and ordered Docker argument rendering.
+Generated commands are ordinary PowerShell: native types, `ValidateSet`,
+`ValidateRange`, `ValidatePattern`, static completion, comment-based help,
+Markdown references, `-WhatIf`, verbose tracing, and ordered Docker arguments.
 
-Inference can expose standalone scripts and explicitly exported module functions
-beneath a repository's `scripts` directory without turning unrelated PowerShell
-files into commands.
+If your directory already has scripts, inference can turn standalone `.ps1` files
+and explicitly exported module functions beneath `scripts` into commands without
+sweeping in unrelated PowerShell.
 
-## Development checks
+## Platform and Trust Boundary
 
-```powershell
-./build/Invoke-Quality.ps1 -InstallDependencies
-Invoke-Pester -Path ./tests -Output Detailed
-./build/Test-GeneratorNuGetPackage.ps1 -InstallDependencies
-```
-
-With Docker and `act` installed:
-
-```powershell
-./build/Invoke-CI.ps1
-```
-
-Hosted CI validates PowerShell 7.4 on Windows and Linux, Pester tests, coverage,
-static analysis, NuGet packaging, and a real container end-to-end workflow.
-
-## Platform and trust boundary
-
-PowerShell 7.4 is the minimum runtime. Windows and Linux are supported and tested.
+PowerShell 7.4 is the minimum runtime. Windows and Linux are supported and tested;
 macOS is best-effort for Version 1.
 
-Repository plugins are trusted, unsandboxed PowerShell code. Review them before
-running the generator.
-
-## Package publication
-
-The GitHub Packages workflow runs only when a GitHub Release is published with a tag
-matching `v<ModuleVersion>`. Merging the workflow does not itself create a package.
-See
-[Releases and GitHub Packages](https://psgenerator.subzerodev.com/operations/releases).
+Local plugins are trusted, unsandboxed PowerShell. Review them before running the
+generator against a directory you did not write.
 
 ## License
 
 Released under the
-[MIT License](https://github.com/The-Running-Dev/SubZeroDev.ContainerPSGenerator/blob/main/LICENSE).
+[MIT License](https://github.com/The-Running-Dev/SubZeroDev.PSGenerator/blob/main/LICENSE).

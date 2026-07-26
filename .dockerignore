@@ -1,0 +1,21 @@
+# The image needs src/ and nothing else. Everything below is either build
+# output, documentation tooling, or test material that would only add layers.
+.git
+.github
+.act
+artifacts
+docs
+examples
+planning
+tests
+tests-e2e
+tests-integration
+build
+node_modules
+*.code-workspace
+AGENTS.md
+README.md
+Specifications.md
+TODO.md
+LICENSE
+docs.ps1

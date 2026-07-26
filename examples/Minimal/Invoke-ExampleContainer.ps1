@@ -8,7 +8,7 @@ $message = if ($messageIndex -ge 0 -and $messageIndex + 1 -lt $args.Count) {
 else {
     $null
 }
-$readmePath = '/repository/README.md'
+$readmePath = '/workspace/README.md'
 $cacheMarkerPath = '/cache/e2e-marker.txt'
 $secretPath = '/run/secrets/api-token'
 $cacheMounted = Test-Path -LiteralPath '/cache' -PathType Container

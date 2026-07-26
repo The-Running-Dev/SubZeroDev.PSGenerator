@@ -1,4 +1,4 @@
-# Repository-Generated PowerShell Container Modules
+# Directory-Generated PowerShell Container Modules
 
 > **Status:** Version 1 behavior contract and release roadmap
 >
@@ -13,26 +13,26 @@ minimum supported runtime.
 
 # Purpose
 
-Container Module Generator (CMG) generates repository-specific PowerShell modules for containerized applications.
+Container Module Generator (CMG) generates PowerShell modules for containerized applications.
 
-Instead of exposing Docker commands directly, repositories define a PowerShell-oriented specification describing their public interface. During the normal repository build, CMG generates a complete, self-contained PowerShell module which is embedded into the resulting container image.
+Instead of exposing Docker commands directly, directories define a PowerShell-oriented specification describing their public interface. During the normal directory build, CMG generates a complete, self-contained PowerShell module which is embedded into the resulting container image.
 
 End users install the module directly from the image and interact with the application through ordinary PowerShell commands rather than raw `docker run` invocations.
 
-The repository remains the single source of truth.
+The directory remains the single source of truth.
 
 ---
 
 # Version 1 Boundary
 
 The core Version 1 workflow described here is implemented: specification validation,
-model normalization, repository inspection, deterministic module and Markdown
+model normalization, directory inspection, deterministic module and Markdown
 generation, Docker command rendering, `/PSModule` packaging, installation, import,
 help, preview, and invocation.
 
 Items explicitly described as remaining Version 1 work are release-hardening tasks,
 not implemented behavior. They are tracked in `TODO.md`. Anything under
-**Deferred to Phase 2** is outside the Version 1 contract. Repository plugins are an
+**Deferred to Phase 2** is outside the Version 1 contract. Local plugins are an
 internal, trusted-code extension mechanism in Version 1; a stable public plugin SDK
 is Phase 2 work.
 
@@ -56,7 +56,7 @@ Version 1 is guided by the following principles:
 # High-Level Architecture
 
 ```text
-Repository
+Directory
 │
 ├── PSModule/
 │   └── PSModule.psd1
@@ -66,7 +66,7 @@ Repository
 └── Build
       │
       ▼
-Build-ContainerModule
+Build-PSModule
       │
       ▼
 Generated PowerShell Module
@@ -75,7 +75,7 @@ Generated PowerShell Module
 Embedded in Docker Image
       │
       ▼
-Install-ContainerModule
+Install-PSModule
       │
       ▼
 Imported locally
@@ -86,7 +86,7 @@ Native PowerShell Experience
 
 ---
 
-# Repository Layout
+# Directory Layout
 
 Default specification location:
 
@@ -98,7 +98,7 @@ PSModule/
 Alternative specification:
 
 ```powershell
-Build-ContainerModule -Specification ./config/MyModule.psd1
+Build-PSModule -Specification ./config/MyModule.psd1
 ```
 
 ---
@@ -117,7 +117,7 @@ artifacts/PSModule/
 │   └── model.json
 ├── Public/
 │   └── <CommandName>.ps1
-└── Scripts/                 # only when repository scripts are packaged
+└── Scripts/                 # only when directory scripts are packaged
 ```
 
 Only required directories are generated.
@@ -125,7 +125,7 @@ Only required directories are generated.
 Output location may be overridden:
 
 ```powershell
-Build-ContainerModule -Output ./dist
+Build-PSModule -Output ./dist
 ```
 
 Each build overwrites previously generated output.
@@ -136,16 +136,16 @@ The generator validates the specification before clearing the selected output di
 
 # Build Model
 
-The generated module is produced during the normal repository build.
+The generated module is produced during the normal directory build.
 
-Repository authors generally do not execute the generator manually.
+Module authors generally do not execute the generator manually.
 
 Typical pipeline:
 
 ```text
 Build Application
         │
-Build-ContainerModule
+Build-PSModule
         │
 Copy module into image
         │
@@ -185,7 +185,7 @@ CMG constructs a complete internal object model before rendering PowerShell.
 Pipeline:
 
 ```text
-Repository
+Directory
       │
 Inspectors
       │
@@ -256,9 +256,9 @@ Plugins execute in ascending lexical order.
 
 ---
 
-# Repository Inspection
+# Directory Inspection
 
-Repository inspection occurs through independent inspector plugins.
+Directory inspection occurs through independent inspector plugins.
 
 Inspectors may analyze:
 
@@ -274,7 +274,7 @@ Inspectors may analyze:
 - OpenAPI
 - Additional technologies
 
-Trusted repository inspectors can be added beneath the conventional
+Trusted directory inspectors can be added beneath the conventional
 `PSModule/Plugins/Inspectors` directory or an explicitly selected plugin root. They
 run with the invoking PowerShell process's filesystem, process, network, and
 credential access.
@@ -293,7 +293,7 @@ optional artifacts while failing for explicitly authoritative inputs such as
 The build process exposes a single command:
 
 ```powershell
-Build-ContainerModule
+Build-PSModule
 ```
 
 Pipeline stages are internal implementation details.
@@ -320,7 +320,7 @@ The generator handles:
 - Process invocation
 - Runtime detection
 
-Repository authors should not write platform-specific specifications whenever practical.
+Module authors should not write platform-specific specifications whenever practical.
 
 ---
 
@@ -332,7 +332,7 @@ Generated modules are embedded inside every compliant image at:
 /PSModule
 ```
 
-Install-ContainerModule retrieves the module from this location.
+Install-PSModule retrieves the module from this location.
 
 Installation creates a temporary container without starting it, stages `/PSModule` beside the destination, validates its single module manifest, and removes the temporary container even when copying or validation fails. Existing destinations require `-Force` and are only replaced after validation succeeds. The command supports `-WhatIf`.
 
@@ -345,14 +345,14 @@ Local installation defaults to:
 Override:
 
 ```powershell
-Install-ContainerModule -Destination ~/Modules
+Install-PSModule -Destination ~/Modules
 ```
 
 ---
 
-# Repository Specification
+# Directory Specification
 
-The repository specification uses PowerShell PSD1.
+The specification uses PowerShell PSD1.
 
 Collections are represented as arrays of typed objects.
 
@@ -382,7 +382,7 @@ Command names use PowerShell `Verb-Noun` syntax. Version 1 command names contain
 Commands = @(
     @{
         Name = "Invoke-BuildAgent"
-        Description = "Build repository"
+        Description = "Build directory"
 
         Parameters = @(...)
     }
@@ -402,7 +402,7 @@ Parameter names must be valid PowerShell identifiers. Version 1 type names suppo
 ```powershell
 Parameters = @(
     @{
-        Name = "Repository"
+        Name = "Directory"
         Type = "DirectoryInfo"
         Mandatory = $true
     }
@@ -471,7 +471,7 @@ Extension points include:
 - Validation
 - Completion
 - Discovery
-- Repository-specific behaviors
+- Directory-specific behaviors
 
 External PowerShell files are preferred over embedded script blocks.
 
@@ -514,8 +514,8 @@ Each example requires non-empty `Code` and `Description` strings:
 ```powershell
 Examples = @(
     @{
-        Code = "Invoke-BuildAgent -Repository . -Task Build"
-        Description = "Builds the current repository."
+        Code = "Invoke-BuildAgent -Directory . -Task Build"
+        Description = "Builds the current directory."
     }
 )
 ```
@@ -535,7 +535,7 @@ Mappings are first-class typed objects.
 
 The `Mappings` property is optional on a parameter. When present, it must be an array. Each mapping must be an object with a supported, non-empty string `Type`. Unknown mapping types are rejected so that a specification cannot silently omit runtime behavior. Rules for the properties required by each mapping type are applied separately.
 
-Repository-specific runtime intent is not inferred from script names, source paths,
+Directory-specific runtime intent is not inferred from script names, source paths,
 or other naming conventions. Authors explicitly declare mappings whenever a command
 requires container runtime behavior.
 
@@ -543,7 +543,7 @@ requires container runtime behavior.
 Mappings = @(
     @{
         Type = "Mount"
-        Target = "/repository"
+        Target = "/directory"
         Access = "ReadOnly"
     }
 
@@ -554,7 +554,7 @@ Mappings = @(
 
     @{
         Type = "Argument"
-        Name = "--repository"
+        Name = "--directory"
     }
 )
 ```
@@ -669,18 +669,18 @@ Topics intentionally deferred include:
 
 # Success Criteria
 
-The project succeeds when a repository author can define a PowerShell specification, build the repository, embed the generated module into the image, and allow end users to install it directly from that image.
+The project succeeds when a module author can define a PowerShell specification, build their project, embed the generated module into the image, and allow end users to install it directly from that image.
 
 Users should be able to execute:
 
 ```powershell
-Install-ContainerModule ghcr.io/the-running-dev/build-agent:latest
+Install-PSModule ghcr.io/the-running-dev/build-agent:latest
 
-Invoke-BuildAgent -Repository . -Task Build
+Invoke-BuildAgent -Directory . -Task Build
 
 Get-Help Invoke-BuildAgent
 ```
 
 without manually constructing `docker run` commands.
 
-The repository remains the authoritative definition of the public interface while the generated module provides a native PowerShell experience.
+The directory remains the authoritative definition of the public interface while the generated module provides a native PowerShell experience.
