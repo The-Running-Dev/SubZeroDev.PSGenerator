@@ -1,7 +1,7 @@
 # Next
 
-Follow-up work after the v1 rename. Each item is independent of the others and
-none belongs on the rename branch, which is already large.
+Follow-up work after the v1 rename. Independent of that branch, which is already
+large.
 
 ## 1. Drop Docusaurus Versioning
 
@@ -18,99 +18,74 @@ Remove:
 - the `docsVersionDropdown` navbar item
 - `-CreateVersion` from `docs.ps1`, and its ordering caution
 - the "Documentation Versions" section in `docs/docs/developing/releases.md`,
-  plus the release-checklist step that cuts a snapshot
+  and the release-checklist step that cuts a snapshot
 - the `versioned_docs` exclusion in `.config/DocumentationRules.psd1`
+- the changelog entry advertising versioned documentation
 
-After this, `/` serves the only docs and `/next` disappears. The doc gate goes
-from 27 files to 27 (the snapshot was already excluded), and the site build gets
-faster.
+After this, `/` serves the only docs and `/next` disappears. Check nothing links
+to `/next` before removing it.
 
-**Watch for:** anything linking to `/next`, and the changelog entry that
-advertises versioned documentation.
+## 2. Publishing Stays Release-Driven
 
-## 2. Remove `examples/Minimal` — Recommend Against, As Stated
+Decided: keep publishing on tag push and manual dispatch until 1.0 is
+formalized. No change to `publish.yml`. The container image keeps publishing
+from `main` on its own cadence, which is fine because date tags are always
+unique.
 
-The reasoning does not hold up, and I would rather flag it than quietly delete
-test coverage.
+Revisit at 1.0, and note two things that will matter then:
 
-`Initialize-PSModuleDirectory` does *inference*: it discovers scripts in a
-directory and scaffolds commands that run those scripts locally. `examples/Minimal`
-is an *authored* specification exercising container runtime mappings. Inference
-cannot produce those — the docs state that runtime intent must be authored
-explicitly, and that inference must never guess it. The two do not overlap.
+- **nuget.org and GitHub Packages both reject a version that already exists,
+  permanently.** Any "publish on push" scheme has to publish only when
+  `ModuleVersion` changes, or it fails on the second push.
+- **The first nuget.org push claims `SubZeroDev.PSGenerator` forever.** It can be
+  deprecated but never renamed, so confirm the public name before publishing.
 
-What deleting it actually removes:
+Also worth deciding then: whether the image should carry `:1.0.0` alongside
+`:latest` and the date tag, so an image can be matched to a package version.
 
-| Depends on it | What breaks |
-| --- | --- |
-| `tests-e2e/Container.EndToEnd.Tests.ps1` | The only real-Docker end-to-end test: build image, install `/PSModule`, import, invoke, verify help and Markdown |
-| `build/Test-PowerShellBaseline.ps1` | The 7.4 baseline check generates this example; it has no other subject |
-| `tests/Module.Tests.ps1` | The "Minimal runnable container example" coverage |
-| 6 documentation pages | Container packaging, installation, security, releases, development, homepage |
+## 3. Gaps Found During the Rename
 
-It is also the only specification anywhere in the repository that exercises all
-eleven mapping types — Argument, Environment, Mount, Volume, Port,
-WorkingDirectory, RuntimeOption, Device, Gpu, ResourceLimit, Secret. Nothing
-else covers Gpu, Device, Secret, or ResourceLimit at all.
+Small, concrete, and each one is a thing that can silently rot.
 
-**If the goal is less clutter**, the cheaper move is to keep the example and stop
-featuring it on the landing page — it is already only referenced, not walked
-through. **If it should still go**, the e2e test and baseline check need a
-replacement fixture first, which is most of the work of keeping it.
+- **`docs/docs/index.md` drift is unverified.** It is generated from `README.md`
+  by `docs.ps1`, but nothing checks that the committed copy still matches. Every
+  README edit needs it regenerated, and today the only thing catching that is
+  someone remembering. Add the comparison to `build/Test-Documentation.ps1`:
+  rebuild the expected content from `README.md` and fail when it differs from
+  the committed file.
+- **`main` has no branch protection.** No required status checks at all, so a red
+  PowerShell quality, documentation, Pester, or docs run does not block a merge.
+  The whole point of the deploy-path coverage added in #61 was to block before
+  merge; without required checks it only reports. Your action, in repository
+  settings.
+- **A generated command can shadow an existing one.** Since the inference naming
+  fix, `convertto-json.ps1` produces `ConvertTo-Json`, which shadows the built-in
+  once the module is imported. Documented as a note in the script inference
+  guide, but inference could detect the collision and warn, the same way it warns
+  about source commands without runtime mappings.
+- **`.gitignore` does not cover `bin/` and `obj/`.** The BuildAgent fixture's
+  `.csproj` files produce build output that shows up as untracked noise whenever
+  anything builds them. Those directories are currently empty, so it is quiet
+  right now, and it will come back.
 
-Say which and I will do it.
+## 4. Still Open on the v1 Roadmap
 
-## 3. Release Everything From `main`
+Not re-planned here, just so it is not forgotten. `TODO.md` still has:
 
-Wanted: a push to `main` publishes the NuGet package to GitHub Packages **and**
-nuget.org, and pushes the container image.
-
-Today: `publish.yml` publishes to GitHub Packages when a GitHub Release is
-published; `container.yml` pushes the image on every `main` push that touches
-`Dockerfile`, `.dockerignore`, or `src/**`.
-
-### The blocker
-
-**nuget.org versions are immutable and cannot be re-pushed.** `ModuleVersion` is
-a fixed `1.0.0`, so the first push to `main` succeeds and every push after it
-fails with a conflict. GitHub Packages behaves the same way. "Push to main
-publishes" cannot work against a static version.
-
-### Recommended shape
-
-Publish packages **when the manifest version changes**, not on every push:
-
-1. On push to `main`, read `ModuleVersion` from the manifest.
-2. Query whether that version already exists on each feed.
-3. If it is new, build once and push to GitHub Packages and nuget.org; if not,
-   skip with a note rather than failing.
-4. Tag the commit `v<ModuleVersion>` and create the GitHub Release from the
-   changelog entry.
-5. Push the image regardless, since date tags are always unique.
-
-That keeps semver meaningful, makes a release a one-line manifest edit, and
-never produces junk versions. `publish.yml` folds into it, or stays as a
-manual `workflow_dispatch` fallback.
-
-### Also needed
-
-- **`NUGET_API_KEY` secret** — your action; nuget.org keys are scoped per package
-  and expire, so it needs a calendar reminder.
-- **First push to nuget.org claims the ID `SubZeroDev.PSGenerator` permanently.**
-  Worth confirming that is the intended public name before the first publish,
-  because it cannot be renamed afterwards, only deprecated.
-- Decide whether the image should also carry `:1.0.0` alongside `:latest` and the
-  date tag, so an image can be matched to a package version.
-- `docs/docs/developing/releases.md` currently documents a release-driven,
-  tag-first process throughout. It needs rewriting, not patching.
+- **§3 Docker-BuildAgent compatibility** — 11 of 13 items unchecked, and this is
+  the largest remaining piece of engineering. Includes the maintenance-script
+  classification that would keep repo tooling out of a public command surface.
+- **§4 Inspector hardening** — all 6 unchecked, starting with the warn-versus-fail
+  malformed-input policy.
+- **§5** — device and GPU mappings on runners that expose the hardware.
+- **Three documentation-toolchain follow-ups** — the `docs-build.ps1` prune
+  manifest, whether `docs/Dockerfile` and `.dockerignore` should stay, and
+  whether the `docs.yml` caller is still worth having. All upstream-shaped and
+  lower priority since the 404 fix removed the reason the prune manifest existed.
 
 ## Sequencing
 
-Separate PR, and yes — worth its own. The rename branch already carries the
-rename, the directory vocabulary, title case, the container image, the
-Using/Developing split, a new public command, the inference naming fix, and a
-documentation pass. These three are independent of all of it.
-
-Order: item 1 first, since it is self-contained and removes the snapshot tax
-that slows every later documentation change. Item 3 next. Item 2 only after the
-question above is settled.
+Separate PR from the rename. Item 1 first: self-contained, and it removes the
+snapshot tax that slows every later documentation change. Item 3 alongside or
+after — the `index.md` check is the one with real leverage, since it closes a
+gap that currently depends on someone noticing.
