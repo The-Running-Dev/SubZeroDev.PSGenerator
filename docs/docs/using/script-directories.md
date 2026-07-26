@@ -35,11 +35,38 @@ scripts/write-greeting.ps1
 becomes:
 
 ```text
-Invoke-WriteGreeting
+Write-Greeting
 ```
 
 The script parameter block supplies parameter names, basic types, and whether the
 parameter is mandatory. Untyped parameters default to `string`.
+
+### How the Name Is Chosen
+
+A file already named `Verb-Noun` keeps that name when the verb is one PowerShell
+approves. The verb is emitted in the casing `Get-Verb` reports, so a lowercase
+file name still produces a correctly cased command:
+
+| File | Command |
+| --- | --- |
+| `Test-Documentation.ps1` | `Test-Documentation` |
+| `write-greeting.ps1` | `Write-Greeting` |
+| `convertto-json.ps1` | `ConvertTo-Json` |
+| `container-tool.ps1` | `Invoke-ContainerTool` |
+| `setup-my-tool.ps1` | `Invoke-SetupMyTool` |
+| `build.ps1` | `Invoke-Build` |
+
+Anything that is not `Verb-Noun` with an approved verb becomes `Invoke-` followed
+by the file name in Pascal case, because a name the author did not write as a
+command has no verb to preserve.
+
+:::note
+
+Naming a script after an existing command produces a generated command with that
+same name, which will shadow the original once the module is imported. Rename the
+script, or author the command explicitly, if that is not what you want.
+
+:::
 
 ## Module Functions
 
@@ -105,7 +132,7 @@ The complete source directory `scripts` tree is copied into the generated module
 ```text
 artifacts/PSModule/
 ├── Public/
-│   └── Invoke-WriteGreeting.ps1
+│   └── Write-Greeting.ps1
 └── Scripts/
     ├── write-greeting.ps1
     ├── modules/

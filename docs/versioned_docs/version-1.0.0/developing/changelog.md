@@ -59,6 +59,10 @@ unreleased and will be consolidated into the first Version 1 release notes.
 
 ### Fixed
 
+- Inference no longer double-verbs a script that is already named `Verb-Noun`.
+  `Test-Documentation.ps1` produced `Invoke-TestDocumentation`; it now produces
+  `Test-Documentation`, and a lowercase file name such as `write-greeting.ps1`
+  produces `Write-Greeting`.
 - Empty generated modules now import without requiring a `Public` directory.
 - Missing or null JSON Schema property collections are handled consistently.
 - Switch parameters normalize to native PowerShell `switch`.

@@ -3002,7 +3002,7 @@ Export-ModuleMember -Function @('Test-DirectoryTool')
         $definition.GeneratedBy | Should -Be 'SubZeroDev.PSGenerator'
         $definition.ModuleName | Should -Be 'InferredDirectory'
         $definition.ContainerImage | Should -Be 'ghcr.io/example/inferred:latest'
-        $definition.Commands.Name | Should -Be @('Invoke-InstallTool', 'Test-DirectoryTool')
+        $definition.Commands.Name | Should -Be @('Install-Tool', 'Test-DirectoryTool')
         $definition.Commands[0].SourceKind | Should -Be 'Script'
         $definition.Commands[0].Parameters.Name | Should -Be @('Name', 'Optional', 'Force')
         $definition.Commands[0].Parameters[0].Mandatory | Should -BeTrue
@@ -3011,11 +3011,11 @@ Export-ModuleMember -Function @('Test-DirectoryTool')
         $definition.Commands[1].SourceKind | Should -Be 'ModuleFunction'
         Test-Path -LiteralPath (Join-Path $directoryPath 'artifacts' 'PSModule' 'Public' 'Invoke-ContainerTool.ps1') |
             Should -BeFalse
-        Test-Path -LiteralPath (Join-Path $directoryPath 'artifacts' 'PSModule' 'Public' 'Invoke-InstallTool.ps1') |
+        Test-Path -LiteralPath (Join-Path $directoryPath 'artifacts' 'PSModule' 'Public' 'Install-Tool.ps1') |
             Should -BeTrue
         Test-Path -LiteralPath (Join-Path $directoryPath 'artifacts' 'PSModule' 'Public' 'Test-DirectoryTool.ps1') |
             Should -BeTrue
-        (Get-Command -Name Invoke-InstallTool -ErrorAction Stop).ModuleName |
+        (Get-Command -Name Install-Tool -ErrorAction Stop).ModuleName |
             Should -Be 'InferredDirectory'
         (Get-Location).Path | Should -Be $originalLocation.Path
     }
@@ -3117,15 +3117,15 @@ Describe 'Maintained directory integration fixtures' {
             $definition.GeneratedBy | Should -Be 'SubZeroDev.PSGenerator'
             $definition.ModuleName | Should -Be 'ScriptOnlyDirectory'
             $definition.ContainerImage | Should -Be 'ghcr.io/example/script-fixture:latest'
-            $definition.Commands.Name | Should -Be 'Invoke-WriteGreeting'
+            $definition.Commands.Name | Should -Be 'Write-Greeting'
             $definition.Commands[0].SourceKind | Should -Be 'Script'
             $definition.Commands[0].Parameters.Name | Should -Be @('Name', 'Uppercase')
-            $commands.Name | Should -Contain 'Invoke-WriteGreeting'
+            $commands.Name | Should -Contain 'Write-Greeting'
             Test-Path -LiteralPath (
                 Join-Path $directoryPath 'artifacts' 'PSModule' 'Scripts' 'support' 'settings.json'
             ) | Should -BeTrue
 
-            Invoke-WriteGreeting -Name 'Codex' -Uppercase | Should -Be 'HELLO, CODEX!'
+            Write-Greeting -Name 'Codex' -Uppercase | Should -Be 'HELLO, CODEX!'
         }
         finally {
             Remove-Module ScriptOnlyDirectory -Force -ErrorAction SilentlyContinue
@@ -3598,5 +3598,81 @@ validated elsewhere.
         $result = Invoke-DocumentationGate -Path (Join-Path $PSScriptRoot '..')
 
         $result.Failed | Should -BeFalse
+    }
+}
+
+Describe 'Inferred command naming' {
+    BeforeAll {
+        $namingDirectory = Join-Path $TestDrive 'NamingDirectory'
+        $namingScripts = New-Item `
+            -Path (Join-Path $namingDirectory 'scripts') `
+            -ItemType Directory `
+            -Force
+        Set-Content -LiteralPath (Join-Path $namingDirectory 'README.md') -Value '# Naming'
+
+        # One file per naming case, so a regression names the case that broke.
+        $namingFiles = @{
+            'Test-Documentation'   = 'Test-Documentation'
+            'Invoke-CI'            = 'Invoke-CI'
+            'New-ThingPackage'     = 'New-ThingPackage'
+            'write-greeting'       = 'Write-Greeting'
+            'convertto-json'       = 'ConvertTo-Json'
+            'container-tool'       = 'Invoke-ContainerTool'
+            'setup-my-tool'        = 'Invoke-SetupMyTool'
+            'build'                = 'Invoke-Build'
+        }
+        foreach ($fileName in $namingFiles.Keys) {
+            Set-Content `
+                -LiteralPath (Join-Path $namingScripts "$fileName.ps1") `
+                -Value 'param([string] $Name)'
+        }
+
+        $namingSpecification = Initialize-PSModuleSpecification `
+            -Directory $namingDirectory `
+            -PassThru
+        $namingDefinition = Import-PowerShellDataFile -LiteralPath $namingSpecification.FullName
+        $namingByFile = @{}
+        foreach ($command in $namingDefinition.Commands) {
+            $leaf = [IO.Path]::GetFileNameWithoutExtension($command.SourcePath)
+            $namingByFile[$leaf] = $command.Name
+        }
+    }
+
+    It 'keeps a file already named <_> as its own command name' -ForEach @(
+        'Test-Documentation'
+        'Invoke-CI'
+        'New-ThingPackage'
+    ) {
+        $namingByFile[$_] | Should -Be $_
+    }
+
+    It 'capitalizes a lowercase approved verb: write-greeting' {
+        $namingByFile['write-greeting'] | Should -Be 'Write-Greeting'
+    }
+
+    It 'uses the canonical casing of a compound verb: convertto-json' {
+        $namingByFile['convertto-json'] | Should -Be 'ConvertTo-Json'
+    }
+
+    It 'falls back to Invoke- when <File> is not Verb-Noun' -ForEach @(
+        @{ File = 'container-tool'; Expected = 'Invoke-ContainerTool' }
+        @{ File = 'setup-my-tool'; Expected = 'Invoke-SetupMyTool' }
+        @{ File = 'build'; Expected = 'Invoke-Build' }
+    ) {
+        $namingByFile[$File] | Should -Be $Expected
+    }
+
+    It 'reports the same name through inspection metadata' {
+        $inspection = Get-PSModuleInspection `
+            -Specification (Join-Path $namingDirectory 'PSModule' 'PSModule.psd1')
+        $suggested = @{}
+        foreach ($file in $inspection.Data.PowerShellFiles) {
+            if ($file.IsCommandCandidate) {
+                $suggested[[IO.Path]::GetFileNameWithoutExtension($file.Path)] = $file.SuggestedCommandName
+            }
+        }
+
+        $suggested['Test-Documentation'] | Should -Be 'Test-Documentation'
+        $suggested['container-tool'] | Should -Be 'Invoke-ContainerTool'
     }
 }

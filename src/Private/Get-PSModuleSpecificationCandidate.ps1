@@ -93,10 +93,7 @@ function Get-PSModuleSpecificationCandidate {
         if (@($parseErrors).Count -gt 0) { continue }
 
         if ($file.Extension -eq '.ps1') {
-            $words = [regex]::Matches($file.BaseName, '[A-Za-z0-9]+') | ForEach-Object {
-                [char]::ToUpperInvariant($_.Value[0]) + $_.Value.Substring(1)
-            }
-            $name = "Invoke-$($words -join '')"
+            $name = ConvertTo-PSModuleCommandName -FileBaseName $file.BaseName
             if ($commandNames.Add($name)) {
                 $commands.Add([ordered]@{
                     Id          = "script.$($relativePath.ToLowerInvariant().Replace('/', '.').Replace('.ps1', ''))"

@@ -25,10 +25,7 @@ $files = foreach ($item in $items) {
     $isCommandCandidate = $item.Extension -eq '.ps1'
     $suggestedCommandName = $null
     if ($isCommandCandidate) {
-        $words = [regex]::Matches($item.BaseName, '[A-Za-z0-9]+') | ForEach-Object {
-            [char]::ToUpperInvariant($_.Value[0]) + $_.Value.Substring(1)
-        }
-        $suggestedCommandName = "Invoke-$($words -join '')"
+        $suggestedCommandName = ConvertTo-PSModuleCommandName -FileBaseName $item.BaseName
     }
     $parameters = @(
         if ($isCommandCandidate -and $ast.ParamBlock) {
