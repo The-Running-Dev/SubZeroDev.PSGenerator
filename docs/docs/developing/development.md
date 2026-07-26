@@ -115,6 +115,13 @@ CI first stages the generator into a clean module directory and points tests at 
 manifest. This prevents the development source tree from masking missing package
 files.
 
+### Maintained Fixtures
+
+The suite includes isolated copies of a script-only directory and an authored
+build-agent directory, under `tests/fixtures/directories`. Tests copy them to
+temporary directories before initialization or generation, so the tracked fixture
+sources stay unchanged.
+
 ## PowerShell 7.4 Baseline
 
 The baseline script requires an exact 7.4 runtime:

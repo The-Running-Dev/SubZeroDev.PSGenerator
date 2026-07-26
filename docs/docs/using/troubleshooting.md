@@ -1,7 +1,7 @@
 ---
 title: Troubleshooting
 description: Diagnose installation, generation, inference, Docker, plugin, CI, and package failures.
-sidebar_position: 11
+sidebar_position: 12
 ---
 
 # Troubleshooting

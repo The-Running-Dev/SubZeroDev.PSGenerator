@@ -27,6 +27,7 @@ Describe 'SubZeroDev.PSGenerator module' {
         $exportedCommands.Name | Should -Contain 'Get-PSModuleModel'
         $exportedCommands.Name | Should -Contain 'Get-PSModulePlugin'
         $exportedCommands.Name | Should -Contain 'Install-PSModule'
+        $exportedCommands.Name | Should -Contain 'Initialize-PSModuleDirectory'
         $exportedCommands.Name | Should -Contain 'Initialize-PSModuleSpecification'
         $exportedCommands.Name | Should -Contain 'Test-PSModuleSpecification'
     }
@@ -2942,7 +2943,7 @@ Describe 'Install-PSModule' {
     }
 }
 
-Describe 'Test-LocalDirectory script' {
+Describe 'Initialize-PSModuleDirectory' {
     BeforeAll {
         $directoryPath = Join-Path $TestDrive 'Directory'
         $specificationDirectory = Join-Path $directoryPath 'PSModule'
@@ -2950,13 +2951,12 @@ Describe 'Test-LocalDirectory script' {
         Set-Content -LiteralPath (Join-Path $specificationDirectory 'PSModule.psd1') -Value @'
 @{ Commands = @(@{ Name = 'Invoke-ExternalDirectory'; Parameters = @() }) }
 '@
-        $scriptPath = Join-Path $PSScriptRoot '..' 'build' 'Test-LocalDirectory.ps1'
     }
 
     It 'returns the target directory model and restores the caller location' {
         $originalLocation = Get-Location
 
-        $model = & $scriptPath -Directory $directoryPath
+        $model = Initialize-PSModuleDirectory -Directory $directoryPath
 
         $model.Commands[0].Name | Should -Be 'Invoke-ExternalDirectory'
         (Get-Location).Path | Should -Be $originalLocation.Path
@@ -2965,7 +2965,7 @@ Describe 'Test-LocalDirectory script' {
     It 'generates directory metadata and restores the caller location' {
         $originalLocation = Get-Location
 
-        $artifact = & $scriptPath -Directory $directoryPath -Generate -Output './generated'
+        $artifact = Initialize-PSModuleDirectory -Directory $directoryPath -Generate -Output './generated'
 
         $artifact.FullName | Should -Be (Join-Path $directoryPath 'generated' 'Metadata' 'model.json')
         (Get-Location).Path | Should -Be $originalLocation.Path
@@ -2995,7 +2995,7 @@ function Test-DirectoryTool { param([string] $Path) }
 Export-ModuleMember -Function @('Test-DirectoryTool')
 '@
 
-        & $scriptPath -Directory ($directoryPath + [IO.Path]::DirectorySeparatorChar) | Out-Null
+        Initialize-PSModuleDirectory -Directory ($directoryPath + [IO.Path]::DirectorySeparatorChar) | Out-Null
 
         $specificationPath = Join-Path $directoryPath 'PSModule' 'PSModule.psd1'
         $definition = Import-PowerShellDataFile $specificationPath
@@ -3028,7 +3028,7 @@ Export-ModuleMember -Function @('Test-DirectoryTool')
         Set-Content -LiteralPath $specificationPath -Value '@{ ModuleName = ''Old''; Commands = @() }'
         Set-Content -LiteralPath (Join-Path $scriptsPath 'run-tool.ps1') -Value 'param([string] $Value)'
 
-        & $scriptPath -Directory $directoryPath | Out-Null
+        Initialize-PSModuleDirectory -Directory $directoryPath | Out-Null
 
         $refreshed = Import-PowerShellDataFile $specificationPath
         $refreshed.ModuleName | Should -Be 'RefreshDirectory'
@@ -3038,7 +3038,7 @@ Export-ModuleMember -Function @('Test-DirectoryTool')
 
         $authoredSource = "@{ ModuleName = 'Authored'; Commands = @(@{ Name = 'Invoke-Authored'; Parameters = @() }) }"
         Set-Content -LiteralPath $specificationPath -Value $authoredSource
-        & $scriptPath -Directory $directoryPath | Out-Null
+        Initialize-PSModuleDirectory -Directory $directoryPath | Out-Null
 
         (Get-Content -LiteralPath $specificationPath -Raw).Trim() | Should -Be $authoredSource
     }
@@ -3065,7 +3065,7 @@ Export-ModuleMember -Function @('Test-DirectoryTool')
         $scriptsPath = New-Item -Path (Join-Path $directoryPath 'scripts') -ItemType Directory -Force
         Set-Content -LiteralPath (Join-Path $scriptsPath 'setup.ps1') -Value 'param([switch] $Force)'
 
-        $commands = @(& $scriptPath -Directory $directoryPath -ListCommands)
+        $commands = @(Initialize-PSModuleDirectory -Directory $directoryPath -ListCommands)
         $definition = Import-PowerShellDataFile $specificationPath
 
         $definition.Commands.Name | Should -Be 'Invoke-Setup'
@@ -3075,7 +3075,7 @@ Export-ModuleMember -Function @('Test-DirectoryTool')
     }
 
     It 'imports the generated module and lists commands for immediate testing' {
-        $commands = @(& $scriptPath -Directory $directoryPath -ListCommands -Output './listed')
+        $commands = @(Initialize-PSModuleDirectory -Directory $directoryPath -ListCommands -Output './listed')
 
         $commands.Name | Should -Contain 'Invoke-ExternalDirectory'
         (Get-Command Invoke-ExternalDirectory -ErrorAction Stop).ModuleName | Should -Be 'PSModule'
@@ -3087,7 +3087,7 @@ Export-ModuleMember -Function @('Test-DirectoryTool')
         $emptyDirectoryPath = Join-Path $TestDrive 'EmptyDirectory'
         New-Item -Path $emptyDirectoryPath -ItemType Directory -Force | Out-Null
 
-        $commands = @(& $scriptPath -Directory $emptyDirectoryPath -ListCommands)
+        $commands = @(Initialize-PSModuleDirectory -Directory $emptyDirectoryPath -ListCommands)
 
         $commands.Count | Should -Be 0
         Test-Path -LiteralPath (
@@ -3100,7 +3100,7 @@ Export-ModuleMember -Function @('Test-DirectoryTool')
 Describe 'Maintained directory integration fixtures' {
     BeforeAll {
         $fixtureRoot = Join-Path $PSScriptRoot 'fixtures' 'directories'
-        $localDirectoryScript = Join-Path $PSScriptRoot '..' 'build' 'Test-LocalDirectory.ps1'
+        # harness is now the public Initialize-PSModuleDirectory command
     }
 
     It 'initializes, packages, imports, and invokes the script-only fixture' {
@@ -3108,7 +3108,7 @@ Describe 'Maintained directory integration fixtures' {
         Copy-Item -LiteralPath (Join-Path $fixtureRoot 'ScriptOnly') `
             -Destination $directoryPath -Recurse
 
-        $commands = @(& $localDirectoryScript -Directory $directoryPath -ListCommands)
+        $commands = @(Initialize-PSModuleDirectory -Directory $directoryPath -ListCommands)
         $definition = Import-PowerShellDataFile (
             Join-Path $directoryPath 'PSModule' 'PSModule.psd1'
         )
@@ -3139,7 +3139,7 @@ Describe 'Maintained directory integration fixtures' {
         $specificationPath = Join-Path $directoryPath 'PSModule' 'PSModule.psd1'
 
         $inspection = Get-PSModuleInspection -Specification $specificationPath
-        $commands = @(& $localDirectoryScript -Directory $directoryPath -ListCommands)
+        $commands = @(Initialize-PSModuleDirectory -Directory $directoryPath -ListCommands)
         $generatedCommandPath = Join-Path $directoryPath `
             'artifacts' 'PSModule' 'Public' 'Invoke-BuildAgent.ps1'
         $generatedCommand = Get-Content -LiteralPath $generatedCommandPath -Raw

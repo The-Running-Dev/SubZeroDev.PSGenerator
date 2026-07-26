@@ -13,6 +13,7 @@
         'Get-PSModuleDiagnostic'
         'Get-PSModulePlugin'
         'Install-PSModule'
+        'Initialize-PSModuleDirectory'
         'Initialize-PSModuleSpecification'
         'Test-PSModuleSpecification'
     )

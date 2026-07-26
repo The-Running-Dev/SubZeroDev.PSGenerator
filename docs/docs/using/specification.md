@@ -1,7 +1,7 @@
 ---
 title: Specification Reference
 description: Complete Version 1 PSModule.psd1 property reference.
-sidebar_position: 7
+sidebar_position: 8
 ---
 
 # Specification Reference

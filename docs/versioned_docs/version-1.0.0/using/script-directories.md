@@ -1,7 +1,7 @@
 ---
 title: Script Directory Inference
 description: Turn scripts and exported module functions into generated commands.
-sidebar_position: 3
+sidebar_position: 4
 ---
 
 # Script Directory Inference
@@ -78,10 +78,10 @@ The scaffold infers:
 
 ## Generate and List Commands
 
-From the PSGenerator checkout:
+Point the generator at the directory:
 
 ```powershell
-./build/Test-LocalDirectory.ps1 `
+Initialize-PSModuleDirectory `
     -Directory ../MyDirectory `
     -ListCommands
 ```
@@ -93,7 +93,7 @@ available in the current PowerShell session.
 Use strict behavior when a missing specification should fail:
 
 ```powershell
-./build/Test-LocalDirectory.ps1 `
+Initialize-PSModuleDirectory `
     -Directory ../MyDirectory `
     -NoInitialize
 ```

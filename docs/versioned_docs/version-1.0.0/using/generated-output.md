@@ -1,7 +1,7 @@
 ---
 title: Generated Output
 description: Deterministic module artifacts and their runtime roles.
-sidebar_position: 9
+sidebar_position: 10
 ---
 
 # Generated Output

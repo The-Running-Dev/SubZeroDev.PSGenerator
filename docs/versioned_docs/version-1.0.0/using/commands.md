@@ -1,7 +1,7 @@
 ---
 title: Command Reference
 description: Public PSGenerator command syntax, parameters, and outputs.
-sidebar_position: 8
+sidebar_position: 9
 ---
 
 # Command Reference
@@ -80,6 +80,37 @@ Initialize-PSModuleSpecification `
 | `PassThru` | False | Return the created `FileInfo` |
 
 Without `-PassThru`, successful creation has no pipeline output.
+
+## Initialize-PSModuleDirectory
+
+Prepares a directory and reports what it produced, in one call:
+
+```powershell
+Initialize-PSModuleDirectory `
+    -Directory <string> `
+    [-Specification <string>] `
+    [-Output <string>] `
+    [-Generate] `
+    [-ListCommands] `
+    [-NoInitialize]
+```
+
+| Parameter | Default | Description |
+| --- | --- | --- |
+| `Directory` | Required | Directory to prepare |
+| `Specification` | `PSModule/PSModule.psd1` | Relative to `Directory`, or absolute |
+| `Output` | `artifacts/PSModule` | Relative to `Directory`, or absolute |
+| `Generate` | False | Generate, import globally, return the artifact |
+| `ListCommands` | False | Generate, import globally, return exported commands |
+| `NoInitialize` | False | Fail on a missing specification instead of scaffolding |
+
+Scaffolds a specification when none exists, generates the module, imports it
+globally, and returns the normalized model, the generated artifact, or the
+exported commands depending on the switches. An authored specification is never
+overwritten; only a missing, empty, or unmapped generator-owned scaffold is
+created or refreshed.
+
+See [Point PSGenerator at a Directory](./local-testing.md).
 
 ## Get-PSModuleInspection
 

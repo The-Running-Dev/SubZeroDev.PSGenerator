@@ -1,7 +1,7 @@
 ---
 title: Validation, Completion, and Help
 description: Add native PowerShell ergonomics to generated commands.
-sidebar_position: 5
+sidebar_position: 6
 ---
 
 # Validation, Completion, and Help

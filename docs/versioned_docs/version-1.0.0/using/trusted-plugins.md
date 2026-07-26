@@ -1,7 +1,7 @@
 ---
 title: Trusted Local Plugins
 description: Add inspection and packaging behavior for one directory with internal Version 1 plugins.
-sidebar_position: 10
+sidebar_position: 11
 ---
 
 # Trusted Local Plugins

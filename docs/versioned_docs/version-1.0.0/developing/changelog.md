@@ -44,6 +44,10 @@ unreleased and will be consolidated into the first Version 1 release notes.
 - A published container image, `ghcr.io/the-running-dev/subzerodev.psgenerator`,
   carrying PowerShell 7.4 and the module on the all-users module path with
   `pwsh` as its entry point.
+- `Initialize-PSModuleDirectory`, which scaffolds, generates, imports, and
+  reports for a directory in one call. Previously a build script that only
+  worked from inside a checkout; now a public command, and the natural first
+  call when a directory is mounted into the container image.
 
 ### Changed
 
