@@ -31,30 +31,12 @@
 .PARAMETER BaseImage
     Base image passed as the Dockerfile BASE_IMAGE build-arg.
 
-.PARAMETER CreateVersion
-    Cut a documentation version snapshot and exit without running a container.
-
-    Runs `docusaurus docs:version <version>` inside the built image with docs/
-    bind-mounted, then writes versioned_docs/, versioned_sidebars/, and
-    versions.json back to docs/ on the host. docs-build.ps1 copies those to
-    /template during CI, so the snapshot ships with the site.
-
-    Cut a snapshot only when the documented content is final for that version;
-    every later edit to docs/docs leaves the frozen copy stale.
-
-    Cut the snapshot before pointing `lastVersion` at it in docusaurus.config.ts.
-    Docusaurus fails to load a config whose `lastVersion` names a version that
-    versions.json does not list, so re-cutting an existing snapshot means
-    temporarily removing that setting first.
-
 .EXAMPLE
     ./docs.ps1                 # build, run baked, serve http://localhost:3000
 .EXAMPLE
     ./docs.ps1 -Live           # build, run with hot-reload from docs/
 .EXAMPLE
     ./docs.ps1 -BuildOnly      # just build the image
-.EXAMPLE
-    ./docs.ps1 -CreateVersion 1.0.0    # freeze the current docs as version 1.0.0
 #>
 [CmdletBinding()]
 param(
@@ -62,8 +44,7 @@ param(
     [switch]$BuildOnly,
     [int]$Port = 3000,
     [string]$Tag = 'psgenerator-docs',
-    [string]$BaseImage = 'ghcr.io/the-running-dev/docs-template:latest',
-    [string]$CreateVersion
+    [string]$BaseImage = 'ghcr.io/the-running-dev/docs-template:latest'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -123,41 +104,6 @@ if ($BuildOnly) {
 
 # Docker Desktop wants forward-slash absolute paths for bind mounts.
 $ctx = ($context -replace '\\', '/')
-
-if ($CreateVersion) {
-    # docusaurus writes these at the project root, not inside docs/. Create them
-    # on the host first so the bind mounts attach to existing paths instead of
-    # Docker creating root-owned directories.
-    $versionedDocs = Join-Path $context 'versioned_docs'
-    $versionedSidebars = Join-Path $context 'versioned_sidebars'
-    $versionsFile = Join-Path $context 'versions.json'
-
-    foreach ($directory in @($versionedDocs, $versionedSidebars)) {
-        if (-not (Test-Path -LiteralPath $directory -PathType Container)) {
-            New-Item -ItemType Directory -Path $directory -Force | Out-Null
-        }
-    }
-    if (-not (Test-Path -LiteralPath $versionsFile -PathType Leaf)) {
-        [IO.File]::WriteAllText($versionsFile, "[]`n", [Text.UTF8Encoding]::new($false))
-    }
-
-    Write-Host "Cutting documentation version '$CreateVersion' ..." -ForegroundColor Cyan
-    docker run --rm `
-        -v "${ctx}/docs:/template/docs" `
-        -v "${ctx}/versioned_docs:/template/versioned_docs" `
-        -v "${ctx}/versioned_sidebars:/template/versioned_sidebars" `
-        -v "${ctx}/versions.json:/template/versions.json" `
-        -w /template `
-        $Tag `
-        pnpm run docusaurus docs:version $CreateVersion
-    if ($LASTEXITCODE -ne 0) { throw "docusaurus docs:version failed (exit $LASTEXITCODE)" }
-
-    Write-Host (
-        "Created docs/versioned_docs/version-$CreateVersion, its sidebar, and " +
-        'updated docs/versions.json.'
-    ) -ForegroundColor Green
-    return
-}
 
 $runArgs = @('run', '--rm', '-it', '-p', "${Port}:3000")
 

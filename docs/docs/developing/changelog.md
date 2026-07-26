@@ -39,8 +39,6 @@ unreleased and will be consolidated into the first Version 1 release notes.
 - MIT license, referenced from the README and the module manifest's `LicenseUri`.
 - Markdown link, heading-anchor, and terminology gate enforced in CI by
   `build/Test-Documentation.ps1`.
-- Versioned documentation: the newest release is served at the site root and the
-  in-progress docs at `/next`, with snapshots cut by `./docs.ps1 -CreateVersion`.
 - A published container image, `ghcr.io/the-running-dev/subzerodev.psgenerator`,
   carrying PowerShell 7.4 and the module on the all-users module path with
   `pwsh` as its entry point.

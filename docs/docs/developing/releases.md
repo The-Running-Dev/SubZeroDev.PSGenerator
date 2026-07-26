@@ -59,8 +59,6 @@ Confirm:
 - the manifest version is final;
 - release notes describe user-visible behavior and breaking changes;
 - installation and getting-started documentation match the release;
-- a documentation snapshot exists for the release version and `lastVersion` in
-  `docs/docusaurus.config.ts` points at it;
 - required checks pass on `main`; and
 - the version has never been published.
 
@@ -78,50 +76,6 @@ manifest exactly.
 
 Because `latest` follows `main` rather than a release tag, it can be ahead of the
 published package. Pin a date tag when the environment must be reproducible.
-
-## Documentation Versions
-
-The site publishes one snapshot per released version plus the in-progress docs:
-
-| Version | Route | Source |
-| --- | --- | --- |
-| Newest release | `/` | `docs/versioned_docs/version-<version>` |
-| Unreleased | `/next` | `docs/docs` |
-
-Serving the newest release at the root means a visitor who lands on the site
-without choosing a version reads shipped behavior, never an unreleased contract.
-
-Cut a snapshot as the last documentation step before tagging, once the content is
-final:
-
-```powershell
-./docs.ps1 -CreateVersion 1.0.0
-```
-
-That writes `docs/versioned_docs/version-1.0.0`, its sidebar under
-`docs/versioned_sidebars`, and updates `docs/versions.json`. Set `lastVersion` in
-`docs/docusaurus.config.ts` to the new version in the same change.
-
-:::caution
-
-Cut the snapshot *before* pointing `lastVersion` at it. Docusaurus fails to load a
-config whose `lastVersion` names a version missing from `versions.json`, so
-deleting a snapshot to re-cut it means temporarily removing that setting first.
-
-:::
-
-A snapshot is frozen: later edits under `docs/docs` change only `/next`. To pull
-a correction into an already-cut version, edit the file under `versioned_docs`
-directly, or delete and re-cut the snapshot when it has drifted broadly.
-
-:::note
-
-The homepage is generated from `README.md`, which links to documentation using
-site-absolute paths such as `/using/installation`. Those resolve to the
-newest released version, so the `/next` homepage links to released pages. Body
-links inside `docs/docs` are relative and stay within their own version.
-
-:::
 
 ## Publish
 

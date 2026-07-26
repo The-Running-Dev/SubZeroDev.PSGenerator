@@ -3,29 +3,7 @@
 Follow-up work after the v1 rename. Independent of that branch, which is already
 large.
 
-## 1. Drop Docusaurus Versioning
-
-There is one version of these docs and there always will be, so the snapshot
-machinery is pure overhead. It has also been a recurring tax: every content
-change needs the snapshot re-cut, and re-cutting needs `lastVersion` temporarily
-removed first, because Docusaurus refuses to load a config naming a version that
-`versions.json` does not list.
-
-Remove:
-
-- `docs/versioned_docs/`, `docs/versioned_sidebars/`, `docs/versions.json`
-- `lastVersion` and the `versions` block in `docs/docusaurus.config.ts`
-- the `docsVersionDropdown` navbar item
-- `-CreateVersion` from `docs.ps1`, and its ordering caution
-- the "Documentation Versions" section in `docs/docs/developing/releases.md`,
-  and the release-checklist step that cuts a snapshot
-- the `versioned_docs` exclusion in `.config/DocumentationRules.psd1`
-- the changelog entry advertising versioned documentation
-
-After this, `/` serves the only docs and `/next` disappears. Check nothing links
-to `/next` before removing it.
-
-## 2. Publishing Stays Release-Driven
+## 1. Publishing Stays Release-Driven
 
 Decided: keep publishing on tag push and manual dispatch until 1.0 is
 formalized. No change to `publish.yml`. The container image keeps publishing
@@ -43,7 +21,7 @@ Revisit at 1.0, and note two things that will matter then:
 Also worth deciding then: whether the image should carry `:1.0.0` alongside
 `:latest` and the date tag, so an image can be matched to a package version.
 
-## 3. Gaps Found During the Rename
+## 2. Gaps Found During the Rename
 
 Small, concrete, and each one is a thing that can silently rot.
 
@@ -84,6 +62,12 @@ Small, concrete, and each one is a thing that can silently rot.
 
   Do not require `Deploy documentation`: it is skipped on pull requests by
   design, because its job is gated on `github.event_name == 'push'`.
+- **Head branches are not deleted on merge.** Nine stale branches accumulated
+  before being cleaned up, all of them pointers into already-merged history. The
+  two most recent behaved differently — `#62`'s branch went automatically while
+  `feature/replace-docs-workflow` stayed — so the setting is not on for every
+  merge path. Turn on *Automatically delete head branches* in repository
+  settings and the list stops growing on its own.
 - **A generated command can shadow an existing one.** Since the inference naming
   fix, `convertto-json.ps1` produces `ConvertTo-Json`, which shadows the built-in
   once the module is imported. Documented as a note in the script inference
@@ -94,7 +78,7 @@ Small, concrete, and each one is a thing that can silently rot.
   anything builds them. Those directories are currently empty, so it is quiet
   right now, and it will come back.
 
-## 4. Still Open on the v1 Roadmap
+## 3. Still Open on the v1 Roadmap
 
 Not re-planned here, just so it is not forgotten. `TODO.md` still has:
 
@@ -111,7 +95,10 @@ Not re-planned here, just so it is not forgotten. `TODO.md` still has:
 
 ## Sequencing
 
-Separate PR from the rename. Item 1 first: self-contained, and it removes the
-snapshot tax that slows every later documentation change. Item 3 alongside or
-after — the `index.md` check is the one with real leverage, since it closes a
-gap that currently depends on someone noticing.
+Dropping Docusaurus versioning is done, so the snapshot no longer has to be
+re-cut on every documentation change.
+
+Of what remains, the two repository settings in section 2 are the highest
+leverage and cost nothing: without required status checks, none of the gates
+block a merge. After that, the `index.md` drift check, since it closes a gap
+that currently depends on someone remembering. Publishing waits for 1.0.

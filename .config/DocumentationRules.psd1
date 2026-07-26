@@ -31,7 +31,6 @@
         '.git'
         'artifacts'
         'node_modules'
-        'versioned_docs'
     )
 
     # Individual files excluded from scanning, relative to the repository root.

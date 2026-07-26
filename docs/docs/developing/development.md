@@ -121,10 +121,6 @@ Pass `-Path` to scan a subset:
 ./build/Test-Documentation.ps1 -Path ./docs/docs
 ```
 
-Frozen version snapshots under `docs/versioned_docs` are excluded: they are
-historical copies, and a correction belongs in `docs/docs` or in the snapshot
-itself rather than being reported on every run.
-
 ## Unit and Integration Tests
 
 ```powershell
