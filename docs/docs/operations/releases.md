@@ -13,7 +13,7 @@ Publishing is release-driven. Merging code into `main` does not create a package
 The module version is declared in:
 
 ```text
-src/SubZeroDev.ContainerPSGenerator.psd1
+src/SubZeroDev.PSGenerator.psd1
 ```
 
 GitHub Release tags must use:
@@ -135,13 +135,13 @@ The workflow uses its short-lived `GITHUB_TOKEN` with `contents: read` and
 The package ID is:
 
 ```text
-SubZeroDev.ContainerPSGenerator
+SubZeroDev.PSGenerator
 ```
 
 The package contains Git repository metadata linking it to:
 
 ```text
-https://github.com/The-Running-Dev/SubZeroDev.ContainerPSGenerator.git
+https://github.com/The-Running-Dev/SubZeroDev.PSGenerator.git
 ```
 
 GitHub may initially create the package with private visibility. A package
@@ -155,9 +155,9 @@ After the workflow succeeds, follow
 Verify:
 
 ```powershell
-Get-InstalledPSResource SubZeroDev.ContainerPSGenerator
-Import-Module SubZeroDev.ContainerPSGenerator -Force
-Get-Command -Module SubZeroDev.ContainerPSGenerator
+Get-InstalledPSResource SubZeroDev.PSGenerator
+Import-Module SubZeroDev.PSGenerator -Force
+Get-Command -Module SubZeroDev.PSGenerator
 ```
 
 Then validate and build the minimal example.

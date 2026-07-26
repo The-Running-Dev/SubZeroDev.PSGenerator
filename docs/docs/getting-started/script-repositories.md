@@ -6,7 +6,7 @@ sidebar_position: 3
 
 # Script repository inference
 
-ContainerPSGenerator can create an initial specification for repositories that
+PSGenerator can create an initial specification for repositories that
 already expose PowerShell entry points beneath `scripts`.
 
 ## Discovery boundary
@@ -54,7 +54,7 @@ imports the packaged module and invokes the exported function module-qualified.
 ## Initialize a specification
 
 ```powershell
-Initialize-ContainerModuleSpecification `
+Initialize-PSModuleSpecification `
     -Repository . `
     -PassThru
 ```
@@ -63,8 +63,8 @@ This creates `PSModule/PSModule.psd1`. Use `-WhatIf` to preview creation and `-F
 to replace an existing file:
 
 ```powershell
-Initialize-ContainerModuleSpecification -Repository . -WhatIf
-Initialize-ContainerModuleSpecification -Repository . -Force
+Initialize-PSModuleSpecification -Repository . -WhatIf
+Initialize-PSModuleSpecification -Repository . -Force
 ```
 
 The scaffold infers:
@@ -78,7 +78,7 @@ The scaffold infers:
 
 ## Generate and list commands
 
-From the ContainerPSGenerator checkout:
+From the PSGenerator checkout:
 
 ```powershell
 ./build/Test-LocalRepository.ps1 `
@@ -123,7 +123,7 @@ machine path.
 Generated scaffolds carry:
 
 ```powershell
-GeneratedBy = 'SubZeroDev.ContainerPSGenerator'
+GeneratedBy = 'SubZeroDev.PSGenerator'
 ```
 
 The repository test harness refreshes missing, empty, or generator-owned scaffolds

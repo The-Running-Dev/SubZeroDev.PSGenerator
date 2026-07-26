@@ -82,7 +82,7 @@ Publishing uses the workflow-scoped `GITHUB_TOKEN`.
 Before publishing a container module:
 
 ```powershell
-Build-ContainerModule
+Build-PSModule
 Get-ChildItem ./artifacts/PSModule -Recurse
 Get-Content ./artifacts/PSModule/Public/*.ps1
 ```
@@ -93,7 +93,7 @@ authored modules.
 
 ## Container image integrity
 
-`Install-ContainerModule` validates module structure, not image provenance. Use
+`Install-PSModule` validates module structure, not image provenance. Use
 trusted registries, immutable digests where appropriate, and repository-specific
 signature or attestation policies.
 

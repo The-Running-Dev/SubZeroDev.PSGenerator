@@ -3,7 +3,7 @@ param ([Parameter(Mandatory)] [psobject] $Context)
 $names = '^(?i:(?:openapi|swagger).*)\.(?:json|ya?ml)$'
 $items = @(Get-ChildItem -LiteralPath $Context.RepositoryPath -Recurse -File | Where-Object {
     $_.Name -match $names -and
-    (Test-ContainerModuleInspectionPath -Context $Context -Path $_.FullName)
+    (Test-PSModuleInspectionPath -Context $Context -Path $_.FullName)
 })
 [Array]::Sort($items, [Collections.Generic.Comparer[object]]::Create({ param($a, $b) [StringComparer]::Ordinal.Compare($a.FullName, $b.FullName) }))
 

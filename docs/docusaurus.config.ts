@@ -4,14 +4,14 @@ import type * as Preset from '@docusaurus/preset-classic';
 const isProduction = process.env.NODE_ENV === 'production';
 
 const config: Config = {
-  title: 'SubZeroDev.ContainerPSGenerator',
+  title: 'SubZeroDev.PSGenerator',
   tagline: 'Generate native PowerShell modules for containerized applications',
   url: isProduction
     ? 'https://psgenerator.subzerodev.com'
     : 'http://localhost:3000',
   baseUrl: '/',
   organizationName: 'The-Running-Dev',
-  projectName: 'SubZeroDev.ContainerPSGenerator',
+  projectName: 'SubZeroDev.PSGenerator',
   trailingSlash: false,
 
   onBrokenLinks: 'throw',
@@ -55,12 +55,12 @@ const config: Config = {
 
   themeConfig: {
     navbar: {
-      title: 'ContainerPSGenerator',
+      title: 'PSGenerator',
       items: [
         {type: 'docSidebar', sidebarId: 'docs', position: 'left', label: 'Docs'},
         {type: 'docsVersionDropdown', position: 'right'},
         {
-          href: 'https://github.com/The-Running-Dev/SubZeroDev.ContainerPSGenerator',
+          href: 'https://github.com/The-Running-Dev/SubZeroDev.PSGenerator',
           label: 'GitHub',
           position: 'right',
         },

@@ -1,6 +1,6 @@
 BeforeAll {
     $repositoryRoot = Split-Path $PSScriptRoot -Parent
-    $generatorManifest = Join-Path $repositoryRoot 'src' 'SubZeroDev.ContainerPSGenerator.psd1'
+    $generatorManifest = Join-Path $repositoryRoot 'src' 'SubZeroDev.PSGenerator.psd1'
     $fixtureSource = Join-Path $repositoryRoot 'examples' 'Minimal'
     $fixturePath = Join-Path $TestDrive 'Minimal'
     $generatedModulePath = Join-Path $fixturePath 'artifacts' 'PSModule'
@@ -8,8 +8,8 @@ BeforeAll {
     $isAct = $env:ACT -eq 'true'
     $mountedRepositoryPath = if ($isAct) { '/tmp' } else { Join-Path $TestDrive 'Repository' }
     $secretPath = Join-Path $TestDrive 'api-token.txt'
-    $volumeName = 'containerpsgenerator-e2e-' + [guid]::NewGuid().ToString('N')
-    $image = 'subzerodev-containerpsgenerator-minimal:local'
+    $volumeName = 'psgenerator-e2e-' + [guid]::NewGuid().ToString('N')
+    $image = 'subzerodev-psgenerator-minimal:local'
 
     if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
         throw 'Docker is required for the container end-to-end tests.'
@@ -24,7 +24,7 @@ BeforeAll {
 
     Push-Location $fixturePath
     try {
-        $null = Build-ContainerModule -Specification './PSModule/PSModule.psd1' -Output './artifacts/PSModule'
+        $null = Build-PSModule -Specification './PSModule/PSModule.psd1' -Output './artifacts/PSModule'
     }
     finally {
         Pop-Location
@@ -35,7 +35,7 @@ BeforeAll {
         throw "Building the end-to-end fixture image failed with exit code $LASTEXITCODE."
     }
 
-    $null = Install-ContainerModule $image -Destination $installedModulePath
+    $null = Install-PSModule $image -Destination $installedModulePath
     Import-Module (Join-Path $installedModulePath 'ExampleContainer.psd1') -Force
 
     if (-not $isAct) {
@@ -48,7 +48,7 @@ BeforeAll {
 
 AfterAll {
     Remove-Module ExampleContainer -Force -ErrorAction SilentlyContinue
-    Remove-Module SubZeroDev.ContainerPSGenerator -Force -ErrorAction SilentlyContinue
+    Remove-Module SubZeroDev.PSGenerator -Force -ErrorAction SilentlyContinue
     & docker image rm --force $image 2>&1 | Out-Null
     & docker volume rm --force $volumeName 2>&1 | Out-Null
 }

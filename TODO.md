@@ -23,7 +23,7 @@ work queue.
 
 ## 1. MVP blockers
 
-- [x] Make `Build-ContainerModule` orchestration-only and keep it as the single public
+- [x] Make `Build-PSModule` orchestration-only and keep it as the single public
   build command.
 - [x] Add deterministic package regression tests that prove repeated builds produce
   identical files without changing current behavior.
@@ -202,7 +202,7 @@ Complete these in order so every inspector follows the same policy:
 - [x] A repository author can define `PSModule/PSModule.psd1` and generate a complete
   module package.
 - [x] The generated module is embedded at `/PSModule` in a real image.
-- [x] A user can install it with `Install-ContainerModule`, import it, invoke generated
+- [x] A user can install it with `Install-PSModule`, import it, invoke generated
   commands, and use `Get-Help` without manually constructing `docker run` arguments.
 - [x] Built-in stages execute through the ordered internal plugin pipeline and expose
   actionable execution diagnostics.

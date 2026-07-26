@@ -50,14 +50,14 @@ filename determines lexical order; use zero-padded prefixes consistently.
 Inspect without executing:
 
 ```powershell
-Get-ContainerModulePlugin `
+Get-PSModulePlugin `
     -Path ./PSModule/Plugins
 ```
 
 Filter stages:
 
 ```powershell
-Get-ContainerModulePlugin `
+Get-PSModulePlugin `
     -Path ./PSModule/Plugins `
     -Stage Inspectors, Validators
 ```
@@ -113,9 +113,9 @@ PSModule/
 Select explicit additional roots:
 
 ```powershell
-Build-ContainerModule `
+Build-PSModule `
     -Specification ./PSModule/PSModule.psd1 `
-    -PluginPath ./Build/ContainerModulePlugins
+    -PluginPath ./Build/PSModulePlugins
 ```
 
 Built-in plugins always run. Explicit roots do not replace them.
@@ -133,9 +133,9 @@ Every attempted plugin records:
 - error text.
 
 ```powershell
-$inspection = Get-ContainerModuleInspection
-$inspection | Get-ContainerModuleDiagnostic
-$inspection | Get-ContainerModuleDiagnostic -Detailed
+$inspection = Get-PSModuleInspection
+$inspection | Get-PSModuleDiagnostic
+$inspection | Get-PSModuleDiagnostic -Detailed
 ```
 
 The runner wraps ordinary failures with plugin and stage identity. Failures stop the

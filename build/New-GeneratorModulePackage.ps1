@@ -14,7 +14,7 @@ Directory that will contain the packaged module.
 [CmdletBinding()]
 param (
     [Parameter()]
-    [string] $Output = 'artifacts/module/SubZeroDev.ContainerPSGenerator'
+    [string] $Output = 'artifacts/module/SubZeroDev.PSGenerator'
 )
 
 Set-StrictMode -Version 3.0
@@ -53,6 +53,6 @@ foreach ($sourceItem in Get-ChildItem -LiteralPath $sourceRoot) {
     Copy-Item -LiteralPath $sourceItem.FullName -Destination $outputPath -Recurse -Force
 }
 
-$manifestPath = Join-Path $outputPath 'SubZeroDev.ContainerPSGenerator.psd1'
+$manifestPath = Join-Path $outputPath 'SubZeroDev.PSGenerator.psd1'
 $null = Test-ModuleManifest -Path $manifestPath -ErrorAction Stop
 Get-Item -LiteralPath $manifestPath

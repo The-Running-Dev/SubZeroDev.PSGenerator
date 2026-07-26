@@ -28,13 +28,13 @@ PSModule/PSModule.psd1
 Select another file:
 
 ```powershell
-Build-ContainerModule -Specification ./config/MyModule.psd1
+Build-PSModule -Specification ./config/MyModule.psd1
 ```
 
 Or initialize:
 
 ```powershell
-Initialize-ContainerModuleSpecification -Repository .
+Initialize-PSModuleSpecification -Repository .
 ```
 
 ## Validation fails
@@ -42,7 +42,7 @@ Initialize-ContainerModuleSpecification -Repository .
 Run validation independently:
 
 ```powershell
-Test-ContainerModuleSpecification -Specification ./PSModule/PSModule.psd1
+Test-PSModuleSpecification -Specification ./PSModule/PSModule.psd1
 ```
 
 Common causes:
@@ -64,7 +64,7 @@ Inference reads only `scripts/**/*.ps1` and explicitly exported functions in
 Check parse errors:
 
 ```powershell
-$inspection = Get-ContainerModuleInspection
+$inspection = Get-PSModuleInspection
 $inspection.Data.PowerShellFiles |
     Select-Object Path, IsCommandCandidate, SuggestedCommandName, ParseErrors
 ```
@@ -80,7 +80,7 @@ runtime mappings. This prevents inference from overwriting intent.
 To deliberately replace a specification:
 
 ```powershell
-Initialize-ContainerModuleSpecification `
+Initialize-PSModuleSpecification `
     -Repository . `
     -Force
 ```
@@ -95,7 +95,7 @@ source. A `SourcePath` alone does not select a script inside a container.
 Inspect:
 
 ```powershell
-$model = Get-ContainerModuleModel
+$model = Get-PSModuleModel
 $model.Commands |
     Select-Object Name, @{n='SourceKind';e={$_.Definition.SourceKind}},
         @{n='SourcePath';e={$_.Definition.SourcePath}}
@@ -127,7 +127,7 @@ docker info
 
 ```powershell
 Invoke-MyCommand -WhatIf
-Install-ContainerModule example/image:latest -WhatIf
+Install-PSModule example/image:latest -WhatIf
 ```
 
 ## Docker exits non-zero
@@ -148,7 +148,7 @@ Copy the reported arguments into a direct Docker invocation, then inspect:
 - device/GPU capabilities; and
 - resource-limit syntax.
 
-## Install-ContainerModule fails
+## Install-PSModule fails
 
 The image must contain exactly one top-level manifest at `/PSModule`.
 
@@ -170,8 +170,8 @@ remain untouched when staged validation fails.
 Run inspection and detailed diagnostics:
 
 ```powershell
-$inspection = Get-ContainerModuleInspection
-$inspection | Get-ContainerModuleDiagnostic -Detailed
+$inspection = Get-PSModuleInspection
+$inspection | Get-PSModuleDiagnostic -Detailed
 ```
 
 Current parsers may terminate on malformed `.csproj`, `package.json`,

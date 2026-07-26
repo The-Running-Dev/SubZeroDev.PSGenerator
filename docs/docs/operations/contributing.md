@@ -34,7 +34,7 @@ Use a `feature/` branch for planned work.
 - Preserve deterministic ordinal ordering.
 - Emit UTF-8 without BOM for generated text.
 - Never embed local absolute paths in generated source.
-- Keep `Build-ContainerModule` orchestration-only.
+- Keep `Build-PSModule` orchestration-only.
 
 Run these from the repository root:
 

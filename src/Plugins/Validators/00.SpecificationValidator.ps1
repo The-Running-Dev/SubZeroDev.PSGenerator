@@ -3,6 +3,6 @@ param (
     [psobject] $Context
 )
 
-Invoke-ContainerModuleSpecificationValidation `
+Invoke-PSModuleSpecificationValidation `
     -Specification $Context.Specification `
     -SpecificationPath $Context.SpecificationPath

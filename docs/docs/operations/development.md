@@ -51,8 +51,8 @@ when the published package grants this repository read access.
 ## Import the development module
 
 ```powershell
-Import-Module ./src/SubZeroDev.ContainerPSGenerator.psd1 -Force
-Get-Command -Module SubZeroDev.ContainerPSGenerator
+Import-Module ./src/SubZeroDev.PSGenerator.psd1 -Force
+Get-Command -Module SubZeroDev.PSGenerator
 ```
 
 ## Static analysis
@@ -139,7 +139,7 @@ This:
 3. verifies package identity and repository metadata;
 4. registers a temporary local PSResource repository;
 5. saves and imports the package; and
-6. verifies `Build-ContainerModule` is exported.
+6. verifies `Build-PSModule` is exported.
 
 Output is under `artifacts/packages`.
 

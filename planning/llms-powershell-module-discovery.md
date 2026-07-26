@@ -2,14 +2,14 @@
 
 > **Not published documentation.** This is a planning brief describing changes to
 > a *different* repository, `The-Running-Dev/LLMs`. It lives outside `docs/` so it
-> does not appear on the ContainerPSGenerator documentation site, where a reader
+> does not appear on the PSGenerator documentation site, where a reader
 > would reasonably mistake another project's `setup/` layout for this one's.
 
 ## Purpose
 
 Use this document as an implementation prompt for
 `The-Running-Dev/LLMs`. It describes the smallest repository change needed to
-give `SubZeroDev.ContainerPSGenerator` an unambiguous PowerShell interface to
+give `SubZeroDev.PSGenerator` an unambiguous PowerShell interface to
 discover.
 
 This specification is based on the complete documentation set in the pinned
@@ -210,9 +210,9 @@ Adding this internal manifest is optional for the facade task.
   authored page under `setup/docs`; let the documentation build generate its
   rendered output.
 
-## Discovery contract for ContainerPSGenerator
+## Discovery contract for PSGenerator
 
-ContainerPSGenerator should be able to:
+PSGenerator should be able to:
 
 1. Locate `PowerShell/LLMs.psd1`.
 2. Read `RootModule` and the literal `FunctionsToExport` list without importing

@@ -104,17 +104,17 @@ result through `Artifacts`.
 ## Inspect before building
 
 ```powershell
-$inspection = Get-ContainerModuleInspection `
+$inspection = Get-PSModuleInspection `
     -Specification ./PSModule/PSModule.psd1
 
 $inspection.Data.RepositoryPolicy
-$inspection | Get-ContainerModuleDiagnostic -Detailed
+$inspection | Get-PSModuleDiagnostic -Detailed
 ```
 
 ## Generate and verify
 
 ```powershell
-Build-ContainerModule `
+Build-PSModule `
     -Specification ./PSModule/PSModule.psd1 `
     -Output ./artifacts/PSModule
 

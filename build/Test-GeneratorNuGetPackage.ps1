@@ -31,7 +31,7 @@ $package = & (Join-Path $PSScriptRoot 'New-GeneratorNuGetPackage.ps1') `
     -InstallDependencies:$InstallDependencies
 $repositoryName = 'SubZeroDevPackageTest-{0}' -f [guid]::NewGuid().ToString('N')
 $installRoot = Join-Path ([IO.Path]::GetTempPath()) (
-    'SubZeroDev.ContainerPSGenerator.Install.{0}' -f [guid]::NewGuid()
+    'SubZeroDev.PSGenerator.Install.{0}' -f [guid]::NewGuid()
 )
 
 try {
@@ -56,14 +56,14 @@ try {
     }
 
     $metadata = $nuspec.package.metadata
-    if ($metadata.id -ne 'SubZeroDev.ContainerPSGenerator') {
+    if ($metadata.id -ne 'SubZeroDev.PSGenerator') {
         throw "Unexpected package ID '$($metadata.id)'."
     }
     if ([string]::IsNullOrWhiteSpace([string] $metadata.version)) {
         throw 'The package version is missing.'
     }
     if ($metadata.repository.type -ne 'git' -or
-        $metadata.repository.url -ne 'https://github.com/The-Running-Dev/SubZeroDev.ContainerPSGenerator.git') {
+        $metadata.repository.url -ne 'https://github.com/The-Running-Dev/SubZeroDev.PSGenerator.git') {
         throw 'The package does not contain the expected GitHub repository metadata.'
     }
 
@@ -89,7 +89,7 @@ try {
 
     $installedManifest = Get-ChildItem `
         -LiteralPath $installRoot `
-        -Filter 'SubZeroDev.ContainerPSGenerator.psd1' `
+        -Filter 'SubZeroDev.PSGenerator.psd1' `
         -File `
         -Recurse |
         Select-Object -First 1
@@ -98,11 +98,11 @@ try {
     }
 
     $installedModule = Import-Module $installedManifest.FullName -Force -PassThru -ErrorAction Stop
-    $buildCommand = Get-Command Build-ContainerModule `
+    $buildCommand = Get-Command Build-PSModule `
         -Module $installedModule.Name `
         -ErrorAction SilentlyContinue
     if (-not $buildCommand) {
-        throw 'The installed package did not export Build-ContainerModule.'
+        throw 'The installed package did not export Build-PSModule.'
     }
 
     Write-Host "Verified NuGet package '$($package.Name)' by installing and importing it from a local repository."
@@ -112,7 +112,7 @@ finally {
     if (Get-PSResourceRepository -Name $repositoryName -ErrorAction SilentlyContinue) {
         Unregister-PSResourceRepository -Name $repositoryName -ErrorAction SilentlyContinue
     }
-    Remove-Module SubZeroDev.ContainerPSGenerator -Force -ErrorAction SilentlyContinue
+    Remove-Module SubZeroDev.PSGenerator -Force -ErrorAction SilentlyContinue
     if (Test-Path -LiteralPath $installRoot) {
         Remove-Item -LiteralPath $installRoot -Recurse -Force
     }

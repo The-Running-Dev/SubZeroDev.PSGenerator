@@ -15,7 +15,7 @@ Every compliant image stores one complete generated module at:
 ## Generate during the repository build
 
 ```powershell
-Build-ContainerModule `
+Build-PSModule `
     -Specification ./PSModule/PSModule.psd1 `
     -Output ./artifacts/PSModule
 ```
@@ -41,7 +41,7 @@ That manifest must pass `Test-ModuleManifest`.
 ## Install from an image
 
 ```powershell
-Install-ContainerModule `
+Install-PSModule `
     ghcr.io/example/example-container:latest
 ```
 
@@ -49,7 +49,7 @@ The default destination is `~/PSModule`. Choose a module-specific destination wh
 installing more than one generated module:
 
 ```powershell
-Install-ContainerModule `
+Install-PSModule `
     ghcr.io/example/example-container:latest `
     -Destination ~/Modules/ExampleContainer
 ```
@@ -57,7 +57,7 @@ Install-ContainerModule `
 Preview without calling Docker or changing files:
 
 ```powershell
-Install-ContainerModule `
+Install-PSModule `
     ghcr.io/example/example-container:latest `
     -Destination ~/Modules/ExampleContainer `
     -WhatIf
@@ -66,7 +66,7 @@ Install-ContainerModule `
 Replace an existing destination only after the staged module validates:
 
 ```powershell
-Install-ContainerModule `
+Install-PSModule `
     ghcr.io/example/example-container:latest `
     -Destination ~/Modules/ExampleContainer `
     -Force
@@ -74,7 +74,7 @@ Install-ContainerModule `
 
 ## Installation safety
 
-`Install-ContainerModule`:
+`Install-PSModule`:
 
 1. resolves and rejects a filesystem-root destination;
 2. refuses to replace an existing destination without `-Force`;

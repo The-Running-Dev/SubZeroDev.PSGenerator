@@ -46,7 +46,7 @@ unreleased and will be consolidated into the first Version 1 release notes.
 
 - Restricted inferred PowerShell commands to the repository `scripts` directory.
 - Preserved complete script trees and relative dependency paths in generated modules.
-- Kept `Build-ContainerModule` orchestration-only while routing behavior through
+- Kept `Build-PSModule` orchestration-only while routing behavior through
   ordered plugins.
 - Raised generator and generated manifests to PowerShell 7.4.
 

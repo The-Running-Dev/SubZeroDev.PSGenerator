@@ -20,11 +20,11 @@ $ErrorActionPreference = 'Stop'
 
 $exampleRoot = $PSScriptRoot
 $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $exampleRoot '..' '..'))
-$generatorManifest = Join-Path $repositoryRoot 'src' 'SubZeroDev.ContainerPSGenerator.psd1'
+$generatorManifest = Join-Path $repositoryRoot 'src' 'SubZeroDev.PSGenerator.psd1'
 $artifactRoot = Join-Path $exampleRoot 'artifacts'
 $generatedModulePath = Join-Path $artifactRoot 'PSModule'
 $installedModulePath = Join-Path $artifactRoot 'Installed' 'ExampleContainer'
-$image = 'subzerodev-containerpsgenerator-minimal:local'
+$image = 'subzerodev-psgenerator-minimal:local'
 $generatedModule = $null
 $imageBuilt = $false
 
@@ -36,7 +36,7 @@ Import-Module $generatorManifest -Force -ErrorAction Stop
 
 try {
     Write-Host '1/8 Generate the PowerShell module'
-    Build-ContainerModule `
+    Build-PSModule `
         -Specification (Join-Path $exampleRoot 'PSModule' 'PSModule.psd1') `
         -Output $generatedModulePath |
         Out-Null
@@ -49,7 +49,7 @@ try {
     $imageBuilt = $true
 
     Write-Host '3/8 Install the module embedded at /PSModule'
-    Install-ContainerModule $image -Destination $installedModulePath | Out-Null
+    Install-PSModule $image -Destination $installedModulePath | Out-Null
 
     Write-Host '4/8 Import the installed module'
     $generatedModule = Import-Module (
@@ -71,7 +71,7 @@ try {
     $documentation = Get-Content -LiteralPath $documentationPath -Raw
 
     [pscustomobject] @{
-        PSTypeName = 'SubZeroDev.ContainerPSGenerator.MinimalExampleResult'
+        PSTypeName = 'SubZeroDev.PSGenerator.MinimalExampleResult'
         Image = $image
         Module = $generatedModule.Name
         Command = 'Invoke-Example'

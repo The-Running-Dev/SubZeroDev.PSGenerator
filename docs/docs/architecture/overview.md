@@ -6,14 +6,14 @@ sidebar_position: 1
 
 # Architecture overview
 
-ContainerPSGenerator separates build-time analysis from generated-module runtime
+PSGenerator separates build-time analysis from generated-module runtime
 execution.
 
 ```text
 Repository inputs
       │
       ▼
-Build-ContainerModule
+Build-PSModule
       │
       ├── Inspectors
       ├── Validators
@@ -109,7 +109,7 @@ trusted plugins must impose their own deterministic ordering.
 
 ## Runtime behavior
 
-Generated modules contain no dependency on ContainerPSGenerator.
+Generated modules contain no dependency on PSGenerator.
 
 Container-backed commands:
 
@@ -125,7 +125,7 @@ module's `Scripts` directory.
 
 ## Installation architecture
 
-`Install-ContainerModule` uses `docker create`, not `docker run`, so application
+`Install-PSModule` uses `docker create`, not `docker run`, so application
 entry points are not started. It copies `/PSModule` into a staging directory,
 validates the manifest, replaces the destination only when safe, and always attempts
 to remove the temporary container.

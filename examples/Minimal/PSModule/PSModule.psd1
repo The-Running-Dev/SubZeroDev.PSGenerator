@@ -2,7 +2,7 @@
     Id = 'example.container-module'
     ModuleName = 'ExampleContainer'
     ModuleVersion = '0.1.0'
-    ContainerImage = 'subzerodev-containerpsgenerator-minimal:local'
+    ContainerImage = 'subzerodev-psgenerator-minimal:local'
 
     Commands = @(
         @{

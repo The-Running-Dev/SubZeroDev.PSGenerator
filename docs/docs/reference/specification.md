@@ -244,9 +244,9 @@ generation. Repository-specific behavior belongs in a trusted plugin.
 ## Validate and inspect
 
 ```powershell
-Test-ContainerModuleSpecification `
+Test-PSModuleSpecification `
     -Specification ./PSModule/PSModule.psd1
 
-Get-ContainerModuleModel `
+Get-PSModuleModel `
     -Specification ./PSModule/PSModule.psd1
 ```

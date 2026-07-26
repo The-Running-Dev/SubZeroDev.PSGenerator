@@ -9,11 +9,11 @@ sidebar_position: 3
 Run inspection without generating output:
 
 ```powershell
-$inspection = Get-ContainerModuleInspection `
+$inspection = Get-PSModuleInspection `
     -Specification ./PSModule/PSModule.psd1
 
 $inspection.Data
-$inspection | Get-ContainerModuleDiagnostic -Detailed
+$inspection | Get-PSModuleDiagnostic -Detailed
 ```
 
 Inspector output is an ordered dictionary. Missing artifact types normally produce

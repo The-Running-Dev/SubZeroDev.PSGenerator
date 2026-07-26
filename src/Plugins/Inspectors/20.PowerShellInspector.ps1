@@ -5,7 +5,7 @@ $items = @(
     if (Test-Path -LiteralPath $scriptsPath -PathType Container) {
         Get-ChildItem -LiteralPath $scriptsPath -Recurse -File | Where-Object {
             $_.Extension -in @('.ps1', '.psm1', '.psd1') -and
-            (Test-ContainerModuleInspectionPath -Context $Context -Path $_.FullName)
+            (Test-PSModuleInspectionPath -Context $Context -Path $_.FullName)
         }
     }
 )

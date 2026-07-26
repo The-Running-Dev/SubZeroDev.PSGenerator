@@ -77,7 +77,7 @@ if ($Context.Inspection.Contains('DotNetProjects')) {
 }
 [string[]] $buildScripts = @()
 $buildScriptItems = @(Get-ChildItem -LiteralPath $Context.RepositoryPath -Recurse -File -Filter 'build.ps1' |
-    Where-Object { Test-ContainerModuleInspectionPath -Context $Context -Path $_.FullName })
+    Where-Object { Test-PSModuleInspectionPath -Context $Context -Path $_.FullName })
 if ($buildScriptItems.Count -gt 0) {
     $buildScripts = @($buildScriptItems | ForEach-Object {
         [IO.Path]::GetRelativePath($Context.RepositoryPath, $_.FullName).Replace('\', '/')

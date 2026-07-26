@@ -40,7 +40,7 @@ $manifestItems = @(
     Get-ChildItem -LiteralPath $Context.RepositoryPath -Recurse -File |
         Where-Object {
             ($_.Extension -eq '.csproj' -or $_.Name -eq 'package.json') -and
-            (Test-ContainerModuleInspectionPath -Context $Context -Path $_.FullName)
+            (Test-PSModuleInspectionPath -Context $Context -Path $_.FullName)
         }
 )
 [Array]::Sort(
@@ -101,7 +101,7 @@ foreach ($manifestItem in $manifestItems) {
                 )) {
                     continue
                 }
-                if (-not (Test-ContainerModuleInspectionPath -Context $Context -Path $resolvedPath)) {
+                if (-not (Test-PSModuleInspectionPath -Context $Context -Path $resolvedPath)) {
                     continue
                 }
                 [ordered]@{

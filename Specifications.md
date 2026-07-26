@@ -66,7 +66,7 @@ Repository
 └── Build
       │
       ▼
-Build-ContainerModule
+Build-PSModule
       │
       ▼
 Generated PowerShell Module
@@ -75,7 +75,7 @@ Generated PowerShell Module
 Embedded in Docker Image
       │
       ▼
-Install-ContainerModule
+Install-PSModule
       │
       ▼
 Imported locally
@@ -98,7 +98,7 @@ PSModule/
 Alternative specification:
 
 ```powershell
-Build-ContainerModule -Specification ./config/MyModule.psd1
+Build-PSModule -Specification ./config/MyModule.psd1
 ```
 
 ---
@@ -125,7 +125,7 @@ Only required directories are generated.
 Output location may be overridden:
 
 ```powershell
-Build-ContainerModule -Output ./dist
+Build-PSModule -Output ./dist
 ```
 
 Each build overwrites previously generated output.
@@ -145,7 +145,7 @@ Typical pipeline:
 ```text
 Build Application
         │
-Build-ContainerModule
+Build-PSModule
         │
 Copy module into image
         │
@@ -293,7 +293,7 @@ optional artifacts while failing for explicitly authoritative inputs such as
 The build process exposes a single command:
 
 ```powershell
-Build-ContainerModule
+Build-PSModule
 ```
 
 Pipeline stages are internal implementation details.
@@ -332,7 +332,7 @@ Generated modules are embedded inside every compliant image at:
 /PSModule
 ```
 
-Install-ContainerModule retrieves the module from this location.
+Install-PSModule retrieves the module from this location.
 
 Installation creates a temporary container without starting it, stages `/PSModule` beside the destination, validates its single module manifest, and removes the temporary container even when copying or validation fails. Existing destinations require `-Force` and are only replaced after validation succeeds. The command supports `-WhatIf`.
 
@@ -345,7 +345,7 @@ Local installation defaults to:
 Override:
 
 ```powershell
-Install-ContainerModule -Destination ~/Modules
+Install-PSModule -Destination ~/Modules
 ```
 
 ---
@@ -674,7 +674,7 @@ The project succeeds when a repository author can define a PowerShell specificat
 Users should be able to execute:
 
 ```powershell
-Install-ContainerModule ghcr.io/the-running-dev/build-agent:latest
+Install-PSModule ghcr.io/the-running-dev/build-agent:latest
 
 Invoke-BuildAgent -Repository . -Task Build
 

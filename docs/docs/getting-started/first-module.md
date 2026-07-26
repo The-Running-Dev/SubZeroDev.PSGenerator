@@ -7,7 +7,7 @@ sidebar_position: 2
 # Build your first module
 
 This tutorial creates a repository specification manually. Run the commands from the
-root of a repository where ContainerPSGenerator is already imported.
+root of a repository where PSGenerator is already imported.
 
 ## 1. Create the specification
 
@@ -68,7 +68,7 @@ Arrays are required for `Commands`, `Parameters`, `Examples`, `Validations`,
 ## 2. Validate
 
 ```powershell
-Test-ContainerModuleSpecification `
+Test-PSModuleSpecification `
     -Specification ./PSModule/PSModule.psd1
 ```
 
@@ -79,7 +79,7 @@ locate.
 Inspect the normalized model:
 
 ```powershell
-$model = Get-ContainerModuleModel `
+$model = Get-PSModuleModel `
     -Specification ./PSModule/PSModule.psd1
 
 $model.Commands.Parameters.Mappings
@@ -88,12 +88,12 @@ $model.Commands.Parameters.Mappings
 ## 3. Generate
 
 ```powershell
-$metadata = Build-ContainerModule `
+$metadata = Build-PSModule `
     -Specification ./PSModule/PSModule.psd1 `
     -Output ./artifacts/PSModule
 ```
 
-`Build-ContainerModule` returns the generated `Metadata/model.json` file. The full
+`Build-PSModule` returns the generated `Metadata/model.json` file. The full
 module is under `artifacts/PSModule`:
 
 ```text

@@ -24,18 +24,18 @@ standard runners do not expose that hardware.
 ## Run each step manually
 
 ```powershell
-Import-Module ./src/SubZeroDev.ContainerPSGenerator.psd1 -Force
+Import-Module ./src/SubZeroDev.PSGenerator.psd1 -Force
 
-Build-ContainerModule `
+Build-PSModule `
     -Specification ./examples/Minimal/PSModule/PSModule.psd1 `
     -Output ./examples/Minimal/artifacts/PSModule
 
 docker build `
-    --tag subzerodev-containerpsgenerator-minimal:local `
+    --tag subzerodev-psgenerator-minimal:local `
     ./examples/Minimal
 
-Install-ContainerModule `
-    subzerodev-containerpsgenerator-minimal:local `
+Install-PSModule `
+    subzerodev-psgenerator-minimal:local `
     -Destination ./examples/Minimal/artifacts/Installed/ExampleContainer
 
 Import-Module `
@@ -55,6 +55,6 @@ Clean up the imported module, image, and generated files:
 
 ```powershell
 Remove-Module ExampleContainer -Force
-docker image rm --force subzerodev-containerpsgenerator-minimal:local
+docker image rm --force subzerodev-psgenerator-minimal:local
 Remove-Item ./examples/Minimal/artifacts -Recurse -Force
 ```

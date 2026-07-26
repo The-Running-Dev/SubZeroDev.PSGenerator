@@ -1,6 +1,6 @@
 ---
 title: Installation
-description: Install ContainerPSGenerator from source or GitHub Packages.
+description: Install PSGenerator from source or GitHub Packages.
 sidebar_position: 1
 ---
 
@@ -25,15 +25,15 @@ Until the first package release is published, importing from a source checkout i
 the direct installation path:
 
 ```powershell
-git clone https://github.com/The-Running-Dev/SubZeroDev.ContainerPSGenerator.git
-Set-Location ./SubZeroDev.ContainerPSGenerator
-Import-Module ./src/SubZeroDev.ContainerPSGenerator.psd1 -Force
+git clone https://github.com/The-Running-Dev/SubZeroDev.PSGenerator.git
+Set-Location ./SubZeroDev.PSGenerator
+Import-Module ./src/SubZeroDev.PSGenerator.psd1 -Force
 ```
 
 Verify the exported commands:
 
 ```powershell
-Get-Command -Module SubZeroDev.ContainerPSGenerator
+Get-Command -Module SubZeroDev.PSGenerator
 ```
 
 To test the same clean module layout used by CI:
@@ -44,7 +44,7 @@ Import-Module $manifest.FullName -Force
 ```
 
 The staged module is written to
-`artifacts/module/SubZeroDev.ContainerPSGenerator` by default.
+`artifacts/module/SubZeroDev.PSGenerator` by default.
 
 ## Install from GitHub Packages
 
@@ -63,12 +63,12 @@ Register-PSResourceRepository `
     -Trusted
 
 Install-PSResource `
-    -Name SubZeroDev.ContainerPSGenerator `
+    -Name SubZeroDev.PSGenerator `
     -Repository SubZeroDevGitHub `
     -Credential $credential `
     -Scope CurrentUser
 
-Import-Module SubZeroDev.ContainerPSGenerator
+Import-Module SubZeroDev.PSGenerator
 ```
 
 :::note
@@ -82,7 +82,7 @@ Update an existing installation with the same repository and credential:
 
 ```powershell
 Update-PSResource `
-    -Name SubZeroDev.ContainerPSGenerator `
+    -Name SubZeroDev.PSGenerator `
     -Repository SubZeroDevGitHub `
     -Credential $credential
 ```

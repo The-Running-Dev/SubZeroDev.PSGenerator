@@ -1,10 +1,10 @@
 <#
 .SYNOPSIS
-Tests ContainerPSGenerator against another local repository.
+Tests PSGenerator against another local repository.
 
 .DESCRIPTION
 Imports the generator from this checkout, changes to the selected repository, and builds
-its validated object model. Use Generate to continue through Build-ContainerModule.
+its validated object model. Use Generate to continue through Build-PSModule.
 
 .PARAMETER Repository
 Path to the local repository to test.
@@ -16,7 +16,7 @@ Specification path relative to Repository, or an absolute path.
 Generation output path relative to Repository, or an absolute path.
 
 .PARAMETER Generate
-Runs Build-ContainerModule after model validation, globally imports the generated
+Runs Build-PSModule after model validation, globally imports the generated
 module for immediate testing, and returns the generated artifacts.
 
 .PARAMETER ListCommands
@@ -56,7 +56,7 @@ if (-not (Test-Path -LiteralPath $Repository -PathType Container)) {
 }
 
 $repositoryPath = (Resolve-Path -LiteralPath $Repository).ProviderPath
-$manifestPath = Join-Path $PSScriptRoot '..' 'src' 'SubZeroDev.ContainerPSGenerator.psd1'
+$manifestPath = Join-Path $PSScriptRoot '..' 'src' 'SubZeroDev.PSGenerator.psd1'
 Import-Module $manifestPath -Force -ErrorAction Stop
 
 Push-Location $repositoryPath
@@ -74,7 +74,7 @@ try {
         $existingCommands = @($existingDefinition.Commands)
         $isMarkedGeneratedSpecification = (
             $existingDefinition.ContainsKey('GeneratedBy') -and
-            $existingDefinition.GeneratedBy -eq 'SubZeroDev.ContainerPSGenerator'
+            $existingDefinition.GeneratedBy -eq 'SubZeroDev.PSGenerator'
         )
         $isLegacyGeneratedSpecification = (
             $existingCommands.Count -gt 0 -and
@@ -104,7 +104,7 @@ try {
                 "Container module specification was not found: '$(Join-Path $repositoryPath $Specification)'."
             )
         }
-        Initialize-ContainerModuleSpecification `
+        Initialize-PSModuleSpecification `
             -Repository $repositoryPath `
             -Specification $Specification `
             -Force:($refreshEmptySpecification -or $refreshGeneratedSpecification) |
@@ -115,8 +115,8 @@ try {
     }
 
     if ($Generate -or $ListCommands -or $specificationInitialized) {
-        $artifact = Build-ContainerModule -Specification $Specification -Output $Output
-        $model = Get-ContainerModuleModel -Specification $Specification
+        $artifact = Build-PSModule -Specification $Specification -Output $Output
+        $model = Get-PSModuleModel -Specification $Specification
         $outputPath = if ([IO.Path]::IsPathRooted($Output)) {
             $Output
         }
@@ -152,7 +152,7 @@ try {
         return
     }
 
-    Get-ContainerModuleModel -Specification $Specification
+    Get-PSModuleModel -Specification $Specification
 }
 finally {
     Pop-Location

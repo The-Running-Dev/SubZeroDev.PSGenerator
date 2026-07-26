@@ -28,7 +28,7 @@ jobs:
           }
 
           $releaseVersion = [version] $Matches.Version
-          $manifest = Test-ModuleManifest ./src/SubZeroDev.ContainerPSGenerator.psd1
+          $manifest = Test-ModuleManifest ./src/SubZeroDev.PSGenerator.psd1
           if ($releaseVersion -ne $manifest.Version) {
             throw "Release tag version '$releaseVersion' does not match module version '$($manifest.Version)'."
           }

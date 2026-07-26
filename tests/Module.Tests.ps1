@@ -1,16 +1,16 @@
 BeforeAll {
     $manifestPath = if (
-        -not [string]::IsNullOrWhiteSpace($env:CONTAINERPSGENERATOR_MODULE_PATH)
+        -not [string]::IsNullOrWhiteSpace($env:PSGENERATOR_MODULE_PATH)
     ) {
-        [IO.Path]::GetFullPath($env:CONTAINERPSGENERATOR_MODULE_PATH)
+        [IO.Path]::GetFullPath($env:PSGENERATOR_MODULE_PATH)
     }
     else {
-        Join-Path $PSScriptRoot '..' 'src' 'SubZeroDev.ContainerPSGenerator.psd1'
+        Join-Path $PSScriptRoot '..' 'src' 'SubZeroDev.PSGenerator.psd1'
     }
     Import-Module $manifestPath -Force
 }
 
-Describe 'SubZeroDev.ContainerPSGenerator module' {
+Describe 'SubZeroDev.PSGenerator module' {
     It 'has a valid module manifest' {
         $manifest = Test-ModuleManifest $manifestPath -ErrorAction Stop
 
@@ -19,20 +19,20 @@ Describe 'SubZeroDev.ContainerPSGenerator module' {
     }
 
     It 'exports the public commands' {
-        $exportedCommands = Get-Command -Module SubZeroDev.ContainerPSGenerator
+        $exportedCommands = Get-Command -Module SubZeroDev.PSGenerator
 
-        $exportedCommands.Name | Should -Contain 'Build-ContainerModule'
-        $exportedCommands.Name | Should -Contain 'Get-ContainerModuleDiagnostic'
-        $exportedCommands.Name | Should -Contain 'Get-ContainerModuleInspection'
-        $exportedCommands.Name | Should -Contain 'Get-ContainerModuleModel'
-        $exportedCommands.Name | Should -Contain 'Get-ContainerModulePlugin'
-        $exportedCommands.Name | Should -Contain 'Install-ContainerModule'
-        $exportedCommands.Name | Should -Contain 'Initialize-ContainerModuleSpecification'
-        $exportedCommands.Name | Should -Contain 'Test-ContainerModuleSpecification'
+        $exportedCommands.Name | Should -Contain 'Build-PSModule'
+        $exportedCommands.Name | Should -Contain 'Get-PSModuleDiagnostic'
+        $exportedCommands.Name | Should -Contain 'Get-PSModuleInspection'
+        $exportedCommands.Name | Should -Contain 'Get-PSModuleModel'
+        $exportedCommands.Name | Should -Contain 'Get-PSModulePlugin'
+        $exportedCommands.Name | Should -Contain 'Install-PSModule'
+        $exportedCommands.Name | Should -Contain 'Initialize-PSModuleSpecification'
+        $exportedCommands.Name | Should -Contain 'Test-PSModuleSpecification'
     }
 
     It 'declares the specification and output parameters' {
-        $command = Get-Command Build-ContainerModule -Module SubZeroDev.ContainerPSGenerator
+        $command = Get-Command Build-PSModule -Module SubZeroDev.PSGenerator
 
         $command.Parameters.Specification.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }) |
             Should -Not -BeNullOrEmpty
@@ -41,10 +41,10 @@ Describe 'SubZeroDev.ContainerPSGenerator module' {
     }
 
     It 'documents the implemented Version 1 package and inference boundaries' {
-        $buildDescription = (Get-Help Build-ContainerModule).Description.Text -join "`n"
-        $installDescription = (Get-Help Install-ContainerModule).Description.Text -join "`n"
+        $buildDescription = (Get-Help Build-PSModule).Description.Text -join "`n"
+        $installDescription = (Get-Help Install-PSModule).Description.Text -join "`n"
         $initializeDescription = (
-            Get-Help Initialize-ContainerModuleSpecification
+            Get-Help Initialize-PSModuleSpecification
         ).Description.Text -join "`n"
 
         $buildDescription | Should -Match 'Markdown reference page per command'
@@ -83,14 +83,14 @@ Describe 'Packaged generator module' {
         Test-Path -LiteralPath (Join-Path $packageRoot 'Plugins') -PathType Container |
             Should -BeTrue
 
-        Remove-Module SubZeroDev.ContainerPSGenerator -Force
+        Remove-Module SubZeroDev.PSGenerator -Force
         $packagedModule = Import-Module $packagedManifest.FullName -Force -PassThru -ErrorAction Stop
         try {
             $packagedModule.ModuleBase | Should -Be $packageRoot
             $packagedModule.Path | Should -Be (
-                Join-Path $packageRoot 'SubZeroDev.ContainerPSGenerator.psm1'
+                Join-Path $packageRoot 'SubZeroDev.PSGenerator.psm1'
             )
-            $packagedModule.ExportedCommands.Keys | Should -Contain 'Build-ContainerModule'
+            $packagedModule.ExportedCommands.Keys | Should -Contain 'Build-PSModule'
 
             $specificationPath = Join-Path $TestDrive 'PackagedGenerator.psd1'
             $outputPath = Join-Path $TestDrive 'packaged-generator-output'
@@ -98,7 +98,7 @@ Describe 'Packaged generator module' {
 @{ ModuleName = 'PackagedGeneratorSmoke'; Commands = @() }
 '@
 
-            $artifact = Build-ContainerModule `
+            $artifact = Build-PSModule `
                 -Specification $specificationPath `
                 -Output $outputPath
 
@@ -127,9 +127,9 @@ Describe 'Container module inspection diagnostics' {
     }
 
     It 'returns typed inspection data without creating build output' {
-        $result = Get-ContainerModuleInspection -Specification $specificationPath
+        $result = Get-PSModuleInspection -Specification $specificationPath
 
-        $result.PSObject.TypeNames | Should -Contain 'SubZeroDev.ContainerPSGenerator.InspectionResult'
+        $result.PSObject.TypeNames | Should -Contain 'SubZeroDev.PSGenerator.InspectionResult'
         $result.RepositoryPath | Should -Be $repositoryPath
         $result.Data.Dockerfiles[0].Stages[0].Image | Should -Be 'alpine:3.20'
         $result.PluginExecutions.Count | Should -BeGreaterThan 0
@@ -138,12 +138,12 @@ Describe 'Container module inspection diagnostics' {
     }
 
     It 'returns ordered typed diagnostics from an inspection result' {
-        $inspection = Get-ContainerModuleInspection -Specification $specificationPath
+        $inspection = Get-PSModuleInspection -Specification $specificationPath
 
-        $diagnostics = @($inspection | Get-ContainerModuleDiagnostic)
+        $diagnostics = @($inspection | Get-PSModuleDiagnostic)
 
         $diagnostics.Count | Should -Be $inspection.PluginExecutions.Count
-        $diagnostics[0].PSObject.TypeNames | Should -Contain 'SubZeroDev.ContainerPSGenerator.Diagnostic'
+        $diagnostics[0].PSObject.TypeNames | Should -Contain 'SubZeroDev.PSGenerator.Diagnostic'
         $diagnostics.Plugin | Should -Be $inspection.PluginExecutions.Plugin
         $diagnostics.ExecutionOrder | Should -Be @(0..($diagnostics.Count - 1))
         $diagnostics.Succeeded | Should -Not -Contain $false
@@ -152,7 +152,7 @@ Describe 'Container module inspection diagnostics' {
     }
 
     It 'returns detailed diagnostics for troubleshooting' {
-        $diagnostic = Get-ContainerModuleDiagnostic -Specification $specificationPath -Detailed |
+        $diagnostic = Get-PSModuleDiagnostic -Specification $specificationPath -Detailed |
             Select-Object -First 1
 
         $diagnostic.Path | Should -Exist
@@ -161,19 +161,19 @@ Describe 'Container module inspection diagnostics' {
     }
 
     It 'can run diagnostics directly from a specification' {
-        $diagnostics = @(Get-ContainerModuleDiagnostic -Specification $specificationPath)
+        $diagnostics = @(Get-PSModuleDiagnostic -Specification $specificationPath)
 
         $diagnostics.Plugin | Should -Contain 'DockerfileInspector'
         $diagnostics.Stage | Should -Not -Contain 'Validators'
     }
 
     It 'rejects an unrelated diagnostic input object' {
-        { [pscustomobject]@{} | Get-ContainerModuleDiagnostic } |
-            Should -Throw -ExceptionType ([System.ArgumentException]) -ExpectedMessage '*Get-ContainerModuleInspection*'
+        { [pscustomobject]@{} | Get-PSModuleDiagnostic } |
+            Should -Throw -ExceptionType ([System.ArgumentException]) -ExpectedMessage '*Get-PSModuleInspection*'
     }
 }
 
-Describe 'Get-ContainerModulePlugin' {
+Describe 'Get-PSModulePlugin' {
     BeforeEach {
         $pluginRoot = Join-Path $TestDrive 'Plugins'
         foreach ($stage in @(
@@ -198,7 +198,7 @@ Describe 'Get-ContainerModulePlugin' {
         Set-Content -LiteralPath (Join-Path $pluginRoot 'CodeGenerators' '00.Generator.ps1') -Value '# plugin'
         Set-Content -LiteralPath (Join-Path $pluginRoot 'TemplateRenderers' '00.Renderer.ps1') -Value '# plugin'
 
-        $plugins = @(Get-ContainerModulePlugin -Path $pluginRoot)
+        $plugins = @(Get-PSModulePlugin -Path $pluginRoot)
 
         $plugins.FileName | Should -Be @(
             '00.DockerfileInspector.ps1'
@@ -217,14 +217,14 @@ Describe 'Get-ContainerModulePlugin' {
             'TemplateRenderers'
         )
         $plugins.ExecutionOrder | Should -Be @(0, 1, 2, 3, 4, 5)
-        $plugins[0].PSObject.TypeNames | Should -Contain 'SubZeroDev.ContainerPSGenerator.PluginInfo'
+        $plugins[0].PSObject.TypeNames | Should -Contain 'SubZeroDev.PSGenerator.PluginInfo'
     }
 
     It 'can limit discovery to selected stages' {
         Set-Content -LiteralPath (Join-Path $pluginRoot 'Inspectors' '00.DockerfileInspector.ps1') -Value '# plugin'
         Set-Content -LiteralPath (Join-Path $pluginRoot 'Validators' '00.SpecificationValidator.ps1') -Value '# plugin'
 
-        $plugin = Get-ContainerModulePlugin -Path $pluginRoot -Stage Validators
+        $plugin = Get-PSModulePlugin -Path $pluginRoot -Stage Validators
 
         $plugin.Stage | Should -Be 'Validators'
         $plugin.Name | Should -Be 'SpecificationValidator'
@@ -234,12 +234,12 @@ Describe 'Get-ContainerModulePlugin' {
     It 'rejects plugin filenames without a numeric ordering prefix' {
         Set-Content -LiteralPath (Join-Path $pluginRoot 'Inspectors' 'DockerfileInspector.ps1') -Value '# plugin'
 
-        { Get-ContainerModulePlugin -Path $pluginRoot } |
+        { Get-PSModulePlugin -Path $pluginRoot } |
             Should -Throw -ExceptionType ([System.IO.InvalidDataException]) -ExpectedMessage "*numeric-prefix*"
     }
 
     It 'rejects a missing plugin root' {
-        { Get-ContainerModulePlugin -Path (Join-Path $TestDrive 'missing') } |
+        { Get-PSModulePlugin -Path (Join-Path $TestDrive 'missing') } |
             Should -Throw -ExceptionType ([System.IO.DirectoryNotFoundException]) -ExpectedMessage '*was not found*'
     }
 }
@@ -268,11 +268,11 @@ param ([psobject] $Context)
 $Context.Trace.Add('validate')
 '@
 
-        InModuleScope SubZeroDev.ContainerPSGenerator -Parameters @{ PluginRoot = $pluginRoot } {
+        InModuleScope SubZeroDev.PSGenerator -Parameters @{ PluginRoot = $pluginRoot } {
             param ($PluginRoot)
             $context = [pscustomobject]@{ Trace = [System.Collections.Generic.List[string]]::new() }
 
-            $result = Invoke-ContainerModulePluginPipeline -Context $context -Path $PluginRoot
+            $result = Invoke-PSModulePluginPipeline -Context $context -Path $PluginRoot
 
             [object]::ReferenceEquals($result, $context) | Should -BeTrue
             $context.Trace | Should -Be @('first', 'second', 'validate')
@@ -285,9 +285,9 @@ $Context.Trace.Add('validate')
     It 'requires plugins to declare the shared context contract' {
         Set-Content -LiteralPath (Join-Path $pluginRoot 'Inspectors' '00.Invalid.ps1') -Value "'no context'"
 
-        InModuleScope SubZeroDev.ContainerPSGenerator -Parameters @{ PluginRoot = $pluginRoot } {
+        InModuleScope SubZeroDev.PSGenerator -Parameters @{ PluginRoot = $pluginRoot } {
             param ($PluginRoot)
-            { Invoke-ContainerModulePluginPipeline -Context ([pscustomobject]@{}) -Path $PluginRoot } |
+            { Invoke-PSModulePluginPipeline -Context ([pscustomobject]@{}) -Path $PluginRoot } |
                 Should -Throw -ExceptionType ([System.IO.InvalidDataException]) -ExpectedMessage "*declare a 'Context' parameter*"
         }
     }
@@ -298,11 +298,11 @@ param ([psobject] $Context)
 throw 'inspection failed'
 '@
 
-        InModuleScope SubZeroDev.ContainerPSGenerator -Parameters @{ PluginRoot = $pluginRoot } {
+        InModuleScope SubZeroDev.PSGenerator -Parameters @{ PluginRoot = $pluginRoot } {
             param ($PluginRoot)
             $context = [pscustomobject]@{}
 
-            { Invoke-ContainerModulePluginPipeline -Context $context -Path $PluginRoot } |
+            { Invoke-PSModulePluginPipeline -Context $context -Path $PluginRoot } |
                 Should -Throw -ExceptionType ([System.InvalidOperationException]) -ExpectedMessage "*Plugin 'Fail' in stage 'Inspectors' failed*"
             $context.PluginExecutions.Count | Should -Be 1
             $context.PluginExecutions[0].Succeeded | Should -BeFalse
@@ -311,7 +311,7 @@ throw 'inspection failed'
     }
 }
 
-Describe 'Test-ContainerModuleSpecification' {
+Describe 'Test-PSModuleSpecification' {
     It 'returns true for a valid specification' {
         $specificationPath = Join-Path $TestDrive 'Valid.psd1'
         Set-Content -LiteralPath $specificationPath -Value @'
@@ -327,7 +327,7 @@ Describe 'Test-ContainerModuleSpecification' {
 }
 '@
 
-        Test-ContainerModuleSpecification -Specification $specificationPath | Should -BeTrue
+        Test-PSModuleSpecification -Specification $specificationPath | Should -BeTrue
     }
 
     It 'throws the validator error for an invalid specification' {
@@ -336,7 +336,7 @@ Describe 'Test-ContainerModuleSpecification' {
 @{ Commands = @(@{ Name = 'Invoke-Example'; Parameters = @(@{ Name = 'Message' }) }) }
 '@
 
-        { Test-ContainerModuleSpecification -Specification $specificationPath } |
+        { Test-PSModuleSpecification -Specification $specificationPath } |
             Should -Throw -ExceptionType ([System.IO.InvalidDataException]) -ExpectedMessage "*non-empty string 'Type'*"
     }
 
@@ -348,13 +348,13 @@ Describe 'Test-ContainerModuleSpecification' {
 ) }) }
 '@
 
-        { Test-ContainerModuleSpecification -Specification $specificationPath } |
+        { Test-PSModuleSpecification -Specification $specificationPath } |
             Should -Throw -ExceptionType ([System.IO.InvalidDataException]) `
                 -ExpectedMessage "*non-empty string 'Type'*Source: '$specificationPath'*Object Id: 'command.invoke-example', 'parameter.message'*"
     }
 }
 
-Describe 'Build-ContainerModule specification loading' {
+Describe 'Build-PSModule specification loading' {
     BeforeEach {
         New-Item -Path (Join-Path $TestDrive 'PSModule') -ItemType Directory -Force | Out-Null
         Remove-Item -LiteralPath (Join-Path $TestDrive 'PSModule' 'Plugins') -Recurse -Force -ErrorAction SilentlyContinue
@@ -368,7 +368,7 @@ Describe 'Build-ContainerModule specification loading' {
     }
 
     It 'loads the conventional specification path by default' {
-        $artifact = Build-ContainerModule
+        $artifact = Build-PSModule
 
         $artifact.FullName | Should -Be (Join-Path $TestDrive 'artifacts' 'PSModule' 'Metadata' 'model.json')
     }
@@ -376,27 +376,27 @@ Describe 'Build-ContainerModule specification loading' {
     It 'loads an explicitly selected specification' {
         Set-Content -LiteralPath (Join-Path $TestDrive 'Custom.psd1') -Value '@{ Commands = @() }'
 
-        $artifact = Build-ContainerModule -Specification './Custom.psd1' -Output './dist'
+        $artifact = Build-PSModule -Specification './Custom.psd1' -Output './dist'
 
         $artifact.FullName | Should -Be (Join-Path $TestDrive 'dist' 'Metadata' 'model.json')
     }
 
     It 'rejects a missing specification' {
-        { Build-ContainerModule -Specification './missing.psd1' } |
+        { Build-PSModule -Specification './missing.psd1' } |
             Should -Throw -ExceptionType ([System.IO.FileNotFoundException]) -ExpectedMessage '*Container module specification was not found*'
     }
 
     It 'rejects a specification that is not a PSD1 file' {
         Set-Content -LiteralPath (Join-Path $TestDrive 'Specification.ps1') -Value '@{ Commands = @() }'
 
-        { Build-ContainerModule -Specification './Specification.ps1' } |
+        { Build-PSModule -Specification './Specification.ps1' } |
             Should -Throw -ExceptionType ([System.ArgumentException]) -ExpectedMessage "*must be a PowerShell data file with a '.psd1' extension*"
     }
 
     It 'rejects malformed PSD1 content' {
         Set-Content -LiteralPath (Join-Path $TestDrive 'Invalid.psd1') -Value '@{ Commands = '
 
-        { Build-ContainerModule -Specification './Invalid.psd1' } |
+        { Build-PSModule -Specification './Invalid.psd1' } |
             Should -Throw -ExceptionType ([System.IO.InvalidDataException]) -ExpectedMessage '*is not a valid PowerShell data file*'
     }
 
@@ -421,7 +421,7 @@ Add-Content -LiteralPath '$tracePath' -Value '$stage'
 "@
         }
 
-        $null = Build-ContainerModule
+        $null = Build-PSModule
 
         Get-Content -LiteralPath $tracePath | Should -Be $stages
     }
@@ -438,31 +438,31 @@ Add-Content -LiteralPath '$tracePath' -Value '$stage'
 }
 '@
 
-        $context = InModuleScope SubZeroDev.ContainerPSGenerator -Parameters @{
+        $context = InModuleScope SubZeroDev.PSGenerator -Parameters @{
             SpecificationPath = Join-Path $TestDrive 'PSModule' 'PSModule.psd1'
             OutputPath = Join-Path $TestDrive 'generated'
             ModuleRoot = Split-Path $manifestPath -Parent
         } {
             param ($SpecificationPath, $OutputPath, $ModuleRoot)
-            $context = New-ContainerModuleBuildContext `
+            $context = New-PSModuleBuildContext `
                 -SpecificationPath $SpecificationPath `
                 -OutputPath $OutputPath
             $pluginRoot = Join-Path $ModuleRoot 'Plugins'
 
-            $null = Invoke-ContainerModulePluginPipeline `
+            $null = Invoke-PSModulePluginPipeline `
                 -Context $context `
                 -Path $pluginRoot `
                 -Stage Validators, ObjectModelProcessors, RuntimeAdapters
-            Reset-ContainerModuleOutput -Context $context
-            $null = Invoke-ContainerModulePluginPipeline `
+            Reset-PSModuleOutput -Context $context
+            $null = Invoke-PSModulePluginPipeline `
                 -Context $context `
                 -Path $pluginRoot `
                 -Stage CodeGenerators
-            $null = Invoke-ContainerModulePluginPipeline `
+            $null = Invoke-PSModulePluginPipeline `
                 -Context $context `
                 -Path $pluginRoot `
                 -Stage TemplateRenderers
-            $null = Invoke-ContainerModulePluginPipeline `
+            $null = Invoke-PSModulePluginPipeline `
                 -Context $context `
                 -Path $pluginRoot `
                 -Stage PackagingProviders
@@ -501,7 +501,7 @@ Add-Content -LiteralPath '$tracePath' -Value '$stage'
             'ManifestRenderer'
             'PSModulePackagingProvider'
         )
-        $context.Model.PSObject.TypeNames | Should -Contain 'SubZeroDev.ContainerPSGenerator.Model'
+        $context.Model.PSObject.TypeNames | Should -Contain 'SubZeroDev.PSGenerator.Model'
         $context.Model.Commands.RuntimeAdapter | Should -Be @('Docker', 'Docker')
         $context.RenderRequests | Should -Be @(
             'Metadata'
@@ -518,7 +518,7 @@ Add-Content -LiteralPath '$tracePath' -Value '$stage'
         )
         $context.Artifacts.Package.FullName | Should -Be $context.OutputPath
         $context.Artifacts.Package.PSObject.TypeNames |
-            Should -Contain 'SubZeroDev.ContainerPSGenerator.PackageArtifact'
+            Should -Contain 'SubZeroDev.PSGenerator.PackageArtifact'
     }
 
     It 'uses explicitly selected plugin roots' {
@@ -530,7 +530,7 @@ param ([psobject] `$Context)
 Set-Content -LiteralPath '$markerPath' -Value 'invoked'
 "@
 
-        $null = Build-ContainerModule -PluginPath $pluginRoot
+        $null = Build-PSModule -PluginPath $pluginRoot
 
         Get-Content -LiteralPath $markerPath | Should -Be 'invoked'
     }
@@ -558,7 +558,7 @@ Set-Content -LiteralPath '$adapterMarker' -Value 'adapted'
 "@
 
         {
-            Build-ContainerModule -PluginPath $pluginRoot
+            Build-PSModule -PluginPath $pluginRoot
         } | Should -Throw '*object-model processor stage did not produce*'
         Test-Path -LiteralPath $adapterMarker | Should -BeFalse
     }
@@ -586,7 +586,7 @@ Set-Content -LiteralPath '$packagingMarker' -Value 'packaged'
 "@
 
         {
-            Build-ContainerModule -PluginPath $pluginRoot
+            Build-PSModule -PluginPath $pluginRoot
         } | Should -Throw '*template-renderer stage did not produce the metadata artifact*'
         Test-Path -LiteralPath $packagingMarker | Should -BeFalse
     }
@@ -606,12 +606,12 @@ Remove-Item -LiteralPath (
 '@
 
         {
-            Build-ContainerModule -PluginPath $pluginRoot
+            Build-PSModule -PluginPath $pluginRoot
         } | Should -Throw "*PSModulePackagingProvider*package is incomplete*Loader*was not found*"
     }
 
     It 'rejects an explicitly selected missing plugin root' {
-        { Build-ContainerModule -PluginPath (Join-Path $TestDrive 'MissingPlugins') } |
+        { Build-PSModule -PluginPath (Join-Path $TestDrive 'MissingPlugins') } |
             Should -Throw -ExceptionType ([System.IO.DirectoryNotFoundException]) -ExpectedMessage '*Plugin root*was not found*'
     }
 }
@@ -623,17 +623,17 @@ Describe 'Container module build context' {
     }
 
     It 'normalizes build paths and carries the imported specification' {
-        InModuleScope SubZeroDev.ContainerPSGenerator -Parameters @{
+        InModuleScope SubZeroDev.PSGenerator -Parameters @{
             SpecificationPath = $specificationPath
             OutputPath = Join-Path $TestDrive 'generated' '..' 'output'
         } {
             param ($SpecificationPath, $OutputPath)
 
-            $context = New-ContainerModuleBuildContext `
+            $context = New-PSModuleBuildContext `
                 -SpecificationPath $SpecificationPath `
                 -OutputPath $OutputPath
 
-            $context.PSObject.TypeNames | Should -Contain 'SubZeroDev.ContainerPSGenerator.BuildContext'
+            $context.PSObject.TypeNames | Should -Contain 'SubZeroDev.PSGenerator.BuildContext'
             $context.SpecificationPath | Should -Be ([System.IO.Path]::GetFullPath($SpecificationPath))
             $context.OutputPath | Should -Be ([System.IO.Path]::GetFullPath($OutputPath))
             $context.RepositoryPath | Should -Be (Split-Path $SpecificationPath -Parent)
@@ -645,13 +645,13 @@ Describe 'Container module build context' {
     It 'does not create the output directory while constructing the context' {
         $outputPath = Join-Path $TestDrive 'not-created'
 
-        InModuleScope SubZeroDev.ContainerPSGenerator -Parameters @{
+        InModuleScope SubZeroDev.PSGenerator -Parameters @{
             SpecificationPath = $specificationPath
             OutputPath = $outputPath
         } {
             param ($SpecificationPath, $OutputPath)
 
-            $null = New-ContainerModuleBuildContext `
+            $null = New-PSModuleBuildContext `
                 -SpecificationPath $SpecificationPath `
                 -OutputPath $OutputPath
 
@@ -681,7 +681,7 @@ FROM mcr.microsoft.com/dotnet/runtime:8.0 AS final
 '@
         Set-Content -LiteralPath (Join-Path $TestDrive 'tools.Dockerfile') -Value 'FROM alpine:3.20'
 
-        $artifact = Build-ContainerModule
+        $artifact = Build-PSModule
         $metadata = Get-Content -LiteralPath $artifact.FullName -Raw | ConvertFrom-Json
 
         $metadata.Inspection.Dockerfiles.Path | Should -Be @('Dockerfile', 'tools.Dockerfile')
@@ -693,7 +693,7 @@ FROM mcr.microsoft.com/dotnet/runtime:8.0 AS final
     }
 
     It 'persists an empty collection when no Dockerfile exists' {
-        $artifact = Build-ContainerModule
+        $artifact = Build-PSModule
         $metadata = Get-Content -LiteralPath $artifact.FullName -Raw | ConvertFrom-Json
 
         @($metadata.Inspection.Dockerfiles).Count | Should -Be 0
@@ -733,7 +733,7 @@ services:
     build: ./tools
 '@
 
-        $artifact = Build-ContainerModule
+        $artifact = Build-PSModule
         $metadata = Get-Content -LiteralPath $artifact.FullName -Raw | ConvertFrom-Json
 
         $metadata.Inspection.ComposeFiles.Path | Should -Be @('compose.yaml', 'docker-compose.yml')
@@ -747,7 +747,7 @@ services:
     }
 
     It 'persists an empty collection when no Compose file exists' {
-        $artifact = Build-ContainerModule
+        $artifact = Build-PSModule
         $metadata = Get-Content -LiteralPath $artifact.FullName -Raw | ConvertFrom-Json
 
         @($metadata.Inspection.ComposeFiles).Count | Should -Be 0
@@ -814,7 +814,7 @@ Describe 'Project manifest inspection' {
         $ignoredPath = New-Item -Path (Join-Path $TestDrive 'node_modules' 'ignored') -ItemType Directory -Force
         Set-Content -LiteralPath (Join-Path $ignoredPath.FullName 'package.json') -Value '{ "name": "ignored" }'
 
-        $artifact = Build-ContainerModule
+        $artifact = Build-PSModule
         $metadata = Get-Content -LiteralPath $artifact.FullName -Raw | ConvertFrom-Json
 
         $dotNet = $metadata.Inspection.DotNetProjects | Where-Object Name -eq 'Example.Api'
@@ -845,7 +845,7 @@ Describe 'Project manifest inspection' {
     }
 
     It 'persists empty collections when no supported project manifests exist' {
-        $artifact = Build-ContainerModule
+        $artifact = Build-PSModule
         $metadata = Get-Content -LiteralPath $artifact.FullName -Raw | ConvertFrom-Json
 
         @($metadata.Inspection.DotNetProjects).Count | Should -Be 0
@@ -886,7 +886,7 @@ unlabelled
 '@
         Set-Content -LiteralPath (Join-Path $TestDrive 'README.txt') -Value "Plain text title`nDetails"
 
-        $artifact = Build-ContainerModule
+        $artifact = Build-PSModule
         $metadata = Get-Content -LiteralPath $artifact.FullName -Raw | ConvertFrom-Json
 
         $metadata.Inspection.Readmes.Path | Should -Be @('README.md', 'README.txt')
@@ -901,7 +901,7 @@ unlabelled
     }
 
     It 'persists an empty collection when no root README exists' {
-        $artifact = Build-ContainerModule
+        $artifact = Build-PSModule
         $metadata = Get-Content -LiteralPath $artifact.FullName -Raw | ConvertFrom-Json
 
         @($metadata.Inspection.Readmes).Count | Should -Be 0
@@ -999,7 +999,7 @@ jobs:
 { "openapi": "3.1.0", "info": { "title": "Example API", "version": "1.2.0" }, "paths": { "/users": {}, "/health": {} } }
 '@
 
-        $artifact = Build-ContainerModule
+        $artifact = Build-PSModule
         $inspection = (Get-Content -LiteralPath $artifact.FullName -Raw | ConvertFrom-Json).Inspection
 
         $powerShell = $inspection.PowerShellFiles | Where-Object Path -eq 'scripts/Tools.psm1'
@@ -1054,7 +1054,7 @@ jobs:
         Set-Content -LiteralPath (Join-Path $nestedPath 'invalid.schema.json') -Value 'definitely not json'
         Set-Content -LiteralPath (Join-Path $nestedPath 'Nested.ps1') -Value 'function Invoke-Nested { }'
 
-        $artifact = Build-ContainerModule
+        $artifact = Build-PSModule
         $inspection = (Get-Content -LiteralPath $artifact.FullName -Raw | ConvertFrom-Json).Inspection
 
         @($inspection.ConfigurationSchemas).Count | Should -Be 0
@@ -1074,7 +1074,7 @@ jobs:
 '@
         Set-Content -LiteralPath (Join-Path $schemas.FullName 'cache.json') -Value 'definitely not json'
 
-        $artifact = Build-ContainerModule
+        $artifact = Build-PSModule
         $inspection = (Get-Content -LiteralPath $artifact.FullName -Raw | ConvertFrom-Json).Inspection
 
         $inspection.ConfigurationSchemas.Path | Should -Be @(
@@ -1093,12 +1093,12 @@ jobs:
         $schemaPath = Join-Path $schemas.FullName 'invalid.schema.json'
         Set-Content -LiteralPath $schemaPath -Value 'definitely not json'
 
-        { Build-ContainerModule } |
+        { Build-PSModule } |
             Should -Throw "*Configuration schema '$schemaPath' is not valid JSON*"
     }
 }
 
-Describe 'Build-ContainerModule command validation' {
+Describe 'Build-PSModule command validation' {
     BeforeEach {
         Push-Location $TestDrive
     }
@@ -1110,27 +1110,27 @@ Describe 'Build-ContainerModule command validation' {
     It 'allows a specification with no commands' {
         Set-Content -LiteralPath './Specification.psd1' -Value '@{}'
 
-        { Build-ContainerModule -Specification './Specification.psd1' } | Should -Not -Throw
+        { Build-PSModule -Specification './Specification.psd1' } | Should -Not -Throw
     }
 
     It 'requires Commands to be an array' {
         Set-Content -LiteralPath './Specification.psd1' -Value '@{ Commands = @{ Name = ''Invoke-Example'' } }'
 
-        { Build-ContainerModule -Specification './Specification.psd1' } |
+        { Build-PSModule -Specification './Specification.psd1' } |
             Should -Throw -ExceptionType ([System.IO.InvalidDataException]) -ExpectedMessage "*'Commands' property must be an array*"
     }
 
     It 'requires each command to be an object' {
         Set-Content -LiteralPath './Specification.psd1' -Value '@{ Commands = @(''Invoke-Example'') }'
 
-        { Build-ContainerModule -Specification './Specification.psd1' } |
+        { Build-PSModule -Specification './Specification.psd1' } |
             Should -Throw -ExceptionType ([System.IO.InvalidDataException]) -ExpectedMessage '*Command at index 0 must be an object*'
     }
 
     It 'requires each command to have a non-empty string name' {
         Set-Content -LiteralPath './Specification.psd1' -Value '@{ Commands = @(@{ Name = '' '' }) }'
 
-        { Build-ContainerModule -Specification './Specification.psd1' } |
+        { Build-PSModule -Specification './Specification.psd1' } |
             Should -Throw -ExceptionType ([System.IO.InvalidDataException]) -ExpectedMessage "*must define a non-empty string 'Name'*"
     }
 
@@ -1148,7 +1148,7 @@ Describe 'Container module identity validation' {
         $specificationPath = Join-Path $TestDrive 'UnsafeModuleName.psd1'
         Set-Content -LiteralPath $specificationPath -Value "@{ ModuleName = '../Unsafe'; Commands = @() }"
 
-        { Test-ContainerModuleSpecification -Specification $specificationPath } |
+        { Test-PSModuleSpecification -Specification $specificationPath } |
             Should -Throw -ExceptionType ([System.IO.InvalidDataException]) -ExpectedMessage "*'ModuleName' property must be*"
     }
 
@@ -1156,25 +1156,25 @@ Describe 'Container module identity validation' {
         $specificationPath = Join-Path $TestDrive 'InvalidModuleVersion.psd1'
         Set-Content -LiteralPath $specificationPath -Value "@{ ModuleVersion = 'latest'; Commands = @() }"
 
-        { Test-ContainerModuleSpecification -Specification $specificationPath } |
+        { Test-PSModuleSpecification -Specification $specificationPath } |
             Should -Throw -ExceptionType ([System.IO.InvalidDataException]) -ExpectedMessage "*'ModuleVersion' property must be a valid version string*"
     }
 }
 '@
 
-        { Build-ContainerModule -Specification './Specification.psd1' } |
+        { Build-PSModule -Specification './Specification.psd1' } |
             Should -Throw -ExceptionType ([System.IO.InvalidDataException]) -ExpectedMessage '*defined more than once*'
     }
 
     It 'requires PowerShell Verb-Noun command syntax' {
         Set-Content -LiteralPath './Specification.psd1' -Value '@{ Commands = @(@{ Name = ''../../Example'' }) }'
 
-        { Build-ContainerModule -Specification './Specification.psd1' } |
+        { Build-PSModule -Specification './Specification.psd1' } |
             Should -Throw -ExceptionType ([System.IO.InvalidDataException]) -ExpectedMessage '*must use PowerShell Verb-Noun syntax*'
     }
 }
 
-Describe 'Build-ContainerModule parameter validation' {
+Describe 'Build-PSModule parameter validation' {
     BeforeEach {
         Push-Location $TestDrive
     }
@@ -1186,7 +1186,7 @@ Describe 'Build-ContainerModule parameter validation' {
     It 'allows a command with no parameters' {
         Set-Content -LiteralPath './Specification.psd1' -Value '@{ Commands = @(@{ Name = ''Invoke-Example'' }) }'
 
-        { Build-ContainerModule -Specification './Specification.psd1' } | Should -Not -Throw
+        { Build-PSModule -Specification './Specification.psd1' } | Should -Not -Throw
     }
 
     It 'allows a valid parameter array' {
@@ -1204,7 +1204,7 @@ Describe 'Build-ContainerModule parameter validation' {
 }
 '@
 
-        { Build-ContainerModule -Specification './Specification.psd1' } | Should -Not -Throw
+        { Build-PSModule -Specification './Specification.psd1' } | Should -Not -Throw
     }
 
     It 'requires Parameters to be an array' {
@@ -1212,7 +1212,7 @@ Describe 'Build-ContainerModule parameter validation' {
 @{ Commands = @(@{ Name = 'Invoke-Example'; Parameters = @{ Name = 'Path'; Type = 'string' } }) }
 '@
 
-        { Build-ContainerModule -Specification './Specification.psd1' } |
+        { Build-PSModule -Specification './Specification.psd1' } |
             Should -Throw -ExceptionType ([System.IO.InvalidDataException]) -ExpectedMessage "*'Parameters' property for command 'Invoke-Example' must be an array*"
     }
 
@@ -1221,7 +1221,7 @@ Describe 'Build-ContainerModule parameter validation' {
 @{ Commands = @(@{ Name = 'Invoke-Example'; Parameters = @('Path') }) }
 '@
 
-        { Build-ContainerModule -Specification './Specification.psd1' } |
+        { Build-PSModule -Specification './Specification.psd1' } |
             Should -Throw -ExceptionType ([System.IO.InvalidDataException]) -ExpectedMessage '*Parameter at index 0*must be an object*'
     }
 
@@ -1230,7 +1230,7 @@ Describe 'Build-ContainerModule parameter validation' {
 @{ Commands = @(@{ Name = 'Invoke-Example'; Parameters = @(@{ Name = ''; Type = 'string' }) }) }
 '@
 
-        { Build-ContainerModule -Specification './Specification.psd1' } |
+        { Build-PSModule -Specification './Specification.psd1' } |
             Should -Throw -ExceptionType ([System.IO.InvalidDataException]) -ExpectedMessage "*must define a non-empty string 'Name'*"
     }
 
@@ -1239,7 +1239,7 @@ Describe 'Build-ContainerModule parameter validation' {
 @{ Commands = @(@{ Name = 'Invoke-Example'; Parameters = @(@{ Name = 'Path' }) }) }
 '@
 
-        { Build-ContainerModule -Specification './Specification.psd1' } |
+        { Build-PSModule -Specification './Specification.psd1' } |
             Should -Throw -ExceptionType ([System.IO.InvalidDataException]) -ExpectedMessage "*must define a non-empty string 'Type'*"
     }
 
@@ -1248,7 +1248,7 @@ Describe 'Build-ContainerModule parameter validation' {
 @{ Commands = @(@{ Name = 'Invoke-Example'; Parameters = @(@{ Name = 'Path'; Type = 'string'; Mandatory = 'yes' }) }) }
 '@
 
-        { Build-ContainerModule -Specification './Specification.psd1' } |
+        { Build-PSModule -Specification './Specification.psd1' } |
             Should -Throw -ExceptionType ([System.IO.InvalidDataException]) -ExpectedMessage "*'Mandatory' property*must be Boolean*"
     }
 
@@ -1267,7 +1267,7 @@ Describe 'Build-ContainerModule parameter validation' {
 }
 '@
 
-        { Build-ContainerModule -Specification './Specification.psd1' } |
+        { Build-PSModule -Specification './Specification.psd1' } |
             Should -Throw -ExceptionType ([System.IO.InvalidDataException]) -ExpectedMessage '*defined more than once*'
     }
 
@@ -1276,7 +1276,7 @@ Describe 'Build-ContainerModule parameter validation' {
 @{ Commands = @(@{ Name = 'Invoke-Example'; Parameters = @(@{ Name = 'bad-name'; Type = 'string' }) }) }
 '@
 
-        { Build-ContainerModule -Specification './Specification.psd1' } |
+        { Build-PSModule -Specification './Specification.psd1' } |
             Should -Throw -ExceptionType ([System.IO.InvalidDataException]) -ExpectedMessage '*is not a valid PowerShell identifier*'
     }
 
@@ -1285,7 +1285,7 @@ Describe 'Build-ContainerModule parameter validation' {
 @{ Commands = @(@{ Name = 'Invoke-Example'; Parameters = @(@{ Name = 'Value'; Type = 'string]; Write-Host bad; [string' }) }) }
 '@
 
-        { Build-ContainerModule -Specification './Specification.psd1' } |
+        { Build-PSModule -Specification './Specification.psd1' } |
             Should -Throw -ExceptionType ([System.IO.InvalidDataException]) -ExpectedMessage '*is not a supported PowerShell type name*'
     }
 }
@@ -1313,7 +1313,7 @@ Describe 'Container module mapping validation' {
 }
 '@
 
-        Test-ContainerModuleSpecification -Specification $specificationPath | Should -BeTrue
+        Test-PSModuleSpecification -Specification $specificationPath | Should -BeTrue
     }
 
     It 'requires Mappings to be an array' {
@@ -1328,7 +1328,7 @@ Describe 'Container module mapping validation' {
 }
 '@
 
-        { Test-ContainerModuleSpecification -Specification $specificationPath } |
+        { Test-PSModuleSpecification -Specification $specificationPath } |
             Should -Throw -ExceptionType ([System.IO.InvalidDataException]) -ExpectedMessage "*'Mappings' property*must be an array*"
     }
 
@@ -1344,7 +1344,7 @@ Describe 'Container module mapping validation' {
 }
 '@
 
-        { Test-ContainerModuleSpecification -Specification $specificationPath } |
+        { Test-PSModuleSpecification -Specification $specificationPath } |
             Should -Throw -ExceptionType ([System.IO.InvalidDataException]) -ExpectedMessage '*Mapping at index 0*must be an object*'
     }
 
@@ -1360,7 +1360,7 @@ Describe 'Container module mapping validation' {
 }
 '@
 
-        { Test-ContainerModuleSpecification -Specification $specificationPath } |
+        { Test-PSModuleSpecification -Specification $specificationPath } |
             Should -Throw -ExceptionType ([System.IO.InvalidDataException]) -ExpectedMessage "*must define a non-empty string 'Type'*"
     }
 
@@ -1372,7 +1372,7 @@ Describe 'Container module mapping validation' {
 ) }) }
 '@
 
-        { Test-ContainerModuleSpecification -Specification $specificationPath } |
+        { Test-PSModuleSpecification -Specification $specificationPath } |
             Should -Throw -ExceptionType ([System.IO.InvalidDataException]) -ExpectedMessage "*Mapping type 'CustomRuntimeBehavior'*is not supported*"
     }
 }
@@ -1392,8 +1392,8 @@ Describe 'Container module object identities' {
 }
 '@
 
-        $model = Get-ContainerModuleModel -Specification $specificationPath
-        Build-ContainerModule -Specification $specificationPath -Output $outputPath | Out-Null
+        $model = Get-PSModuleModel -Specification $specificationPath
+        Build-PSModule -Specification $specificationPath -Output $outputPath | Out-Null
         $metadata = Get-Content -LiteralPath (Join-Path $outputPath 'Metadata/model.json') -Raw | ConvertFrom-Json
 
         $model.Id | Should -Be 'module.example'
@@ -1406,7 +1406,7 @@ Describe 'Container module object identities' {
         $specificationPath = Join-Path $TestDrive 'InvalidIdentity.psd1'
         Set-Content -LiteralPath $specificationPath -Value "@{ Commands = @(@{ Id = 'command example'; Name = 'Invoke-Example' }) }"
 
-        { Test-ContainerModuleSpecification -Specification $specificationPath } |
+        { Test-PSModuleSpecification -Specification $specificationPath } |
             Should -Throw -ExceptionType ([System.IO.InvalidDataException]) -ExpectedMessage "*'Id' property for command*"
     }
 
@@ -1422,7 +1422,7 @@ Describe 'Container module object identities' {
 }
 '@
 
-        { Test-ContainerModuleSpecification -Specification $specificationPath } |
+        { Test-PSModuleSpecification -Specification $specificationPath } |
             Should -Throw -ExceptionType ([System.IO.InvalidDataException]) -ExpectedMessage "*Id 'SHARED.IDENTITY'*defined more than once*"
     }
 }
@@ -1447,7 +1447,7 @@ Describe 'Named mapping validation' {
 }
 '@
 
-        Test-ContainerModuleSpecification -Specification $specificationPath | Should -BeTrue
+        Test-PSModuleSpecification -Specification $specificationPath | Should -BeTrue
     }
 
     It 'requires an Argument mapping name' {
@@ -1462,7 +1462,7 @@ Describe 'Named mapping validation' {
 }
 '@
 
-        { Test-ContainerModuleSpecification -Specification $specificationPath } |
+        { Test-PSModuleSpecification -Specification $specificationPath } |
             Should -Throw -ExceptionType ([System.IO.InvalidDataException]) -ExpectedMessage "*'Name' property for Argument mapping*must be a non-empty string*"
     }
 
@@ -1478,7 +1478,7 @@ Describe 'Named mapping validation' {
 }
 '@
 
-        { Test-ContainerModuleSpecification -Specification $specificationPath } |
+        { Test-PSModuleSpecification -Specification $specificationPath } |
             Should -Throw -ExceptionType ([System.IO.InvalidDataException]) -ExpectedMessage "*'Name' property for Environment mapping*must be a non-empty string*"
     }
 }
@@ -1500,7 +1500,7 @@ Describe 'Mount mapping validation' {
 }
 '@
 
-        Test-ContainerModuleSpecification -Specification $specificationPath | Should -BeTrue
+        Test-PSModuleSpecification -Specification $specificationPath | Should -BeTrue
     }
 
     It 'requires a Mount mapping target' {
@@ -1517,7 +1517,7 @@ Describe 'Mount mapping validation' {
 }
 '@
 
-        { Test-ContainerModuleSpecification -Specification $specificationPath } |
+        { Test-PSModuleSpecification -Specification $specificationPath } |
             Should -Throw -ExceptionType ([System.IO.InvalidDataException]) -ExpectedMessage "*'Target' property for Mount mapping*must be a non-empty string*"
     }
 
@@ -1535,7 +1535,7 @@ Describe 'Mount mapping validation' {
 }
 '@
 
-        { Test-ContainerModuleSpecification -Specification $specificationPath } |
+        { Test-PSModuleSpecification -Specification $specificationPath } |
             Should -Throw -ExceptionType ([System.IO.InvalidDataException]) -ExpectedMessage "*'Access' property for Mount mapping*must be a non-empty string*"
     }
 
@@ -1553,7 +1553,7 @@ Describe 'Mount mapping validation' {
 }
 '@
 
-        { Test-ContainerModuleSpecification -Specification $specificationPath } |
+        { Test-PSModuleSpecification -Specification $specificationPath } |
             Should -Throw -ExceptionType ([System.IO.InvalidDataException]) -ExpectedMessage "*must be 'ReadOnly' or 'ReadWrite'*"
     }
 }
@@ -1577,7 +1577,7 @@ Describe 'Port and working-directory mappings' {
 }
 '@
 
-        Build-ContainerModule -Specification $specificationPath -Output $outputPath | Out-Null
+        Build-PSModule -Specification $specificationPath -Output $outputPath | Out-Null
         $module = Import-Module (Join-Path $outputPath 'RuntimeMappingExample.psd1') -Force -PassThru
         $global:capturedDockerArguments = $null
         function global:docker { $global:capturedDockerArguments = @($args); $global:LASTEXITCODE = 0 }
@@ -1613,7 +1613,7 @@ Describe 'Port and working-directory mappings' {
 }
 '@
 
-        Build-ContainerModule -Specification $specificationPath -Output $outputPath | Out-Null
+        Build-PSModule -Specification $specificationPath -Output $outputPath | Out-Null
         $module = Import-Module (Join-Path $outputPath 'RuntimeValueExample.psd1') -Force -PassThru
         $global:dockerWasInvoked = $false
         function global:docker { $global:dockerWasInvoked = $true }
@@ -1639,10 +1639,10 @@ Describe 'Port and working-directory mappings' {
         Set-Content $invalidWorkdirTypePath "@{ Commands = @(@{ Name = 'Invoke-Example'; Parameters = @(@{ Name = 'Path'; Type = 'DirectoryInfo'; Mappings = @(@{ Type = 'WorkingDirectory' }) }) }) }"
         Set-Content $duplicateWorkdirPath "@{ Commands = @(@{ Name = 'Invoke-Example'; Parameters = @(@{ Name = 'One'; Type = 'string'; Mappings = @(@{ Type = 'WorkingDirectory' }) }, @{ Name = 'Two'; Type = 'string'; Mappings = @(@{ Type = 'WorkingDirectory' }) }) }) }"
 
-        { Test-ContainerModuleSpecification $invalidPortPath } | Should -Throw -ExpectedMessage "*'ContainerPort'*1 through 65535*"
-        { Test-ContainerModuleSpecification $invalidProtocolPath } | Should -Throw -ExpectedMessage "*'Protocol'*'tcp' or 'udp'*"
-        { Test-ContainerModuleSpecification $invalidWorkdirTypePath } | Should -Throw -ExpectedMessage "*WorkingDirectory*must use type 'string'*"
-        { Test-ContainerModuleSpecification $duplicateWorkdirPath } | Should -Throw -ExpectedMessage '*at most one WorkingDirectory*'
+        { Test-PSModuleSpecification $invalidPortPath } | Should -Throw -ExpectedMessage "*'ContainerPort'*1 through 65535*"
+        { Test-PSModuleSpecification $invalidProtocolPath } | Should -Throw -ExpectedMessage "*'Protocol'*'tcp' or 'udp'*"
+        { Test-PSModuleSpecification $invalidWorkdirTypePath } | Should -Throw -ExpectedMessage "*WorkingDirectory*must use type 'string'*"
+        { Test-PSModuleSpecification $duplicateWorkdirPath } | Should -Throw -ExpectedMessage '*at most one WorkingDirectory*'
     }
 }
 
@@ -1668,7 +1668,7 @@ Describe 'Volume and runtime-option mappings' {
 }
 '@
 
-        Build-ContainerModule -Specification $specificationPath -Output $outputPath | Out-Null
+        Build-PSModule -Specification $specificationPath -Output $outputPath | Out-Null
         $module = Import-Module (Join-Path $outputPath 'VolumeOptionExample.psd1') -Force -PassThru
         $global:capturedDockerArguments = $null
         function global:docker { $global:capturedDockerArguments = @($args); $global:LASTEXITCODE = 0 }
@@ -1699,7 +1699,7 @@ Describe 'Volume and runtime-option mappings' {
 ) }) }
 '@
 
-        Build-ContainerModule -Specification $specificationPath -Output $outputPath | Out-Null
+        Build-PSModule -Specification $specificationPath -Output $outputPath | Out-Null
         $module = Import-Module (Join-Path $outputPath 'VolumeValueExample.psd1') -Force -PassThru
         $global:dockerWasInvoked = $false
         function global:docker { $global:dockerWasInvoked = $true }
@@ -1724,10 +1724,10 @@ Describe 'Volume and runtime-option mappings' {
         Set-Content $invalidVolumeAccessPath "@{ Commands = @(@{ Name = 'Invoke-Example'; Parameters = @(@{ Name = 'Volume'; Type = 'string'; Mappings = @(@{ Type = 'Volume'; Target = '/cache'; Access = 'OwnerOnly' }) }) }) }"
         Set-Content $invalidOptionPath "@{ Commands = @(@{ Name = 'Invoke-Example'; Parameters = @(@{ Name = 'Network'; Type = 'string'; Mappings = @(@{ Type = 'RuntimeOption'; Name = '-n' }) }) }) }"
 
-        { Test-ContainerModuleSpecification $invalidVolumeTypePath } | Should -Throw -ExpectedMessage "*Volume*mapping*must use type 'string'*"
-        { Test-ContainerModuleSpecification $invalidVolumeTargetPath } | Should -Throw -ExpectedMessage "*'Target'*absolute container path*"
-        { Test-ContainerModuleSpecification $invalidVolumeAccessPath } | Should -Throw -ExpectedMessage "*'Access'*'ReadOnly' or 'ReadWrite'*"
-        { Test-ContainerModuleSpecification $invalidOptionPath } | Should -Throw -ExpectedMessage "*'Name'*RuntimeOption*beginning with '--'*"
+        { Test-PSModuleSpecification $invalidVolumeTypePath } | Should -Throw -ExpectedMessage "*Volume*mapping*must use type 'string'*"
+        { Test-PSModuleSpecification $invalidVolumeTargetPath } | Should -Throw -ExpectedMessage "*'Target'*absolute container path*"
+        { Test-PSModuleSpecification $invalidVolumeAccessPath } | Should -Throw -ExpectedMessage "*'Access'*'ReadOnly' or 'ReadWrite'*"
+        { Test-PSModuleSpecification $invalidOptionPath } | Should -Throw -ExpectedMessage "*'Name'*RuntimeOption*beginning with '--'*"
     }
 }
 
@@ -1755,7 +1755,7 @@ Describe 'Device and GPU mappings' {
 }
 '@
 
-        Build-ContainerModule -Specification $specificationPath -Output $outputPath | Out-Null
+        Build-PSModule -Specification $specificationPath -Output $outputPath | Out-Null
         $module = Import-Module (Join-Path $outputPath 'AcceleratorExample.psd1') -Force -PassThru
         $global:capturedDockerArguments = $null
         function global:docker { $global:capturedDockerArguments = @($args); $global:LASTEXITCODE = 0 }
@@ -1784,7 +1784,7 @@ Describe 'Device and GPU mappings' {
 ) }) }
 '@
 
-        Build-ContainerModule -Specification $specificationPath -Output $outputPath | Out-Null
+        Build-PSModule -Specification $specificationPath -Output $outputPath | Out-Null
         $module = Import-Module (Join-Path $outputPath 'GpuValueExample.psd1') -Force -PassThru
         $global:dockerWasInvoked = $false
         function global:docker { $global:dockerWasInvoked = $true }
@@ -1809,10 +1809,10 @@ Describe 'Device and GPU mappings' {
         Set-Content $invalidPermissionsPath "@{ Commands = @(@{ Name = 'Invoke-Example'; Parameters = @(@{ Name = 'Device'; Type = 'string'; Mappings = @(@{ Type = 'Device'; Permissions = 'wr' }) }) }) }"
         Set-Content $invalidGpuTypePath "@{ Commands = @(@{ Name = 'Invoke-Example'; Parameters = @(@{ Name = 'Gpu'; Type = 'int'; Mappings = @(@{ Type = 'Gpu' }) }) }) }"
 
-        { Test-ContainerModuleSpecification $invalidDeviceTypePath } | Should -Throw -ExpectedMessage "*Device*mapping*must use type 'string' or 'FileInfo'*"
-        { Test-ContainerModuleSpecification $invalidDeviceTargetPath } | Should -Throw -ExpectedMessage "*'Target'*Device mapping*absolute container path*"
-        { Test-ContainerModuleSpecification $invalidPermissionsPath } | Should -Throw -ExpectedMessage "*'Permissions'*ordered combination*"
-        { Test-ContainerModuleSpecification $invalidGpuTypePath } | Should -Throw -ExpectedMessage "*Gpu*mapping*must use type 'string'*"
+        { Test-PSModuleSpecification $invalidDeviceTypePath } | Should -Throw -ExpectedMessage "*Device*mapping*must use type 'string' or 'FileInfo'*"
+        { Test-PSModuleSpecification $invalidDeviceTargetPath } | Should -Throw -ExpectedMessage "*'Target'*Device mapping*absolute container path*"
+        { Test-PSModuleSpecification $invalidPermissionsPath } | Should -Throw -ExpectedMessage "*'Permissions'*ordered combination*"
+        { Test-PSModuleSpecification $invalidGpuTypePath } | Should -Throw -ExpectedMessage "*Gpu*mapping*must use type 'string'*"
     }
 }
 
@@ -1840,7 +1840,7 @@ Describe 'Resource limit and secret mappings' {
 }
 '@
 
-        Build-ContainerModule -Specification $specificationPath -Output $outputPath | Out-Null
+        Build-PSModule -Specification $specificationPath -Output $outputPath | Out-Null
         $module = Import-Module (Join-Path $outputPath 'ResourceExample.psd1') -Force -PassThru
         $global:capturedDockerArguments = $null
         function global:docker { $global:capturedDockerArguments = @($args); $global:LASTEXITCODE = 0 }
@@ -1874,7 +1874,7 @@ Describe 'Resource limit and secret mappings' {
 ) }) }
 '@
 
-        Build-ContainerModule -Specification $specificationPath -Output $outputPath | Out-Null
+        Build-PSModule -Specification $specificationPath -Output $outputPath | Out-Null
         $module = Import-Module (Join-Path $outputPath 'ResourceValueExample.psd1') -Force -PassThru
         $commaSecretPath = Join-Path $TestDrive 'unsafe,secret'
         Set-Content -LiteralPath $commaSecretPath -Value 'secret'
@@ -1908,12 +1908,12 @@ Describe 'Resource limit and secret mappings' {
         Set-Content $invalidSecretNamePath "@{ Commands = @(@{ Name = 'Invoke-Example'; Parameters = @(@{ Name = 'Secret'; Type = 'string'; Mappings = @(@{ Type = 'Secret'; Name = '../token' }) }) }) }"
         Set-Content $invalidSecretTargetPath "@{ Commands = @(@{ Name = 'Invoke-Example'; Parameters = @(@{ Name = 'Secret'; Type = 'string'; Mappings = @(@{ Type = 'Secret'; Name = 'token'; Target = 'run/token' }) }) }) }"
 
-        { Test-ContainerModuleSpecification $invalidResourcePath } | Should -Throw -ExpectedMessage "*'Resource'*'Memory' or 'Cpus'*"
-        { Test-ContainerModuleSpecification $invalidMemoryTypePath } | Should -Throw -ExpectedMessage "*Memory ResourceLimit*must use type 'string'*"
-        { Test-ContainerModuleSpecification $invalidCpuTypePath } | Should -Throw -ExpectedMessage "*Cpus ResourceLimit*numeric type*"
-        { Test-ContainerModuleSpecification $invalidSecretTypePath } | Should -Throw -ExpectedMessage "*Secret*mapping*must use type 'string' or 'FileInfo'*"
-        { Test-ContainerModuleSpecification $invalidSecretNamePath } | Should -Throw -ExpectedMessage "*'Name'*Secret mapping*safe non-empty file name*"
-        { Test-ContainerModuleSpecification $invalidSecretTargetPath } | Should -Throw -ExpectedMessage "*'Target'*Secret mapping*absolute container path*"
+        { Test-PSModuleSpecification $invalidResourcePath } | Should -Throw -ExpectedMessage "*'Resource'*'Memory' or 'Cpus'*"
+        { Test-PSModuleSpecification $invalidMemoryTypePath } | Should -Throw -ExpectedMessage "*Memory ResourceLimit*must use type 'string'*"
+        { Test-PSModuleSpecification $invalidCpuTypePath } | Should -Throw -ExpectedMessage "*Cpus ResourceLimit*numeric type*"
+        { Test-PSModuleSpecification $invalidSecretTypePath } | Should -Throw -ExpectedMessage "*Secret*mapping*must use type 'string' or 'FileInfo'*"
+        { Test-PSModuleSpecification $invalidSecretNamePath } | Should -Throw -ExpectedMessage "*'Name'*Secret mapping*safe non-empty file name*"
+        { Test-PSModuleSpecification $invalidSecretTargetPath } | Should -Throw -ExpectedMessage "*'Target'*Secret mapping*absolute container path*"
     }
 }
 
@@ -1933,8 +1933,8 @@ Describe 'Static argument completion' {
 }
 '@
 
-        $model = Get-ContainerModuleModel -Specification $specificationPath
-        Build-ContainerModule -Specification $specificationPath -Output $outputPath | Out-Null
+        $model = Get-PSModuleModel -Specification $specificationPath
+        Build-PSModule -Specification $specificationPath -Output $outputPath | Out-Null
         $source = Get-Content -LiteralPath (Join-Path $outputPath 'Public' 'Invoke-CompletionExample.ps1') -Raw
         $metadata = Get-Content -LiteralPath (Join-Path $outputPath 'Metadata/model.json') -Raw | ConvertFrom-Json
         $module = Import-Module (Join-Path $outputPath 'CompletionExample.psd1') -Force -PassThru
@@ -1965,10 +1965,10 @@ Describe 'Static argument completion' {
         Set-Content $emptyValuesPath "@{ Commands = @(@{ Name = 'Invoke-Example'; Parameters = @(@{ Name = 'Value'; Type = 'string'; Completions = @(@{ Type = 'Static'; Values = @() }) }) }) }"
         Set-Content $duplicatePath "@{ Commands = @(@{ Name = 'Invoke-Example'; Parameters = @(@{ Name = 'Value'; Type = 'string'; Completions = @(@{ Type = 'Static'; Values = @('One', 'one') }) }) }) }"
 
-        { Test-ContainerModuleSpecification $scalarPath } | Should -Throw -ExpectedMessage "*'Completions'*must be an array*"
-        { Test-ContainerModuleSpecification $unsupportedPath } | Should -Throw -ExpectedMessage "*Completion type 'Script'*not supported*"
-        { Test-ContainerModuleSpecification $emptyValuesPath } | Should -Throw -ExpectedMessage "*Static completion*non-empty string array*"
-        { Test-ContainerModuleSpecification $duplicatePath } | Should -Throw -ExpectedMessage "*Completion value 'one'*defined more than once*"
+        { Test-PSModuleSpecification $scalarPath } | Should -Throw -ExpectedMessage "*'Completions'*must be an array*"
+        { Test-PSModuleSpecification $unsupportedPath } | Should -Throw -ExpectedMessage "*Completion type 'Script'*not supported*"
+        { Test-PSModuleSpecification $emptyValuesPath } | Should -Throw -ExpectedMessage "*Static completion*non-empty string array*"
+        { Test-PSModuleSpecification $duplicatePath } | Should -Throw -ExpectedMessage "*Completion value 'one'*defined more than once*"
     }
 }
 
@@ -1991,8 +1991,8 @@ Describe 'Parameter validation attributes' {
 }
 '@
 
-        $model = Get-ContainerModuleModel -Specification $specificationPath
-        Build-ContainerModule -Specification $specificationPath -Output $outputPath | Out-Null
+        $model = Get-PSModuleModel -Specification $specificationPath
+        Build-PSModule -Specification $specificationPath -Output $outputPath | Out-Null
         $source = Get-Content -LiteralPath (Join-Path $outputPath 'Public' 'Invoke-ValidationExample.ps1') -Raw
         $module = Import-Module (Join-Path $outputPath 'ValidationExample.psd1') -Force -PassThru
         try {
@@ -2019,19 +2019,19 @@ Describe 'Parameter validation attributes' {
         Set-Content -LiteralPath $reversedRangePath -Value "@{ Commands = @(@{ Name = 'Invoke-Example'; Parameters = @(@{ Name = 'Value'; Type = 'int'; Validations = @(@{ Type = 'ValidateRange'; Minimum = 10; Maximum = 1 }) }) }) }"
         Set-Content -LiteralPath $invalidPatternPath -Value "@{ Commands = @(@{ Name = 'Invoke-Example'; Parameters = @(@{ Name = 'Value'; Type = 'string'; Validations = @(@{ Type = 'ValidatePattern'; Pattern = '[' }) }) }) }"
 
-        { Test-ContainerModuleSpecification $unsupportedPath } | Should -Throw -ExpectedMessage '*not supported*'
-        { Test-ContainerModuleSpecification $emptySetPath } | Should -Throw -ExpectedMessage '*non-empty string array*'
-        { Test-ContainerModuleSpecification $reversedRangePath } | Should -Throw -ExpectedMessage '*ascending order*'
-        { Test-ContainerModuleSpecification $invalidPatternPath } | Should -Throw -ExpectedMessage '*invalid regular expression*'
+        { Test-PSModuleSpecification $unsupportedPath } | Should -Throw -ExpectedMessage '*not supported*'
+        { Test-PSModuleSpecification $emptySetPath } | Should -Throw -ExpectedMessage '*non-empty string array*'
+        { Test-PSModuleSpecification $reversedRangePath } | Should -Throw -ExpectedMessage '*ascending order*'
+        { Test-PSModuleSpecification $invalidPatternPath } | Should -Throw -ExpectedMessage '*invalid regular expression*'
     }
 }
 
 Describe 'Container module object model' {
     It 'normalizes a specification without commands to an empty collection' {
-        InModuleScope SubZeroDev.ContainerPSGenerator {
-            $model = ConvertTo-ContainerModuleModel -Specification @{}
+        InModuleScope SubZeroDev.PSGenerator {
+            $model = ConvertTo-PSModuleModel -Specification @{}
 
-            $model.PSObject.TypeNames | Should -Contain 'SubZeroDev.ContainerPSGenerator.Model'
+            $model.PSObject.TypeNames | Should -Contain 'SubZeroDev.PSGenerator.Model'
             $model.ModuleName | Should -Be 'PSModule'
             $model.ModuleVersion | Should -Be '0.1.0'
             $model.ContainerImage | Should -Be 'PSModule'
@@ -2041,7 +2041,7 @@ Describe 'Container module object model' {
     }
 
     It 'normalizes commands, parameters, and mappings' {
-        InModuleScope SubZeroDev.ContainerPSGenerator {
+        InModuleScope SubZeroDev.PSGenerator {
             $definition = @{
                 Commands = @(
                     @{
@@ -2062,20 +2062,20 @@ Describe 'Container module object model' {
                 )
             }
 
-            $model = ConvertTo-ContainerModuleModel -Specification $definition
+            $model = ConvertTo-PSModuleModel -Specification $definition
             $command = $model.Commands[0]
             $parameter = $command.Parameters[0]
             $mapping = $parameter.Mappings[0]
 
-            $command.PSObject.TypeNames | Should -Contain 'SubZeroDev.ContainerPSGenerator.Model.Command'
+            $command.PSObject.TypeNames | Should -Contain 'SubZeroDev.PSGenerator.Model.Command'
             $command.Id | Should -Be 'command.example'
             $command.Name | Should -Be 'Invoke-Example'
             $command.Description | Should -Be 'Runs the example.'
-            $parameter.PSObject.TypeNames | Should -Contain 'SubZeroDev.ContainerPSGenerator.Model.Parameter'
+            $parameter.PSObject.TypeNames | Should -Contain 'SubZeroDev.PSGenerator.Model.Parameter'
             $parameter.Id | Should -Be 'parameter.repository'
             $parameter.Type | Should -Be 'DirectoryInfo'
             $parameter.Mandatory | Should -BeFalse
-            $mapping.PSObject.TypeNames | Should -Contain 'SubZeroDev.ContainerPSGenerator.Model.Mapping'
+            $mapping.PSObject.TypeNames | Should -Contain 'SubZeroDev.PSGenerator.Model.Mapping'
             $mapping.Type | Should -Be 'Mount'
             $mapping.Definition.Target | Should -Be '/repository'
             [object]::ReferenceEquals($model.Definition, $definition) | Should -BeTrue
@@ -2083,16 +2083,16 @@ Describe 'Container module object model' {
     }
 }
 
-Describe 'Get-ContainerModuleModel' {
+Describe 'Get-PSModuleModel' {
     It 'returns a validated normalized model' {
         $specificationPath = Join-Path $TestDrive 'Model.psd1'
         Set-Content -LiteralPath $specificationPath -Value @'
 @{ Commands = @(@{ Name = 'Invoke-Example'; Parameters = @() }) }
 '@
 
-        $model = Get-ContainerModuleModel -Specification $specificationPath
+        $model = Get-PSModuleModel -Specification $specificationPath
 
-        $model.PSObject.TypeNames | Should -Contain 'SubZeroDev.ContainerPSGenerator.Model'
+        $model.PSObject.TypeNames | Should -Contain 'SubZeroDev.PSGenerator.Model'
         $model.Commands[0].Name | Should -Be 'Invoke-Example'
     }
 }
@@ -2113,7 +2113,7 @@ Describe 'Container module metadata generation' {
 }
 '@
 
-        $artifact = Build-ContainerModule -Specification $specificationPath -Output $outputPath
+        $artifact = Build-PSModule -Specification $specificationPath -Output $outputPath
         $firstContent = [System.IO.File]::ReadAllText($artifact.FullName)
         $firstBytes = [System.IO.File]::ReadAllBytes($artifact.FullName)
         $metadata = $firstContent | ConvertFrom-Json
@@ -2123,7 +2123,7 @@ Describe 'Container module metadata generation' {
         $firstContent | Should -Not -Match "`r`n"
         $firstBytes[0] | Should -Not -Be 0xEF
 
-        $null = Build-ContainerModule -Specification $specificationPath -Output $outputPath
+        $null = Build-PSModule -Specification $specificationPath -Output $outputPath
         [System.IO.File]::ReadAllText($artifact.FullName) | Should -BeExactly $firstContent
     }
 }
@@ -2143,7 +2143,7 @@ Describe 'Container module command source generation' {
 }
 '@
 
-        $null = Build-ContainerModule -Specification $specificationPath -Output $outputPath
+        $null = Build-PSModule -Specification $specificationPath -Output $outputPath
         $sourcePath = Join-Path $outputPath 'Public' 'Invoke-Example.ps1'
         $firstContent = [System.IO.File]::ReadAllText($sourcePath)
         $tokens = $null
@@ -2161,7 +2161,7 @@ Describe 'Container module command source generation' {
         $firstContent | Should -Match '\[string\[\]\] \$Tags'
         $firstContent | Should -Not -Match "`r`n"
 
-        $null = Build-ContainerModule -Specification $specificationPath -Output $outputPath
+        $null = Build-PSModule -Specification $specificationPath -Output $outputPath
         [System.IO.File]::ReadAllText($sourcePath) | Should -BeExactly $firstContent
     }
 
@@ -2180,7 +2180,7 @@ Describe 'Container module command source generation' {
 }
 '@
 
-        $null = Build-ContainerModule -Specification $specificationPath -Output $outputPath
+        $null = Build-PSModule -Specification $specificationPath -Output $outputPath
         $source = Get-Content -LiteralPath (
             Join-Path $outputPath 'Public' 'Invoke-SwitchExample.ps1'
         ) -Raw
@@ -2215,7 +2215,7 @@ Describe 'Container module loader generation' {
 }
 '@
 
-        $null = Build-ContainerModule -Specification $specificationPath -Output $outputPath
+        $null = Build-PSModule -Specification $specificationPath -Output $outputPath
         $loaderPath = Join-Path $outputPath 'ExampleContainer.psm1'
         $module = Import-Module $loaderPath -Force -PassThru
 
@@ -2238,7 +2238,7 @@ Describe 'Container module loader generation' {
 }
 '@
 
-        $null = Build-ContainerModule -Specification $specificationPath -Output $outputPath
+        $null = Build-PSModule -Specification $specificationPath -Output $outputPath
 
         Test-Path -LiteralPath (Join-Path $outputPath 'Public') | Should -BeFalse
         $module = Import-Module (
@@ -2267,7 +2267,7 @@ Describe 'Container module manifest generation' {
 }
 '@
 
-        Build-ContainerModule -Specification $specificationPath -Output $outputPath | Out-Null
+        Build-PSModule -Specification $specificationPath -Output $outputPath | Out-Null
 
         $generatedManifestPath = Join-Path $outputPath 'ManifestExample.psd1'
         $manifest = Test-ModuleManifest -Path $generatedManifestPath -ErrorAction Stop
@@ -2289,9 +2289,9 @@ Describe 'Container module manifest generation' {
 @{ ModuleName = 'StableExample'; Commands = @(@{ Name = 'Get-StableExample' }) }
 '@
 
-        Build-ContainerModule -Specification $specificationPath -Output $outputPath | Out-Null
+        Build-PSModule -Specification $specificationPath -Output $outputPath | Out-Null
         $first = [System.IO.File]::ReadAllBytes((Join-Path $outputPath 'StableExample.psd1'))
-        Build-ContainerModule -Specification $specificationPath -Output $outputPath | Out-Null
+        Build-PSModule -Specification $specificationPath -Output $outputPath | Out-Null
         $second = [System.IO.File]::ReadAllBytes((Join-Path $outputPath 'StableExample.psd1'))
 
         [Convert]::ToHexString($second) | Should -Be ([Convert]::ToHexString($first))
@@ -2368,7 +2368,7 @@ param([string] $Name)
             ) | ConvertTo-Json -Compress
         }
 
-        Build-ContainerModule -Specification $specificationPath -Output $outputPath | Out-Null
+        Build-PSModule -Specification $specificationPath -Output $outputPath | Out-Null
         $firstSnapshot = & $getPackageSnapshot $outputPath
         $firstPaths = @(
             Get-ChildItem -LiteralPath $outputPath -File -Recurse |
@@ -2377,7 +2377,7 @@ param([string] $Name)
                 }
         )
 
-        Build-ContainerModule -Specification $specificationPath -Output $outputPath | Out-Null
+        Build-PSModule -Specification $specificationPath -Output $outputPath | Out-Null
         $secondSnapshot = & $getPackageSnapshot $outputPath
 
         $firstPaths | Should -Contain 'DeterministicPackage.psd1'
@@ -2399,7 +2399,7 @@ param([string] $Name)
         Set-Content -LiteralPath (Join-Path $outputPath 'stale.txt') -Value 'old build'
         Set-Content -LiteralPath $specificationPath -Value '@{ Commands = @() }'
 
-        Build-ContainerModule -Specification $specificationPath -Output $outputPath | Out-Null
+        Build-PSModule -Specification $specificationPath -Output $outputPath | Out-Null
 
         Test-Path -LiteralPath (Join-Path $outputPath 'stale.txt') | Should -BeFalse
         Test-Path -LiteralPath (Join-Path $outputPath 'PSModule.psd1') | Should -BeTrue
@@ -2412,7 +2412,7 @@ param([string] $Name)
         Set-Content -LiteralPath (Join-Path $outputPath 'keep.txt') -Value 'keep me'
         Set-Content -LiteralPath $specificationPath -Value "@{ ModuleVersion = 'invalid' }"
 
-        { Build-ContainerModule -Specification $specificationPath -Output $outputPath } | Should -Throw
+        { Build-PSModule -Specification $specificationPath -Output $outputPath } | Should -Throw
 
         Test-Path -LiteralPath (Join-Path $outputPath 'keep.txt') | Should -BeTrue
     }
@@ -2426,8 +2426,8 @@ Describe 'Container runtime configuration' {
 @{ ContainerImage = 'ghcr.io/example/tool:1.2.3'; Commands = @() }
 '@
 
-        $model = Get-ContainerModuleModel -Specification $specificationPath
-        $artifact = Build-ContainerModule -Specification $specificationPath -Output $outputPath
+        $model = Get-PSModuleModel -Specification $specificationPath
+        $artifact = Build-PSModule -Specification $specificationPath -Output $outputPath
         $metadata = Get-Content -LiteralPath $artifact -Raw | ConvertFrom-Json
 
         $model.ContainerImage | Should -Be 'ghcr.io/example/tool:1.2.3'
@@ -2438,7 +2438,7 @@ Describe 'Container runtime configuration' {
         $specificationPath = Join-Path $TestDrive 'UnsafeRuntime.psd1'
         Set-Content -LiteralPath $specificationPath -Value "@{ ContainerImage = 'bad image' }"
 
-        { Test-ContainerModuleSpecification -Specification $specificationPath } |
+        { Test-PSModuleSpecification -Specification $specificationPath } |
             Should -Throw -ExceptionType ([System.IO.InvalidDataException]) -ExpectedMessage "*'ContainerImage' property must be*"
     }
 }
@@ -2468,7 +2468,7 @@ Describe 'Docker runtime command generation' {
 }
 '@
 
-        Build-ContainerModule -Specification $specificationPath -Output $outputPath | Out-Null
+        Build-PSModule -Specification $specificationPath -Output $outputPath | Out-Null
         $module = Import-Module (Join-Path $outputPath 'DockerExample.psd1') -Force -PassThru
         $global:capturedDockerArguments = $null
         function global:docker { $global:capturedDockerArguments = @($args) }
@@ -2505,7 +2505,7 @@ Describe 'Docker runtime command generation' {
 }
 '@
 
-        Build-ContainerModule -Specification $specificationPath -Output $outputPath | Out-Null
+        Build-PSModule -Specification $specificationPath -Output $outputPath | Out-Null
         $module = Import-Module (Join-Path $outputPath 'OptionalDockerExample.psd1') -Force -PassThru
         $global:capturedDockerArguments = $null
         function global:docker { $global:capturedDockerArguments = @($args) }
@@ -2545,7 +2545,7 @@ Describe 'Docker mount and error generation' {
 }
 '@
 
-        Build-ContainerModule -Specification $specificationPath -Output $outputPath | Out-Null
+        Build-PSModule -Specification $specificationPath -Output $outputPath | Out-Null
         $module = Import-Module (Join-Path $outputPath 'MountExample.psd1') -Force -PassThru
         $global:capturedDockerArguments = $null
         function global:docker { $global:capturedDockerArguments = @($args) }
@@ -2573,7 +2573,7 @@ Describe 'Docker mount and error generation' {
 @{ ModuleName = 'MissingDockerExample'; Commands = @(@{ Name = 'Invoke-MissingDockerExample' }) }
 '@
 
-        Build-ContainerModule -Specification $specificationPath -Output $outputPath | Out-Null
+        Build-PSModule -Specification $specificationPath -Output $outputPath | Out-Null
         $module = Import-Module (Join-Path $outputPath 'MissingDockerExample.psd1') -Force -PassThru
         $originalPath = $env:PATH
         try {
@@ -2594,7 +2594,7 @@ Describe 'Docker mount and error generation' {
 @{ ModuleName = 'FailedDockerExample'; Commands = @(@{ Name = 'Invoke-FailedDockerExample' }) }
 '@
 
-        Build-ContainerModule -Specification $specificationPath -Output $outputPath | Out-Null
+        Build-PSModule -Specification $specificationPath -Output $outputPath | Out-Null
         $module = Import-Module (Join-Path $outputPath 'FailedDockerExample.psd1') -Force -PassThru
         function global:docker { $global:LASTEXITCODE = 23 }
         try {
@@ -2628,7 +2628,7 @@ Describe 'Generated command help and preview' {
 }
 '@
 
-        Build-ContainerModule -Specification $specificationPath -Output $outputPath | Out-Null
+        Build-PSModule -Specification $specificationPath -Output $outputPath | Out-Null
         $module = Import-Module (Join-Path $outputPath 'RichHelpExample.psd1') -Force -PassThru
         try {
             $help = Get-Help Invoke-RichHelpExample -Full
@@ -2663,7 +2663,7 @@ Describe 'Generated command help and preview' {
 }
 '@
 
-        Build-ContainerModule -Specification $specificationPath -Output $outputPath | Out-Null
+        Build-PSModule -Specification $specificationPath -Output $outputPath | Out-Null
         $module = Import-Module (Join-Path $outputPath 'HelpExample.psd1') -Force -PassThru
         try {
             $help = Get-Help Invoke-HelpExample -Full
@@ -2692,7 +2692,7 @@ Describe 'Generated command help and preview' {
 }
 '@
 
-        Build-ContainerModule -Specification $specificationPath -Output $outputPath | Out-Null
+        Build-PSModule -Specification $specificationPath -Output $outputPath | Out-Null
         $module = Import-Module (Join-Path $outputPath 'PreviewExample.psd1') -Force -PassThru
         $global:dockerWasInvoked = $false
         function global:docker { $global:dockerWasInvoked = $true }
@@ -2722,9 +2722,9 @@ Describe 'Generated command help and preview' {
 ) }) }
 '@
 
-        { Test-ContainerModuleSpecification -Specification $commandSpecificationPath } |
+        { Test-PSModuleSpecification -Specification $commandSpecificationPath } |
             Should -Throw -ExceptionType ([System.IO.InvalidDataException]) -ExpectedMessage "*'Description' property for command*"
-        { Test-ContainerModuleSpecification -Specification $parameterSpecificationPath } |
+        { Test-PSModuleSpecification -Specification $parameterSpecificationPath } |
             Should -Throw -ExceptionType ([System.IO.InvalidDataException]) -ExpectedMessage "*'Description' property for parameter*"
     }
 
@@ -2736,11 +2736,11 @@ Describe 'Generated command help and preview' {
         Set-Content -LiteralPath $scalarExamplesPath -Value "@{ Commands = @(@{ Name = 'Invoke-Example'; Examples = @{ Code = 'Invoke-Example'; Description = 'Runs it.' } }) }"
         Set-Content -LiteralPath $invalidExamplePath -Value "@{ Commands = @(@{ Name = 'Invoke-Example'; Examples = @(@{ Code = ' '; Description = 'Runs it.' }) }) }"
 
-        { Test-ContainerModuleSpecification -Specification $invalidSynopsisPath } |
+        { Test-PSModuleSpecification -Specification $invalidSynopsisPath } |
             Should -Throw -ExceptionType ([System.IO.InvalidDataException]) -ExpectedMessage "*'Synopsis' property for command*"
-        { Test-ContainerModuleSpecification -Specification $scalarExamplesPath } |
+        { Test-PSModuleSpecification -Specification $scalarExamplesPath } |
             Should -Throw -ExceptionType ([System.IO.InvalidDataException]) -ExpectedMessage "*'Examples' property for command*must be an array*"
-        { Test-ContainerModuleSpecification -Specification $invalidExamplePath } |
+        { Test-PSModuleSpecification -Specification $invalidExamplePath } |
             Should -Throw -ExceptionType ([System.IO.InvalidDataException]) -ExpectedMessage "*'Code' property for example*must be a non-empty string*"
     }
 }
@@ -2769,7 +2769,7 @@ Describe 'Generated Markdown command documentation' {
 }
 '@
 
-        Build-ContainerModule -Specification $specificationPath -Output $outputPath | Out-Null
+        Build-PSModule -Specification $specificationPath -Output $outputPath | Out-Null
         $documentationPath = Join-Path $outputPath 'Documentation' 'Invoke-MarkdownHelpExample.md'
         $firstBytes = [System.IO.File]::ReadAllBytes($documentationPath)
         $markdown = [System.Text.Encoding]::UTF8.GetString($firstBytes)
@@ -2782,7 +2782,7 @@ Describe 'Generated Markdown command documentation' {
         $markdown | Should -Match '## Notes\n\nRequires Docker\.'
         $firstBytes[0..2] | Should -Not -Be @(0xEF, 0xBB, 0xBF)
 
-        Build-ContainerModule -Specification $specificationPath -Output $outputPath | Out-Null
+        Build-PSModule -Specification $specificationPath -Output $outputPath | Out-Null
         [System.IO.File]::ReadAllBytes($documentationPath) | Should -Be $firstBytes
     }
 
@@ -2791,16 +2791,16 @@ Describe 'Generated Markdown command documentation' {
         $outputPath = Join-Path $TestDrive 'no-documentation-output'
         Set-Content -LiteralPath $specificationPath -Value '@{ ModuleName = ''NoDocumentationExample'' }'
 
-        Build-ContainerModule -Specification $specificationPath -Output $outputPath | Out-Null
+        Build-PSModule -Specification $specificationPath -Output $outputPath | Out-Null
 
         Join-Path $outputPath 'Documentation' | Should -Not -Exist
     }
 }
 
-Describe 'Install-ContainerModule' {
+Describe 'Install-PSModule' {
     BeforeEach {
         $global:dockerCalls = [System.Collections.Generic.List[string]]::new()
-        function global:Write-TestContainerModule {
+        function global:Write-TestPSModule {
             param ([string] $Path)
             Set-Content -LiteralPath (Join-Path $Path 'Example.psm1') -Value ''
             Set-Content -LiteralPath (Join-Path $Path 'Example.psd1') -Value @'
@@ -2814,7 +2814,7 @@ Describe 'Install-ContainerModule' {
             Remove-Item Function:\docker -Force
         }
         Remove-Variable -Name dockerCalls -Scope Global -Force -ErrorAction SilentlyContinue
-        Remove-Item Function:\Write-TestContainerModule -Force -ErrorAction SilentlyContinue
+        Remove-Item Function:\Write-TestPSModule -Force -ErrorAction SilentlyContinue
     }
 
     It 'copies the embedded module and removes the temporary container' {
@@ -2823,10 +2823,10 @@ Describe 'Install-ContainerModule' {
             $global:dockerCalls.Add(($args -join ' '))
             $global:LASTEXITCODE = 0
             if ($args[0] -eq 'create') { 'container-123' }
-            if ($args[0] -eq 'cp') { Write-TestContainerModule -Path $args[2] }
+            if ($args[0] -eq 'cp') { Write-TestPSModule -Path $args[2] }
         }
 
-        $installedDirectory = Install-ContainerModule 'example/tool:1.0' -Destination $destination
+        $installedDirectory = Install-PSModule 'example/tool:1.0' -Destination $destination
 
         $installedDirectory.FullName | Should -Be ([System.IO.Path]::GetFullPath($destination))
         $global:dockerCalls[0] | Should -Be 'create example/tool:1.0'
@@ -2851,7 +2851,7 @@ Describe 'Install-ContainerModule' {
             }
         }
 
-        { Install-ContainerModule 'example/tool:1.0' -Destination $destination } |
+        { Install-PSModule 'example/tool:1.0' -Destination $destination } |
             Should -Throw -ExceptionType ([System.InvalidOperationException]) -ExpectedMessage '*could not copy /PSModule*Exit code: 17*'
 
         $global:dockerCalls[-1] | Should -Be 'rm --force container-failed-copy'
@@ -2864,7 +2864,7 @@ Describe 'Install-ContainerModule' {
             $global:LASTEXITCODE = 0
         }
 
-        Install-ContainerModule 'example/tool:1.0' -Destination $destination -WhatIf
+        Install-PSModule 'example/tool:1.0' -Destination $destination -WhatIf
 
         $global:dockerCalls | Should -BeNullOrEmpty
         Test-Path -LiteralPath $destination | Should -BeFalse
@@ -2876,7 +2876,7 @@ Describe 'Install-ContainerModule' {
         Set-Content -LiteralPath (Join-Path $destination 'existing.txt') -Value 'preserve'
         function global:docker { throw 'Docker should not be called.' }
 
-        { Install-ContainerModule 'example/tool:1.0' -Destination $destination } |
+        { Install-PSModule 'example/tool:1.0' -Destination $destination } |
             Should -Throw -ExceptionType ([System.IO.IOException]) -ExpectedMessage '*already exists*Use -Force*'
 
         Test-Path -LiteralPath (Join-Path $destination 'existing.txt') | Should -BeTrue
@@ -2887,7 +2887,7 @@ Describe 'Install-ContainerModule' {
         $rootPath = [System.IO.Path]::GetPathRoot($TestDrive)
         function global:docker { throw 'Docker should not be called.' }
 
-        { Install-ContainerModule 'example/tool:1.0' -Destination $rootPath -Force } |
+        { Install-PSModule 'example/tool:1.0' -Destination $rootPath -Force } |
             Should -Throw -ExceptionType ([System.ArgumentException]) -ExpectedMessage '*destination cannot be a filesystem root*'
     }
 
@@ -2901,7 +2901,7 @@ Describe 'Install-ContainerModule' {
             if ($args[0] -eq 'create') { 'container-invalid-module' }
         }
 
-        { Install-ContainerModule 'example/tool:1.0' -Destination $destination -Force } |
+        { Install-PSModule 'example/tool:1.0' -Destination $destination -Force } |
             Should -Throw -ExceptionType ([System.IO.InvalidDataException]) -ExpectedMessage '*exactly one module manifest*Found 0*'
 
         Test-Path -LiteralPath (Join-Path $destination 'existing.txt') | Should -BeTrue
@@ -2917,10 +2917,10 @@ Describe 'Install-ContainerModule' {
             $global:dockerCalls.Add(($args -join ' '))
             $global:LASTEXITCODE = 0
             if ($args[0] -eq 'create') { 'container-replacement' }
-            if ($args[0] -eq 'cp') { Write-TestContainerModule -Path $args[2] }
+            if ($args[0] -eq 'cp') { Write-TestPSModule -Path $args[2] }
         }
 
-        Install-ContainerModule 'example/tool:1.0' -Destination $destination -Force | Out-Null
+        Install-PSModule 'example/tool:1.0' -Destination $destination -Force | Out-Null
 
         Test-Path -LiteralPath (Join-Path $destination 'old.txt') | Should -BeFalse
         Test-ModuleManifest -Path (Join-Path $destination 'Example.psd1') -ErrorAction Stop |
@@ -2933,7 +2933,7 @@ Describe 'Install-ContainerModule' {
         $originalPath = $env:PATH
         try {
             $env:PATH = ''
-            { Install-ContainerModule 'example/tool:1.0' -Destination $destination } |
+            { Install-PSModule 'example/tool:1.0' -Destination $destination } |
                 Should -Throw -ExceptionType ([System.InvalidOperationException]) -ExpectedMessage '*Docker is required*not found on PATH*'
         }
         finally {
@@ -2999,7 +2999,7 @@ Export-ModuleMember -Function @('Test-RepositoryTool')
 
         $specificationPath = Join-Path $repositoryPath 'PSModule' 'PSModule.psd1'
         $definition = Import-PowerShellDataFile $specificationPath
-        $definition.GeneratedBy | Should -Be 'SubZeroDev.ContainerPSGenerator'
+        $definition.GeneratedBy | Should -Be 'SubZeroDev.PSGenerator'
         $definition.ModuleName | Should -Be 'InferredRepository'
         $definition.ContainerImage | Should -Be 'ghcr.io/example/inferred:latest'
         $definition.Commands.Name | Should -Be @('Invoke-InstallTool', 'Test-RepositoryTool')
@@ -3114,7 +3114,7 @@ Describe 'Maintained repository integration fixtures' {
         )
 
         try {
-            $definition.GeneratedBy | Should -Be 'SubZeroDev.ContainerPSGenerator'
+            $definition.GeneratedBy | Should -Be 'SubZeroDev.PSGenerator'
             $definition.ModuleName | Should -Be 'ScriptOnlyRepository'
             $definition.ContainerImage | Should -Be 'ghcr.io/example/script-fixture:latest'
             $definition.Commands.Name | Should -Be 'Invoke-WriteGreeting'
@@ -3138,7 +3138,7 @@ Describe 'Maintained repository integration fixtures' {
             -Destination $repositoryPath -Recurse
         $specificationPath = Join-Path $repositoryPath 'PSModule' 'PSModule.psd1'
 
-        $inspection = Get-ContainerModuleInspection -Specification $specificationPath
+        $inspection = Get-PSModuleInspection -Specification $specificationPath
         $commands = @(& $localRepositoryScript -Repository $repositoryPath -ListCommands)
         $generatedCommandPath = Join-Path $repositoryPath `
             'artifacts' 'PSModule' 'Public' 'Invoke-BuildAgent.ps1'
@@ -3214,7 +3214,7 @@ Describe 'Minimal runnable container example' {
     }
 
     It 'uses one image identity across generation, packaging, and the lifecycle runner' {
-        $model = Get-ContainerModuleModel -Specification $specificationPath
+        $model = Get-PSModuleModel -Specification $specificationPath
         $dockerfile = Get-Content -LiteralPath (Join-Path $exampleRoot 'Dockerfile') -Raw
         $runnerTokens = $null
         $runnerErrors = $null
@@ -3228,10 +3228,10 @@ Describe 'Minimal runnable container example' {
             $node -is [Management.Automation.Language.CommandAst]
         }, $true).GetCommandName())
 
-        $model.ContainerImage | Should -Be 'subzerodev-containerpsgenerator-minimal:local'
+        $model.ContainerImage | Should -Be 'subzerodev-psgenerator-minimal:local'
         $dockerfile | Should -Match 'COPY artifacts/PSModule /PSModule'
-        $runnerCommands | Should -Contain 'Build-ContainerModule'
-        $runnerCommands | Should -Contain 'Install-ContainerModule'
+        $runnerCommands | Should -Contain 'Build-PSModule'
+        $runnerCommands | Should -Contain 'Install-PSModule'
         $runnerCommands | Should -Contain 'Import-Module'
         $runnerCommands | Should -Contain 'Invoke-Example'
         $runnerCommands | Should -Contain 'Get-Help'
@@ -3279,7 +3279,7 @@ Write-SourceResult -Path $ResultPath -Value $Value
 '@
         $outputPath = Join-Path $repositoryPath 'artifacts'
 
-        Build-ContainerModule -Specification $specificationPath -Output $outputPath | Out-Null
+        Build-PSModule -Specification $specificationPath -Output $outputPath | Out-Null
         $module = Import-Module (Join-Path $outputPath 'SourceExample.psd1') -Force -PassThru
         $generatedCommandSource = Get-Content -LiteralPath (
             Join-Path $outputPath 'Public' 'Invoke-SourceExample.ps1'
@@ -3342,7 +3342,7 @@ Export-ModuleMember -Function Invoke-SourceTool
 '@
         $outputPath = Join-Path $repositoryPath 'artifacts'
 
-        Build-ContainerModule -Specification $specificationPath -Output $outputPath | Out-Null
+        Build-PSModule -Specification $specificationPath -Output $outputPath | Out-Null
         $module = Import-Module (Join-Path $outputPath 'ModuleSourceExample.psd1') -Force -PassThru
         function global:docker { throw 'Docker must not be called for a discovered module function.' }
         try {
@@ -3379,7 +3379,7 @@ Export-ModuleMember -Function Invoke-SourceTool
 '@
 
         {
-            Build-ContainerModule -Specification $specificationPath -Output (
+            Build-PSModule -Specification $specificationPath -Output (
                 Join-Path $repositoryPath 'artifacts'
             )
         } | Should -Throw "*must be beneath the repository's 'scripts' directory*"

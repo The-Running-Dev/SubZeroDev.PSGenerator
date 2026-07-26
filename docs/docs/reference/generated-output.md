@@ -75,7 +75,7 @@ that the content survives image packaging and installation byte-for-byte.
 `Metadata/model.json` is deterministic UTF-8 JSON representing module identity,
 container image, commands, parameters, validations, completions, and mappings.
 
-`Build-ContainerModule` returns this file as its pipeline output.
+`Build-PSModule` returns this file as its pipeline output.
 
 ## Packaged scripts
 

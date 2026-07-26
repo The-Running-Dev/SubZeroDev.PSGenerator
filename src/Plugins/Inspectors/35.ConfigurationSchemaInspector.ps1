@@ -1,7 +1,7 @@
 param ([Parameter(Mandatory)] [psobject] $Context)
 
 $items = @(Get-ChildItem -LiteralPath $Context.RepositoryPath -Recurse -File -Filter '*.json' | Where-Object {
-    Test-ContainerModuleInspectionPath -Context $Context -Path $_.FullName
+    Test-PSModuleInspectionPath -Context $Context -Path $_.FullName
 })
 [Array]::Sort($items, [Collections.Generic.Comparer[object]]::Create({ param($a, $b) [StringComparer]::Ordinal.Compare($a.FullName, $b.FullName) }))
 

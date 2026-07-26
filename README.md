@@ -1,11 +1,11 @@
-# SubZeroDev.ContainerPSGenerator
+# SubZeroDev.PSGenerator
 
-[![Test](https://github.com/The-Running-Dev/SubZeroDev.ContainerPSGenerator/actions/workflows/test.yml/badge.svg)](https://github.com/The-Running-Dev/SubZeroDev.ContainerPSGenerator/actions/workflows/test.yml)
-[![Publish](https://github.com/The-Running-Dev/SubZeroDev.ContainerPSGenerator/actions/workflows/publish.yml/badge.svg)](https://github.com/The-Running-Dev/SubZeroDev.ContainerPSGenerator/actions/workflows/publish.yml)
-[![Docs build](https://github.com/The-Running-Dev/SubZeroDev.ContainerPSGenerator/actions/workflows/docs-build.yml/badge.svg)](https://github.com/The-Running-Dev/SubZeroDev.ContainerPSGenerator/actions/workflows/docs-build.yml)
+[![Test](https://github.com/The-Running-Dev/SubZeroDev.PSGenerator/actions/workflows/test.yml/badge.svg)](https://github.com/The-Running-Dev/SubZeroDev.PSGenerator/actions/workflows/test.yml)
+[![Publish](https://github.com/The-Running-Dev/SubZeroDev.PSGenerator/actions/workflows/publish.yml/badge.svg)](https://github.com/The-Running-Dev/SubZeroDev.PSGenerator/actions/workflows/publish.yml)
+[![Docs build](https://github.com/The-Running-Dev/SubZeroDev.PSGenerator/actions/workflows/docs-build.yml/badge.svg)](https://github.com/The-Running-Dev/SubZeroDev.PSGenerator/actions/workflows/docs-build.yml)
 [![Documentation](https://img.shields.io/badge/docs-psgenerator.subzerodev.com-blue)](https://psgenerator.subzerodev.com/)
 
-SubZeroDev.ContainerPSGenerator is a PowerShell 7.4+ build tool that generates
+SubZeroDev.PSGenerator is a PowerShell 7.4+ build tool that generates
 repository-specific PowerShell modules for containerized applications.
 
 Repositories define native commands, parameters, validation, completion, help, and
@@ -19,12 +19,12 @@ locally.
 ## Quick start
 
 ```powershell
-Import-Module ./src/SubZeroDev.ContainerPSGenerator.psd1 -Force
+Import-Module ./src/SubZeroDev.PSGenerator.psd1 -Force
 
-Test-ContainerModuleSpecification `
+Test-PSModuleSpecification `
     -Specification ./examples/Minimal/PSModule/PSModule.psd1
 
-Build-ContainerModule `
+Build-PSModule `
     -Specification ./examples/Minimal/PSModule/PSModule.psd1 `
     -Output ./artifacts/PSModule
 
@@ -73,7 +73,7 @@ The complete manual is published at
 - [Troubleshooting](https://psgenerator.subzerodev.com/operations/troubleshooting)
 
 See the
-[engineering roadmap](https://github.com/The-Running-Dev/SubZeroDev.ContainerPSGenerator/blob/main/TODO.md)
+[engineering roadmap](https://github.com/The-Running-Dev/SubZeroDev.PSGenerator/blob/main/TODO.md)
 and
 [documentation roadmap](https://psgenerator.subzerodev.com/TODO)
 for remaining work.
@@ -84,7 +84,7 @@ for remaining work.
 Repository specification
         │
         ▼
-Build-ContainerModule
+Build-PSModule
         │
         ▼
 Generated PowerShell module
@@ -93,7 +93,7 @@ Generated PowerShell module
         └── copy to /PSModule in the image
                     │
                     ▼
-             Install-ContainerModule
+             Install-PSModule
 ```
 
 Generated commands support native PowerShell types, `ValidateSet`,
@@ -139,4 +139,4 @@ See
 ## License
 
 Released under the
-[MIT License](https://github.com/The-Running-Dev/SubZeroDev.ContainerPSGenerator/blob/main/LICENSE).
+[MIT License](https://github.com/The-Running-Dev/SubZeroDev.PSGenerator/blob/main/LICENSE).
