@@ -53,11 +53,37 @@ Small, concrete, and each one is a thing that can silently rot.
   someone remembering. Add the comparison to `build/Test-Documentation.ps1`:
   rebuild the expected content from `README.md` and fail when it differs from
   the committed file.
-- **`main` has no branch protection.** No required status checks at all, so a red
-  PowerShell quality, documentation, Pester, or docs run does not block a merge.
-  The whole point of the deploy-path coverage added in #61 was to block before
-  merge; without required checks it only reports. Your action, in repository
-  settings.
+- **No status check is required on `main`.** The `Main` ruleset now protects the
+  branch — a pull request is required, force pushes and deletion are blocked,
+  admins are included, review threads must be resolved, and merges are squash or
+  rebase only. What it does not have is a `required_status_checks` rule, and
+  neither does classic protection, so a red PowerShell quality, documentation,
+  Pester, or docs run still does not block a merge. The deploy-path coverage
+  added in #61 exists specifically to fail before merge rather than after;
+  without required checks it only reports.
+
+  Add these ten contexts, exactly as CI reports them. A context that does not
+  match a reported check name never becomes required, and fails silently rather
+  than loudly:
+
+  ```text
+  Build and publish image
+  Container end-to-end
+  Documentation links and terminology
+  Pester (ubuntu-latest)
+  Pester (windows-latest)
+  PowerShell 7.4 baseline (ubuntu-latest)
+  PowerShell 7.4 baseline (windows-latest)
+  PowerShell NuGet package
+  PowerShell quality
+  Verify documentation / Verify Documentation Build
+  ```
+
+  Only the reusable documentation workflow carries a `caller / job` prefix; the
+  rest report their job name alone.
+
+  Do not require `Deploy documentation`: it is skipped on pull requests by
+  design, because its job is gated on `github.event_name == 'push'`.
 - **A generated command can shadow an existing one.** Since the inference naming
   fix, `convertto-json.ps1` produces `ConvertTo-Json`, which shadows the built-in
   once the module is imported. Documented as a note in the script inference
