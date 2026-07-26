@@ -25,12 +25,6 @@ Also worth deciding then: whether the image should carry `:1.0.0` alongside
 
 Small, concrete, and each one is a thing that can silently rot.
 
-- **`docs/docs/index.md` drift is unverified.** It is generated from `README.md`
-  by `docs.ps1`, but nothing checks that the committed copy still matches. Every
-  README edit needs it regenerated, and today the only thing catching that is
-  someone remembering. Add the comparison to `build/Test-Documentation.ps1`:
-  rebuild the expected content from `README.md` and fail when it differs from
-  the committed file.
 - **No status check is required on `main`.** The `Main` ruleset now protects the
   branch — a pull request is required, force pushes and deletion are blocked,
   admins are included, review threads must be resolved, and merges are squash or

@@ -444,12 +444,90 @@ function Test-DocumentationTerminology {
     }
 }
 
+function Test-GeneratedDocumentationFile {
+    <#
+    .SYNOPSIS
+    Reports a generated file whose committed copy no longer matches its source.
+    #>
+    param (
+        [Parameter(Mandatory)]
+        [hashtable] $Definition,
+
+        [Parameter(Mandatory)]
+        [string] $Root
+    )
+
+    # Repository configuration uses paths relative to the root; an absolute path
+    # is honored as-is so a fixture can point somewhere else entirely.
+    $resolve = {
+        param([string] $Value)
+        if ([IO.Path]::IsPathRooted($Value)) { $Value } else { Join-Path $Root $Value }
+    }
+
+    $generatedPath = & $resolve $Definition.Path
+    $sourcePath = & $resolve $Definition.Source
+    $generatorPath = & $resolve $Definition.Generator
+
+    foreach ($required in @($generatedPath, $sourcePath, $generatorPath)) {
+        if (-not (Test-Path -LiteralPath $required -PathType Leaf)) {
+            New-DocumentationFinding `
+                -RelativePath $Definition.Path `
+                -Line 1 `
+                -Column 1 `
+                -Severity 'Error' `
+                -Rule 'GeneratedFile' `
+                -Message "Cannot check generated file: '$required' does not exist."
+            return
+        }
+    }
+
+    # Splatting needs a variable; an inline hashtable would be passed positionally.
+    $generatorArguments = @{ $Definition.SourceParameter = $sourcePath }
+    $expected = (& $generatorPath @generatorArguments) -join "`n"
+    $actual = ([IO.File]::ReadAllText($generatedPath)) -replace "`r`n?", "`n"
+
+    if ($expected.TrimEnd("`n") -ceq $actual.TrimEnd("`n")) {
+        return
+    }
+
+    # Name the first differing line so the fix is obvious without a diff tool.
+    $expectedLines = $expected -split "`n"
+    $actualLines = $actual -split "`n"
+    $limit = [Math]::Max($expectedLines.Count, $actualLines.Count)
+    $firstDifference = $limit
+    for ($i = 0; $i -lt $limit; $i++) {
+        $e = if ($i -lt $expectedLines.Count) { $expectedLines[$i] } else { $null }
+        $a = if ($i -lt $actualLines.Count) { $actualLines[$i] } else { $null }
+        if ($e -cne $a) {
+            $firstDifference = $i
+            break
+        }
+    }
+
+    New-DocumentationFinding `
+        -RelativePath $Definition.Path `
+        -Line ($firstDifference + 1) `
+        -Column 1 `
+        -Severity 'Error' `
+        -Rule 'GeneratedFile' `
+        -Message (
+            "Generated from '$($Definition.Source)' but the committed copy differs. " +
+            "Regenerate it, then commit the result."
+        )
+}
+
 $documentationFiles = Get-DocumentationFile `
     -SearchPath $Path `
     -Root $repositoryRoot `
     -Settings $settings
 
 $findings = @(
+    if ($settings.Contains('GeneratedFiles')) {
+        foreach ($generated in $settings.GeneratedFiles) {
+            Test-GeneratedDocumentationFile -Definition $generated -Root $repositoryRoot
+        }
+    }
+
     foreach ($file in $documentationFiles) {
         $lines = @(Get-Content -LiteralPath $file.FullName)
 

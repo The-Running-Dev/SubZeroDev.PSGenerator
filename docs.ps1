@@ -69,20 +69,8 @@ if (-not (Test-Path -LiteralPath (Split-Path -Parent $index) -PathType Container
     throw "Documentation directory not found at $(Split-Path -Parent $index)"
 }
 
-$frontmatter = @(
-    '---'
-    'title: PSGenerator'
-    'description: Generate native PowerShell modules for containerized applications.'
-    'sidebar_position: 1'
-    '---'
-    ''
-) -join "`n"
-$readmeContent = (Get-Content -LiteralPath $readme -Raw) -replace "`r`n?", "`n"
-$indexBody = $readmeContent.Replace(
-    'https://psgenerator.subzerodev.com/',
-    '/'
-)
-$indexContent = $frontmatter + "`n" + $indexBody
+$indexContent = & (Join-Path $root 'build' 'ConvertTo-DocumentationHomepage.ps1') `
+    -ReadmePath $readme
 [IO.File]::WriteAllText(
     $index,
     $indexContent,
