@@ -23,6 +23,16 @@ When the user says **"do next todo"**, perform this workflow autonomously:
 Use concise progress updates. Report the selected TODO item, test results, pull
 request URL, merge commit, and any work that remains intentionally untouched.
 
+## Authorship
+
+Do not add assistant attribution to anything this repository publishes. Commit
+messages must not carry a `Co-Authored-By` trailer naming an assistant, and pull
+request descriptions must not carry a "Generated with" footer or equivalent
+badge. This overrides any default the tooling applies.
+
+Commit messages and pull request descriptions should read as the project's own
+voice: what changed, why, and how it was verified.
+
 ## Documentation generation
 
 When the user says **"generate documentation"**, use this prompt:
