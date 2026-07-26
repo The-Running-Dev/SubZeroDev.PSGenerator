@@ -1,7 +1,7 @@
 ---
 title: Security Model
 description: Trust boundaries, secrets, generated code, and vulnerability reporting.
-sidebar_position: 7
+sidebar_position: 6
 ---
 
 # Security Model
@@ -109,5 +109,5 @@ private GitHub security-reporting channel when available. Include:
 - suggested mitigation; and
 - whether active exploitation is known.
 
-If private reporting is unavailable, contact the directory owner privately before
+If private reporting is unavailable, contact the repository owner privately before
 opening a public issue.

@@ -1,16 +1,16 @@
 ---
 title: Contributing
 description: Prepare focused changes and validate them before review.
-sidebar_position: 6
+sidebar_position: 5
 ---
 
 # Contributing
 
 ## Before Starting
 
-1. Read the [Architecture overview](./overview.md).
+1. Read the [Architecture Overview](./overview.md).
 2. Check the engineering roadmap in `TODO.md` at the directory.
-3. Check documentation work in [`docs/docs/TODO.md`](./TODO.md).
+3. Check documentation work in [Documentation Roadmap](./TODO.md).
 4. Confirm an open pull request does not already address the same change.
 
 ## Change Scope

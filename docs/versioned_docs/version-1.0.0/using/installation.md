@@ -1,17 +1,57 @@
 ---
 title: Installation
-description: Install PSGenerator from source or GitHub Packages.
+description: Run PSGenerator from its container image, or install the PowerShell module.
 sidebar_position: 1
 ---
 
 # Installation
 
-## Requirements
+Two ways to run PSGenerator. The image needs nothing installed on the host; the
+module needs PowerShell 7.4 or later. Pick one.
+
+## Use the Container Image
+
+PowerShell and the module are already inside, and `pwsh` is the entry point:
+
+```powershell
+docker pull ghcr.io/the-running-dev/subzerodev.psgenerator:latest
+```
+
+Mount the directory you want to work on at `/workspace`:
+
+```powershell
+docker run --rm -it `
+    -v ${PWD}:/workspace `
+    ghcr.io/the-running-dev/subzerodev.psgenerator:latest
+```
+
+The module resolves by name, so command discovery imports it automatically:
+
+```powershell
+Initialize-PSModuleDirectory -Directory /workspace -ListCommands
+```
+
+`latest` tracks `main`. Every published build also carries an immutable
+date-based tag such as `2026.07.26`; pin that when a reproducible environment
+matters.
+
+:::note
+
+The image does not contain the Docker CLI, so a generated container-backed
+command cannot execute inside it. Authoring, validation, inspection, generation,
+and `-WhatIf` all work; running the generated command against a real container
+needs Docker on the host.
+
+:::
+
+## Install the Module
+
+Requirements:
 
 - PowerShell 7.4 or later.
-- Docker when invoking generated container commands or installing `/PSModule` from
-  an image.
 - Windows or Linux for the supported Version 1 experience.
+- Docker only when invoking generated container commands or installing
+  `/PSModule` from an image.
 
 Confirm the local PowerShell version:
 
@@ -19,38 +59,11 @@ Confirm the local PowerShell version:
 $PSVersionTable.PSVersion
 ```
 
-## Use a Source Checkout
+### From GitHub Packages
 
-Until the first package release is published, importing from a source checkout is
-the direct installation path:
-
-```powershell
-git clone https://github.com/The-Running-Dev/SubZeroDev.PSGenerator.git
-Set-Location ./SubZeroDev.PSGenerator
-Import-Module ./src/SubZeroDev.PSGenerator.psd1 -Force
-```
-
-Verify the exported commands:
-
-```powershell
-Get-Command -Module SubZeroDev.PSGenerator
-```
-
-To test the same clean module layout used by CI:
-
-```powershell
-$manifest = ./build/New-GeneratorModulePackage.ps1
-Import-Module $manifest.FullName -Force
-```
-
-The staged module is written to
-`artifacts/module/SubZeroDev.PSGenerator` by default.
-
-## Install from GitHub Packages
-
-GitHub Packages requires an authenticated NuGet v3 request. Create a classic GitHub
-personal access token with `read:packages`, then enter it through a secure prompt so
-it does not appear in shell history:
+GitHub Packages requires an authenticated NuGet v3 request. Create a classic
+GitHub personal access token with `read:packages`, then enter it through a secure
+prompt so it does not appear in shell history:
 
 ```powershell
 $token = Read-Host 'GitHub token (read:packages)' -AsSecureString
@@ -74,11 +87,12 @@ Import-Module SubZeroDev.PSGenerator
 :::note
 
 The package does not exist until a GitHub Release with a tag matching the module
-version is published. Installing from source remains valid before the first release.
+version is published. Until then, use the container image or a source checkout.
 
 :::
 
-Update an existing installation with the same directory and credential:
+Update an existing installation against the same registered repository and
+credential:
 
 ```powershell
 Update-PSResource `
@@ -87,52 +101,31 @@ Update-PSResource `
     -Credential $credential
 ```
 
-## Use the Container Image
+### From a Source Checkout
 
-The generator also ships as an image with PowerShell 7.4 and the module already
-installed, so nothing has to be installed on the host:
-
-```powershell
-docker pull ghcr.io/the-running-dev/subzerodev.psgenerator:latest
-```
-
-`pwsh` is the entry point. Mount the directory to inspect at `/workspace`:
+Useful before the first package release, and when working on the generator
+itself:
 
 ```powershell
-docker run --rm -it `
-    -v ${PWD}:/workspace `
-    ghcr.io/the-running-dev/subzerodev.psgenerator:latest
+git clone https://github.com/The-Running-Dev/SubZeroDev.PSGenerator.git
+Set-Location ./SubZeroDev.PSGenerator
+Import-Module ./src/SubZeroDev.PSGenerator.psd1 -Force
 ```
 
-The module resolves by name, so command discovery imports it automatically:
+Verify the exported commands:
 
 ```powershell
-Test-PSModuleSpecification -Specification /workspace/PSModule/PSModule.psd1
-Build-PSModule -Specification /workspace/PSModule/PSModule.psd1 -Output /workspace/artifacts/PSModule
+Get-Command -Module SubZeroDev.PSGenerator
 ```
-
-`latest` tracks `main`. Every published build also carries an immutable
-date-based tag such as `2026.07.26`; pin that when a reproducible environment
-matters.
-
-:::note
-
-The image does not contain the Docker CLI, so a generated container-backed
-command cannot execute inside it. Authoring, validation, inspection, generation,
-and `-WhatIf` all work; running the generated command against a real container
-needs Docker on the host.
-
-:::
 
 ## Docker Availability
 
-The generator can validate specifications, inspect directories, generate source,
-and preview commands without starting Docker. Docker is required for:
+The generator validates specifications, inspects directories, generates source,
+and previews commands without starting Docker. Docker is required only for:
 
 - executing a generated container-backed command;
-- running the minimal end-to-end example;
-- installing a module from `/PSModule` inside an image; and
-- running the full local CI workflow.
+- running the minimal end-to-end example; and
+- installing a module from `/PSModule` inside an image.
 
 Check availability:
 
@@ -140,4 +133,4 @@ Check availability:
 docker info
 ```
 
-Continue with [Build your first module](first-module.md).
+Continue with [Build Your First Module](./first-module.md).

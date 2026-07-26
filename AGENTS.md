@@ -40,7 +40,7 @@ When the user says **"generate documentation"**, use this prompt:
 > Generate or refresh the project documentation from the current implementation.
 > Treat source code, public command help, specifications, tests, examples, workflows,
 > and TODOs as the source of truth. First inspect the existing Docusaurus layout and
-> verify that copied template metadata belongs to this directory,
+> verify that copied template metadata belongs to this repository,
 > then write concise Markdown with front matter, ordered categories, working relative
 > links, runnable examples, explicit support boundaries, and no invented behavior.
 > Cover getting started, guides, reference, architecture, development, releases,
@@ -65,7 +65,7 @@ append a subject, for example: **"generate documentation for runtime mappings"**
   build, or `./docs.ps1 -Live` for bind-mounted authoring. Use `-Port`, `-Tag`, and
   `-BaseImage` only when an override is needed.
 - Treat titles, tags, URLs, comments, and prose copied from another directory as
-  placeholders until verified against this directory.
+  placeholders until verified against this repository.
 
 ### Durable lessons
 

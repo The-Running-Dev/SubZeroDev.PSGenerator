@@ -1,7 +1,7 @@
 ---
 title: Changelog
 description: Unreleased Version 1 implementation history.
-sidebar_position: 9
+sidebar_position: 8
 ---
 
 # Changelog

@@ -176,7 +176,7 @@ $inspection | Get-PSModuleDiagnostic -Detailed
 
 Current parsers may terminate on malformed `.csproj`, `package.json`,
 `.nuke/parameters.json`, OpenAPI JSON, and authoritative `*.schema.json`. See
-[Directory inspection](../developing/inspection.md) for supported subsets.
+[Directory Inspection](../developing/inspection.md) for supported subsets.
 
 ## Plugin Fails
 

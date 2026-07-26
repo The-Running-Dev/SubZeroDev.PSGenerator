@@ -201,7 +201,7 @@ Complete these in order so every inspector follows the same policy:
 
 ## Version 1 definition of done
 
-- [x] A directory owner can define `PSModule/PSModule.psd1` and generate a complete
+- [x] A module author can define `PSModule/PSModule.psd1` and generate a complete
   module package.
 - [x] The generated module is embedded at `/PSModule` in a real image.
 - [x] A user can install it with `Install-PSModule`, import it, invoke generated

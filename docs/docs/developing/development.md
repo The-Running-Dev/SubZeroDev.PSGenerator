@@ -1,7 +1,7 @@
 ---
 title: Development and CI
-description: Set up the directory and run quality, test, coverage, packaging, and container checks.
-sidebar_position: 5
+description: Set up the repository and run quality, test, coverage, packaging, and container checks.
+sidebar_position: 4
 ---
 
 # Development and CI
@@ -21,8 +21,8 @@ docs/                Docusaurus project and authored documentation
 ```
 
 The documentation build pulls the published docs-template container image from GHCR.
-It does not require a template directory checkout, Git submodule initialization, or
-Node dependency setup in this directory.
+It does not require a template repository checkout, Git submodule initialization, or
+Node dependency setup in this repository.
 
 ## Documentation Site
 
@@ -41,12 +41,20 @@ their current origin.
 Run `./docs.ps1` to serve a baked image, or `./docs.ps1 -Live` to bind-mount the
 authored Markdown and configuration for local editing.
 
-The `Docs build` GitHub Actions workflow authenticates to GHCR, verifies
-`ghcr.io/the-running-dev/docs-template:latest`, builds the production site, copies
-`/template/artifacts` from the build container, and uploads it for GitHub Pages.
-It prefers the directory secret `REGISTRY_TOKEN` and falls back to the workflow's
-`GITHUB_TOKEN`. `REGISTRY_TOKEN` must have `read:packages`; the fallback works only
-when the published package grants this directory read access.
+In CI, `docs.yml` carries the triggers and calls one of two reusable workflows
+that run every step inside `ghcr.io/the-running-dev/docs-template:latest`. A pull
+request calls `docs-ci.yml`, which builds the site and archives the Pages
+artifact without publishing, so a break in the deploy path is caught before
+merge. A push to `main` calls `docs-deploy.yml`, which builds, uploads, and
+deploys to GitHub Pages.
+
+Both prefer the repository secret `REGISTRY_TOKEN` and fall back to the
+workflow's `GITHUB_TOKEN`. `REGISTRY_TOKEN` must have `read:packages`; the
+fallback works only when the published package grants this repository read
+access.
+
+`docs-ci.yml` and `docs-deploy.yml` are installed from Docusaurus-Template and
+kept byte-identical to it, so `setup-docs-workflow.ps1` stays safe to re-run.
 
 ## Import the Development Module
 
@@ -55,13 +63,25 @@ Import-Module ./src/SubZeroDev.PSGenerator.psd1 -Force
 Get-Command -Module SubZeroDev.PSGenerator
 ```
 
+To import the same clean layout CI tests against, stage it first. This is worth
+doing before trusting a local pass, because the development tree can mask a file
+missing from the package:
+
+```powershell
+$manifest = ./build/New-GeneratorModulePackage.ps1
+Import-Module $manifest.FullName -Force
+```
+
+The staged module is written to `artifacts/module/SubZeroDev.PSGenerator` by
+default.
+
 ## Static Analysis
 
 ```powershell
 ./build/Invoke-Quality.ps1 -InstallDependencies
 ```
 
-The gate pins PSScriptAnalyzer 1.25.0 and analyzes directory-owned PowerShell under
+The gate pins PSScriptAnalyzer 1.25.0 and analyzes repository-owned PowerShell under
 `src`, `build`, `examples`, `tests`, and `tests-e2e` using
 `.config/PSScriptAnalyzerSettings.psd1`.
 

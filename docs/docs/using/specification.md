@@ -218,7 +218,7 @@ Every mapping requires `Type`. Supported values are:
 - `Secret`
 
 Unknown mapping types are rejected. See
-[Runtime mappings](./runtime-mappings.md) for properties, type constraints,
+[Runtime Mappings](./runtime-mappings.md) for properties, type constraints,
 runtime validation, and examples.
 
 ## Inference-Owned Source Properties

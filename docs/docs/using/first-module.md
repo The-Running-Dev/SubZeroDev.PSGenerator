@@ -144,5 +144,5 @@ Invoke-Hello -Message hello -Verbose
 ## 6. Embed the Module
 
 Copy the generated directory to `/PSModule` in the final image. See
-[Container packaging and installation](./container-packaging.md) for a
+[Container Packaging and Installation](./container-packaging.md) for a
 Dockerfile and installation workflow.

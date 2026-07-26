@@ -1,7 +1,7 @@
 ---
 title: Releases and GitHub Packages
 description: Version, validate, publish, and verify a generator release.
-sidebar_position: 8
+sidebar_position: 7
 ---
 
 # Releases and GitHub Packages

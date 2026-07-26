@@ -138,7 +138,7 @@ The generator validates the specification before clearing the selected output di
 
 The generated module is produced during the normal directory build.
 
-Directory owners generally do not execute the generator manually.
+Module authors generally do not execute the generator manually.
 
 Typical pipeline:
 
@@ -320,7 +320,7 @@ The generator handles:
 - Process invocation
 - Runtime detection
 
-Directory owners should not write platform-specific specifications whenever practical.
+Module authors should not write platform-specific specifications whenever practical.
 
 ---
 
@@ -669,7 +669,7 @@ Topics intentionally deferred include:
 
 # Success Criteria
 
-The project succeeds when a directory owner can define a PowerShell specification, build the directory, embed the generated module into the image, and allow end users to install it directly from that image.
+The project succeeds when a module author can define a PowerShell specification, build their project, embed the generated module into the image, and allow end users to install it directly from that image.
 
 Users should be able to execute:
 

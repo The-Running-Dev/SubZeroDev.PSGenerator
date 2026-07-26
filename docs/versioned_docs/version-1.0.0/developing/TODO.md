@@ -1,12 +1,12 @@
 ---
 title: Documentation Roadmap
 description: Remaining documentation delivery and review work.
-sidebar_position: 10
+sidebar_position: 9
 ---
 
 # Documentation Roadmap
 
-This backlog tracks user, directory-author, contributor, and release
+This backlog tracks user, module-author, contributor, and release
 documentation separately from the engineering roadmap in
 [`TODO.md`](https://github.com/The-Running-Dev/SubZeroDev.PSGenerator/blob/main/TODO.md).
 It is ordered by the shortest path from a new user finding
@@ -41,7 +41,7 @@ tests before their task is considered complete.
 - [x] Write a clean-machine getting-started guide covering GitHub Packages
   authentication, installation, import, specification creation, generation,
   command discovery, `-WhatIf`, and cleanup.
-- [x] Write a directory-author tutorial that starts with an empty directory and
+- [x] Write a module-author tutorial that starts with an empty directory and
   produces a working `PSModule/PSModule.psd1`, generated module, and container image.
 - [x] Write a script-only directory tutorial covering automatic specification
   initialization, the `scripts` directory boundary, inferred script commands,
