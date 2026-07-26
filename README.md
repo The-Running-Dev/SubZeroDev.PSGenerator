@@ -38,6 +38,15 @@ Run the complete Docker lifecycle:
 ./examples/Minimal/Run-Example.ps1
 ```
 
+Or run the generator from its image, with PowerShell 7.4 and the module already
+installed and `pwsh` as the entry point:
+
+```powershell
+docker run --rm -it `
+    -v ${PWD}:/workspace `
+    ghcr.io/the-running-dev/subzerodev.psgenerator:latest
+```
+
 ## Documentation
 
 The complete manual is published at

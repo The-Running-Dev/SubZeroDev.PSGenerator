@@ -87,6 +87,43 @@ Update-PSResource `
     -Credential $credential
 ```
 
+## Use the Container Image
+
+The generator also ships as an image with PowerShell 7.4 and the module already
+installed, so nothing has to be installed on the host:
+
+```powershell
+docker pull ghcr.io/the-running-dev/subzerodev.psgenerator:latest
+```
+
+`pwsh` is the entry point. Mount the directory to inspect at `/workspace`:
+
+```powershell
+docker run --rm -it `
+    -v ${PWD}:/workspace `
+    ghcr.io/the-running-dev/subzerodev.psgenerator:latest
+```
+
+The module resolves by name, so command discovery imports it automatically:
+
+```powershell
+Test-PSModuleSpecification -Specification /workspace/PSModule/PSModule.psd1
+Build-PSModule -Specification /workspace/PSModule/PSModule.psd1 -Output /workspace/artifacts/PSModule
+```
+
+`latest` tracks `main`. Every published build also carries an immutable
+date-based tag such as `2026.07.26`; pin that when a reproducible environment
+matters.
+
+:::note
+
+The image does not contain the Docker CLI, so a generated container-backed
+command cannot execute inside it. Authoring, validation, inspection, generation,
+and `-WhatIf` all work; running the generated command against a real container
+needs Docker on the host.
+
+:::
+
 ## Docker Availability
 
 The generator can validate specifications, inspect directories, generate source,

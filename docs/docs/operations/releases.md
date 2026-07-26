@@ -64,6 +64,21 @@ Confirm:
 - required checks pass on `main`; and
 - the version has never been published.
 
+## Container Image
+
+The image is published on a different cadence from the package. Every push to
+`main` that touches `Dockerfile`, `.dockerignore`, or `src/**` builds
+`ghcr.io/the-running-dev/subzerodev.psgenerator` and pushes two tags: an
+immutable date-based `YYYY.MM.DD` and `latest`.
+
+Pull requests build and smoke-test the image without pushing, so a broken image
+blocks the merge instead of reaching `main`. The smoke test asserts from outside
+the image that `pwsh` starts on 7.4, and that the commands it exposes match the
+manifest exactly.
+
+Because `latest` follows `main` rather than a release tag, it can be ahead of the
+published package. Pin a date tag when the environment must be reproducible.
+
 ## Documentation Versions
 
 The site publishes one snapshot per released version plus the in-progress docs:
