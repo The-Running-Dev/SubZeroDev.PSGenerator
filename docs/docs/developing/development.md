@@ -102,12 +102,21 @@ Docusaurus already fails on unresolved links inside `docs/`, so this check cover
 the rest: root Markdown such as `README.md` and `TODO.md`, plus cross-file relative
 links and heading anchors everywhere.
 
-It reports two rule kinds:
+It reports three rule kinds:
 
 - `MarkdownLink` and `MarkdownAnchor` — a relative target that does not exist on
   disk, or a `#fragment` with no matching heading in the target document. Explicit
   `{#custom-id}` headings and duplicate-heading `-1` suffixes are both honored.
 - `Terminology` — product-name casing from `.config/DocumentationRules.psd1`.
+- `GeneratedFile` — a generated file whose committed copy no longer matches its
+  source. `docs/docs/index.md` is generated from `README.md`, so editing the
+  README without regenerating leaves the published homepage stale. The finding
+  names the first line that differs.
+
+  Both `docs.ps1` and this check call
+  `build/ConvertTo-DocumentationHomepage.ps1` to produce the expected content,
+  so the check cannot drift from the generator. Regenerate with any `docs.ps1`
+  run, including `./docs.ps1 -BuildOnly`.
 
 External and site-absolute links are reported as out of scope rather than fetched,
 so the gate never depends on network reachability. Terminology rules apply to prose

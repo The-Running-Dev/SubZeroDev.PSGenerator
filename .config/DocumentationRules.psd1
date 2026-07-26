@@ -33,6 +33,19 @@
         'node_modules'
     )
 
+    # Files generated from another file, checked for drift rather than scanned.
+    # Each entry names the generated file, its source, and the script that
+    # produces the expected content, all relative to the repository root. The
+    # generator and this check share that script so they cannot disagree.
+    GeneratedFiles = @(
+        @{
+            Path = 'docs/docs/index.md'
+            Source = 'README.md'
+            Generator = 'build/ConvertTo-DocumentationHomepage.ps1'
+            SourceParameter = 'ReadmePath'
+        }
+    )
+
     # Individual files excluded from scanning, relative to the repository root.
     # docs/docs/index.md is generated from README.md by docs.ps1 before every
     # image build, so it is validated at its source instead.

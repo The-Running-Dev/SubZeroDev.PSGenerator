@@ -3676,3 +3676,167 @@ Describe 'Inferred command naming' {
         $suggested['container-tool'] | Should -Be 'Invoke-ContainerTool'
     }
 }
+
+Describe 'Generated documentation drift' {
+    BeforeAll {
+        $driftScript = Join-Path $PSScriptRoot '..' 'build' 'Test-Documentation.ps1'
+        $homepageScript = (Resolve-Path (Join-Path $PSScriptRoot '..' 'build' 'ConvertTo-DocumentationHomepage.ps1')).Path
+
+        function New-DriftFixture {
+            param (
+                [Parameter(Mandatory)]
+                [string] $Name,
+
+                [Parameter(Mandatory)]
+                [string] $Readme,
+
+                [Parameter(Mandatory)]
+                [string] $Generated
+            )
+
+            $root = Join-Path $TestDrive $Name
+            New-Item -Path $root -ItemType Directory -Force | Out-Null
+            $readmePath = Join-Path $root 'README.md'
+            $generatedPath = Join-Path $root 'index.md'
+            [IO.File]::WriteAllText($readmePath, $Readme, [Text.UTF8Encoding]::new($false))
+            [IO.File]::WriteAllText($generatedPath, $Generated, [Text.UTF8Encoding]::new($false))
+
+            $settingsPath = Join-Path $root 'rules.psd1'
+            $settings = @"
+@{
+    Terminology = @()
+    ExcludedSegments = @()
+    ExcludedFiles = @()
+    GeneratedFiles = @(
+        @{
+            Path = '$($generatedPath -replace '\\','\\')'
+            Source = '$($readmePath -replace '\\','\\')'
+            Generator = '$($homepageScript -replace '\\','\\')'
+            SourceParameter = 'ReadmePath'
+        }
+    )
+}
+"@
+            [IO.File]::WriteAllText($settingsPath, $settings, [Text.UTF8Encoding]::new($false))
+
+            return [pscustomobject]@{ Root = $root; Settings = $settingsPath }
+        }
+
+        function Invoke-DriftGate {
+            param (
+                [Parameter(Mandatory)]
+                [psobject] $Fixture
+            )
+
+            $outputPath = Join-Path $TestDrive ('drift-{0}.txt' -f [guid]::NewGuid())
+            $failed = $false
+            try {
+                & $driftScript -Path $Fixture.Root -SettingsPath $Fixture.Settings 6> $outputPath
+            }
+            catch {
+                $failed = $true
+            }
+
+            $output = ''
+            if (Test-Path -LiteralPath $outputPath) {
+                $raw = Get-Content -LiteralPath $outputPath -Raw
+                if ($null -ne $raw) { $output = $raw }
+            }
+
+            return [pscustomobject]@{ Failed = $failed; Output = $output }
+        }
+
+        # What the generator produces for a given README, so fixtures stay in
+        # step with the real transformation rather than restating it.
+        function Get-ExpectedHomepage {
+            param ([Parameter(Mandatory)][string] $Readme)
+
+            $temp = Join-Path $TestDrive ('readme-{0}.md' -f [guid]::NewGuid())
+            [IO.File]::WriteAllText($temp, $Readme, [Text.UTF8Encoding]::new($false))
+            return (& $homepageScript -ReadmePath $temp) -join "`n"
+        }
+    }
+
+    It 'passes when the generated file matches its source' {
+        $readme = "# PSGenerator`n`nSee [docs](https://psgenerator.subzerodev.com/using/installation).`n"
+        $fixture = New-DriftFixture `
+            -Name 'DriftMatching' `
+            -Readme $readme `
+            -Generated (Get-ExpectedHomepage -Readme $readme)
+
+        $result = Invoke-DriftGate -Fixture $fixture
+
+        $result.Failed | Should -BeFalse
+    }
+
+    It 'fails when the source changed and the generated file did not' {
+        $readme = "# PSGenerator`n`nOriginal wording.`n"
+        $fixture = New-DriftFixture `
+            -Name 'DriftStale' `
+            -Readme $readme `
+            -Generated (Get-ExpectedHomepage -Readme $readme)
+
+        # Edit the source only, exactly as forgetting to regenerate would.
+        [IO.File]::WriteAllText(
+            (Join-Path $fixture.Root 'README.md'),
+            "# PSGenerator`n`nReworded, but never regenerated.`n",
+            [Text.UTF8Encoding]::new($false)
+        )
+
+        $result = Invoke-DriftGate -Fixture $fixture
+
+        $result.Failed | Should -BeTrue
+        $result.Output | Should -Match 'GeneratedFile'
+        $result.Output | Should -Match 'Regenerate it'
+    }
+
+    It 'reports the first line that differs' {
+        $readme = "# PSGenerator`n`nLine one.`nLine two.`n"
+        $fixture = New-DriftFixture `
+            -Name 'DriftLineNumber' `
+            -Readme $readme `
+            -Generated (Get-ExpectedHomepage -Readme $readme)
+
+        # Front matter is five lines then a blank, so the heading lands on line
+        # 7 and the first body line on 9.
+        [IO.File]::WriteAllText(
+            (Join-Path $fixture.Root 'README.md'),
+            "# PSGenerator`n`nLine one changed.`nLine two.`n",
+            [Text.UTF8Encoding]::new($false)
+        )
+
+        $result = Invoke-DriftGate -Fixture $fixture
+
+        $result.Failed | Should -BeTrue
+        $result.Output | Should -Match 'index\.md:9:'
+    }
+
+    It 'reports a missing generated file rather than throwing' {
+        $readme = "# PSGenerator`n`nBody.`n"
+        $fixture = New-DriftFixture `
+            -Name 'DriftMissing' `
+            -Readme $readme `
+            -Generated (Get-ExpectedHomepage -Readme $readme)
+        Remove-Item -LiteralPath (Join-Path $fixture.Root 'index.md') -Force
+
+        $result = Invoke-DriftGate -Fixture $fixture
+
+        $result.Failed | Should -BeTrue
+        $result.Output | Should -Match 'does not exist'
+    }
+
+    It 'rewrites the production origin to a root-relative path' {
+        $expected = Get-ExpectedHomepage `
+            -Readme "# PSGenerator`n`n[a](https://psgenerator.subzerodev.com/using/installation)`n"
+
+        $expected | Should -Match '\[a\]\(/using/installation\)'
+        $expected | Should -Not -Match 'psgenerator\.subzerodev\.com'
+    }
+
+    It 'keeps the repository documentation homepage in step' {
+        $expected = (& $homepageScript -ReadmePath (Join-Path $PSScriptRoot '..' 'README.md')) -join "`n"
+        $actual = ([IO.File]::ReadAllText((Join-Path $PSScriptRoot '..' 'docs' 'docs' 'index.md'))) -replace "`r`n?", "`n"
+
+        $actual.TrimEnd("`n") | Should -BeExactly $expected.TrimEnd("`n")
+    }
+}
