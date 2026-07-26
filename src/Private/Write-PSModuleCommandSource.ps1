@@ -17,10 +17,10 @@ function Write-PSModuleCommandSource {
         $_.Definition['SourceKind'] -in @('Script', 'ModuleFunction')
     })
     if ($sourceCommands.Count -gt 0) {
-        $repositoryScriptsPath = Join-Path $Context.RepositoryPath 'scripts'
-        if (Test-Path -LiteralPath $repositoryScriptsPath -PathType Container) {
+        $directoryScriptsPath = Join-Path $Context.DirectoryPath 'scripts'
+        if (Test-Path -LiteralPath $directoryScriptsPath -PathType Container) {
             Copy-Item `
-                -LiteralPath $repositoryScriptsPath `
+                -LiteralPath $directoryScriptsPath `
                 -Destination (Join-Path $Context.OutputPath 'Scripts') `
                 -Recurse `
                 -Force
@@ -38,26 +38,26 @@ function Write-PSModuleCommandSource {
             $declaredSourcePath = [string] $command.Definition['SourcePath']
             if ([IO.Path]::IsPathRooted($declaredSourcePath)) {
                 throw [System.IO.InvalidDataException]::new(
-                    "SourcePath for command '$($command.Name)' must be relative to the repository."
+                    "SourcePath for command '$($command.Name)' must be relative to the directory."
                 )
             }
-            $resolvedSourcePath = [IO.Path]::GetFullPath((Join-Path $Context.RepositoryPath $declaredSourcePath))
-            $repositoryPrefix = $Context.RepositoryPath.TrimEnd(
+            $resolvedSourcePath = [IO.Path]::GetFullPath((Join-Path $Context.DirectoryPath $declaredSourcePath))
+            $directoryPrefix = $Context.DirectoryPath.TrimEnd(
                 [IO.Path]::DirectorySeparatorChar,
                 [IO.Path]::AltDirectorySeparatorChar
             ) + [IO.Path]::DirectorySeparatorChar
-            if (-not $resolvedSourcePath.StartsWith($repositoryPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+            if (-not $resolvedSourcePath.StartsWith($directoryPrefix, [StringComparison]::OrdinalIgnoreCase)) {
                 throw [System.IO.InvalidDataException]::new(
-                    "SourcePath for command '$($command.Name)' resolves outside the repository."
+                    "SourcePath for command '$($command.Name)' resolves outside the directory."
                 )
             }
-            $scriptsPrefix = (Join-Path $Context.RepositoryPath 'scripts').TrimEnd(
+            $scriptsPrefix = (Join-Path $Context.DirectoryPath 'scripts').TrimEnd(
                 [IO.Path]::DirectorySeparatorChar,
                 [IO.Path]::AltDirectorySeparatorChar
             ) + [IO.Path]::DirectorySeparatorChar
             if (-not $resolvedSourcePath.StartsWith($scriptsPrefix, [StringComparison]::OrdinalIgnoreCase)) {
                 throw [System.IO.InvalidDataException]::new(
-                    "SourcePath for command '$($command.Name)' must be beneath the repository's 'scripts' directory."
+                    "SourcePath for command '$($command.Name)' must be beneath the directory's 'scripts' directory."
                 )
             }
             if (-not (Test-Path -LiteralPath $resolvedSourcePath -PathType Leaf)) {
@@ -68,7 +68,7 @@ function Write-PSModuleCommandSource {
             }
 
             $scriptsRelativePath = [IO.Path]::GetRelativePath(
-                (Join-Path $Context.RepositoryPath 'scripts'),
+                (Join-Path $Context.DirectoryPath 'scripts'),
                 $resolvedSourcePath
             )
             $packagedSourcePath = Join-Path 'Scripts' $scriptsRelativePath

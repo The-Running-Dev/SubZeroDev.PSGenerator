@@ -58,7 +58,7 @@ try {
 
     Write-Host '5/8 Invoke its generated command'
     $invocation = Invoke-Example `
-        -Repository (Get-Item -LiteralPath $exampleRoot) `
+        -Directory (Get-Item -LiteralPath $exampleRoot) `
         -Message 'hello-from-minimal' |
         ConvertFrom-Json
 

@@ -1,19 +1,19 @@
 <#
 .SYNOPSIS
-Tests PSGenerator against another local repository.
+Tests PSGenerator against another local directory.
 
 .DESCRIPTION
-Imports the generator from this checkout, changes to the selected repository, and builds
+Imports the generator from this checkout, changes to the selected directory, and builds
 its validated object model. Use Generate to continue through Build-PSModule.
 
-.PARAMETER Repository
-Path to the local repository to test.
+.PARAMETER Directory
+Path to the local directory to test.
 
 .PARAMETER Specification
-Specification path relative to Repository, or an absolute path.
+Specification path relative to Directory, or an absolute path.
 
 .PARAMETER Output
-Generation output path relative to Repository, or an absolute path.
+Generation output path relative to Directory, or an absolute path.
 
 .PARAMETER Generate
 Runs Build-PSModule after model validation, globally imports the generated
@@ -28,7 +28,7 @@ Fails when Specification is missing and prevents refreshing an empty scaffold.
 [CmdletBinding()]
 param (
     [Parameter(Mandatory)]
-    [string] $Repository,
+    [string] $Directory,
 
     [Parameter()]
     [string] $Specification = 'PSModule/PSModule.psd1',
@@ -49,17 +49,17 @@ param (
 Set-StrictMode -Version 3.0
 $ErrorActionPreference = 'Stop'
 
-if (-not (Test-Path -LiteralPath $Repository -PathType Container)) {
+if (-not (Test-Path -LiteralPath $Directory -PathType Container)) {
     throw [System.IO.DirectoryNotFoundException]::new(
-        "Local repository was not found: '$Repository'."
+        "Local directory was not found: '$Directory'."
     )
 }
 
-$repositoryPath = (Resolve-Path -LiteralPath $Repository).ProviderPath
+$directoryPath = (Resolve-Path -LiteralPath $Directory).ProviderPath
 $manifestPath = Join-Path $PSScriptRoot '..' 'src' 'SubZeroDev.PSGenerator.psd1'
 Import-Module $manifestPath -Force -ErrorAction Stop
 
-Push-Location $repositoryPath
+Push-Location $directoryPath
 try {
     $specificationInitialized = $false
     $specificationExists = Test-Path -LiteralPath $Specification -PathType Leaf
@@ -101,11 +101,11 @@ try {
     if (-not $specificationExists -or $refreshEmptySpecification -or $refreshGeneratedSpecification) {
         if ($NoInitialize) {
             throw [System.IO.FileNotFoundException]::new(
-                "Container module specification was not found: '$(Join-Path $repositoryPath $Specification)'."
+                "Container module specification was not found: '$(Join-Path $directoryPath $Specification)'."
             )
         }
         Initialize-PSModuleSpecification `
-            -Repository $repositoryPath `
+            -Directory $directoryPath `
             -Specification $Specification `
             -Force:($refreshEmptySpecification -or $refreshGeneratedSpecification) |
             Out-Null
@@ -121,7 +121,7 @@ try {
             $Output
         }
         else {
-            Join-Path $repositoryPath $Output
+            Join-Path $directoryPath $Output
         }
         $generatedManifest = Join-Path ([IO.Path]::GetFullPath($outputPath)) "$($model.ModuleName).psd1"
         $generatedModule = Import-Module $generatedManifest -Force -Global -PassThru -ErrorAction Stop

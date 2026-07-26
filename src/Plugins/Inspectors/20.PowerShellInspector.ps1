@@ -1,6 +1,6 @@
 param ([Parameter(Mandatory)] [psobject] $Context)
 
-$scriptsPath = Join-Path $Context.RepositoryPath 'scripts'
+$scriptsPath = Join-Path $Context.DirectoryPath 'scripts'
 $items = @(
     if (Test-Path -LiteralPath $scriptsPath -PathType Container) {
         Get-ChildItem -LiteralPath $scriptsPath -Recurse -File | Where-Object {
@@ -21,7 +21,7 @@ $files = foreach ($item in $items) {
         [ref]$tokens,
         [ref]$errors
     )
-    $relativePath = [IO.Path]::GetRelativePath($Context.RepositoryPath, $item.FullName).Replace('\', '/')
+    $relativePath = [IO.Path]::GetRelativePath($Context.DirectoryPath, $item.FullName).Replace('\', '/')
     $isCommandCandidate = $item.Extension -eq '.ps1'
     $suggestedCommandName = $null
     if ($isCommandCandidate) {

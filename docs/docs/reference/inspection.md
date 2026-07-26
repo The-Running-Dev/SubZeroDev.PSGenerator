@@ -1,10 +1,10 @@
 ---
-title: Repository inspection
+title: Directory inspection
 description: Inspector inputs, supported subsets, exclusions, and output shapes.
 sidebar_position: 3
 ---
 
-# Repository inspection
+# Directory Inspection
 
 Run inspection without generating output:
 
@@ -19,7 +19,7 @@ $inspection | Get-PSModuleDiagnostic -Detailed
 Inspector output is an ordered dictionary. Missing artifact types normally produce
 an empty collection or an unconfigured object.
 
-## Common exclusions
+## Common Exclusions
 
 Recursive inspectors skip paths containing these segments:
 
@@ -82,7 +82,7 @@ This is a line-oriented subset, not a complete YAML or Compose implementation.
 Anchors, aliases, flow mappings, interpolation semantics, merged configuration, and
 extended forms are not resolved.
 
-## .NET projects
+## .NET Projects
 
 **Inputs:** recursive `*.csproj`.
 
@@ -113,11 +113,11 @@ support a `Version` attribute or nested `Version` element. `Name` uses
 `IsExecutable` recognizes `Exe` and `WinExe`; `IsTestProject` recognizes the
 corresponding MSBuild property or a `Microsoft.NET.Test.Sdk` package reference.
 Project-reference paths are resolved relative to the declaring project and then
-normalized relative to the repository.
+normalized relative to the directory.
 
 Malformed project XML currently terminates inspection.
 
-## Node projects
+## Node Projects
 
 **Inputs:** recursive `package.json`.
 
@@ -239,7 +239,7 @@ This parser resolves only local definition references and does not evaluate exte
 JSON Schema references or arbitrary composition keywords. Malformed NUKE JSON
 currently terminates inspection.
 
-## Configuration schemas
+## Configuration Schemas
 
 **Inputs:** recursive `*.schema.json` and JSON documents containing `$schema`.
 

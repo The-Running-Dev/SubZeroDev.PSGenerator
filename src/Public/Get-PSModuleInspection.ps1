@@ -1,15 +1,15 @@
 function Get-PSModuleInspection {
     <#
     .SYNOPSIS
-    Inspects a repository without generating a module.
+    Inspects a directory without generating a module.
 
     .DESCRIPTION
-    Loads a repository specification, runs the ordered inspector plugin stage, and
+    Loads a specification, runs the ordered inspector plugin stage, and
     returns typed in-memory inspection data and plugin execution records. No build
     output is created.
 
     .PARAMETER Specification
-    Path to the repository PowerShell data-file specification.
+    Path to the directory PowerShell data-file specification.
 
     .PARAMETER PluginPath
     One or more additional plugin roots. When omitted, a Plugins directory beside
@@ -34,7 +34,7 @@ function Get-PSModuleInspection {
     $context = Invoke-PSModuleInspection @parameters
     [pscustomobject] @{
         PSTypeName       = 'SubZeroDev.PSGenerator.InspectionResult'
-        RepositoryPath   = $context.RepositoryPath
+        DirectoryPath   = $context.DirectoryPath
         SpecificationPath = $context.SpecificationPath
         Data             = $context.Inspection
         PluginExecutions = @($context.PluginExecutions)

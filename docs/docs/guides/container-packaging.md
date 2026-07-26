@@ -4,7 +4,7 @@ description: Embed generated modules at /PSModule and install them safely.
 sidebar_position: 3
 ---
 
-# Container packaging and installation
+# Container Packaging and Installation
 
 Every compliant image stores one complete generated module at:
 
@@ -12,7 +12,7 @@ Every compliant image stores one complete generated module at:
 /PSModule
 ```
 
-## Generate during the repository build
+## Generate During the Directory Build
 
 ```powershell
 Build-PSModule `
@@ -21,9 +21,9 @@ Build-PSModule `
 ```
 
 Treat `artifacts/PSModule` as build output. Generate it before the Docker build so a
-single repository commit defines both the application and its PowerShell interface.
+single directory commit defines both the application and its PowerShell interface.
 
-## Copy into the final image
+## Copy into the Final Image
 
 ```dockerfile
 FROM mcr.microsoft.com/powershell:7.4-ubuntu-22.04
@@ -38,7 +38,7 @@ ENTRYPOINT ["pwsh", "-NoLogo", "-NoProfile", "-File", "/app/start.ps1"]
 The `/PSModule` directory must contain exactly one top-level `.psd1` module manifest.
 That manifest must pass `Test-ModuleManifest`.
 
-## Install from an image
+## Install from an Image
 
 ```powershell
 Install-PSModule `
@@ -72,7 +72,7 @@ Install-PSModule `
     -Force
 ```
 
-## Installation safety
+## Installation Safety
 
 `Install-PSModule`:
 
@@ -87,7 +87,7 @@ Install-PSModule `
 
 If copying or validation fails, an existing destination is preserved.
 
-## Import the installed module
+## Import the Installed Module
 
 ```powershell
 Import-Module ~/Modules/ExampleContainer/ExampleContainer.psd1 -Force
@@ -100,9 +100,9 @@ The installation contains generated command references:
 Get-ChildItem ~/Modules/ExampleContainer/Documentation
 ```
 
-## Run the maintained example
+## Run the Maintained Example
 
-From the generator repository root:
+From the generator directory:
 
 ```powershell
 ./examples/Minimal/Run-Example.ps1

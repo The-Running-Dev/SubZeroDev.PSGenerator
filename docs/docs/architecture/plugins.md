@@ -4,7 +4,7 @@ description: Plugin discovery, ordering, shared context, diagnostics, and trust.
 sidebar_position: 2
 ---
 
-# Internal plugin system
+# Internal Plugin System
 
 :::warning
 
@@ -14,7 +14,7 @@ and credentials as the generator process.
 
 :::
 
-## Directory layout
+## Directory Layout
 
 A plugin root may contain:
 
@@ -38,10 +38,10 @@ Files must match:
 Example:
 
 ```text
-Inspectors/20.RepositoryPolicyInspector.ps1
+Inspectors/20.DirectoryPolicyInspector.ps1
 ```
 
-## Discovery and ordering
+## Discovery and Ordering
 
 Stages always execute in pipeline order. Within a stage, files are sorted by ordinal
 filename and then resolved path. Numeric prefixes communicate intent, but the full
@@ -64,7 +64,7 @@ Get-PSModulePlugin `
 
 Duplicate roots, missing roots, and invalid filenames are rejected.
 
-## Plugin contract
+## Plugin Contract
 
 Every plugin is a PowerShell script declaring a `Context` parameter:
 
@@ -83,8 +83,8 @@ param (
     [psobject] $Context
 )
 
-$policyPath = Join-Path $Context.RepositoryPath 'repository-policy.json'
-$Context.Inspection['RepositoryPolicy'] = if (
+$policyPath = Join-Path $Context.DirectoryPath 'directory-policy.json'
+$Context.Inspection['DirectoryPolicy'] = if (
     Test-Path -LiteralPath $policyPath -PathType Leaf
 ) {
     Get-Content -LiteralPath $policyPath -Raw | ConvertFrom-Json
@@ -97,7 +97,7 @@ else {
 Do not write ordinary pipeline output; the runner discards it. Communicate through
 the shared context.
 
-## Repository plugins
+## Local Plugins
 
 When `PluginPath` is omitted, build and inspection commands discover `Plugins`
 beside the resolved specification:
@@ -107,7 +107,7 @@ PSModule/
 ├── PSModule.psd1
 └── Plugins/
     └── Inspectors/
-        └── 20.RepositoryPolicyInspector.ps1
+        └── 20.DirectoryPolicyInspector.ps1
 ```
 
 Select explicit additional roots:
@@ -141,14 +141,14 @@ $inspection | Get-PSModuleDiagnostic -Detailed
 The runner wraps ordinary failures with plugin and stage identity. Failures stop the
 stage and the remaining pipeline.
 
-## Authoring rules
+## Authoring Rules
 
 - Treat the context shape as internal and version-coupled.
 - Validate required context properties before changing them.
-- Use repository-relative paths and normalize separators in persisted metadata.
+- Use directory-relative paths and normalize separators in persisted metadata.
 - Sort discovered files and object properties ordinally.
 - Do not embed development-machine absolute paths in generated artifacts.
 - Produce focused errors that name the source artifact.
-- Avoid network access unless the repository contract explicitly requires it.
+- Avoid network access unless the directory contract explicitly requires it.
 - Never log tokens, credentials, secret contents, or unredacted environment state.
 - Add fixture-backed tests for plugin behavior.

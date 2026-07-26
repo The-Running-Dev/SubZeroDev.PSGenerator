@@ -19,7 +19,7 @@ Confirm the local PowerShell version:
 $PSVersionTable.PSVersion
 ```
 
-## Use a source checkout
+## Use a Source Checkout
 
 Until the first package release is published, importing from a source checkout is
 the direct installation path:
@@ -78,7 +78,7 @@ version is published. Installing from source remains valid before the first rele
 
 :::
 
-Update an existing installation with the same repository and credential:
+Update an existing installation with the same directory and credential:
 
 ```powershell
 Update-PSResource `
@@ -87,9 +87,9 @@ Update-PSResource `
     -Credential $credential
 ```
 
-## Docker availability
+## Docker Availability
 
-The generator can validate specifications, inspect repositories, generate source,
+The generator can validate specifications, inspect directories, generate source,
 and preview commands without starting Docker. Docker is required for:
 
 - executing a generated container-backed command;

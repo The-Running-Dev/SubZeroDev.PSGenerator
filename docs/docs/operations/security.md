@@ -4,29 +4,29 @@ description: Trust boundaries, secrets, generated code, and vulnerability report
 sidebar_position: 4
 ---
 
-# Security model
+# Security Model
 
-## Supported versions
+## Supported Versions
 
 No version has been released. Security fixes currently target the latest `main`
 revision. A supported-version table will replace this statement when the first
 package is published.
 
-## Trusted inputs
+## Trusted Inputs
 
 Treat these inputs as code:
 
-- repository PSD1 specifications;
-- repository plugin `.ps1` files;
+- directory PSD1 specifications;
+- local plugin `.ps1` files;
 - PowerShell scripts and modules packaged beneath `scripts`; and
 - generated modules before importing them.
 
 PowerShell data files can contain data-language expressions supported by
 `Import-PowerShellDataFile`. Plugins are fully unsandboxed scripts.
 
-Only generate or import modules from repositories and plugin roots you trust.
+Only generate or import modules from directories and plugin roots you trust.
 
-## Plugin permissions
+## Plugin Permissions
 
 A plugin runs with the generator process's:
 
@@ -37,9 +37,9 @@ A plugin runs with the generator process's:
 - available credentials.
 
 There is no Version 1 sandbox or permission manifest. Review plugin source and pin
-the repository revision used by CI.
+the directory revision used by CI.
 
-## Container boundary
+## Container Boundary
 
 Generated commands can expose:
 
@@ -77,7 +77,7 @@ Do not:
 GitHub Packages consumer credentials should be entered as `SecureString`.
 Publishing uses the workflow-scoped `GITHUB_TOKEN`.
 
-## Generated source review
+## Generated Source Review
 
 Before publishing a container module:
 
@@ -91,15 +91,15 @@ Review runtime arguments, source paths, mount access, and image identity. Genera
 modules are ordinary PowerShell code and should pass the same review standards as
 authored modules.
 
-## Container image integrity
+## Container Image Integrity
 
 `Install-PSModule` validates module structure, not image provenance. Use
-trusted registries, immutable digests where appropriate, and repository-specific
+trusted registries, immutable digests where appropriate, and project-specific
 signature or attestation policies.
 
-## Reporting a vulnerability
+## Reporting a Vulnerability
 
-Do not disclose an unpatched vulnerability in a public issue. Use the repository's
+Do not disclose an unpatched vulnerability in a public issue. Use the directory's
 private GitHub security-reporting channel when available. Include:
 
 - affected version or commit;
@@ -109,5 +109,5 @@ private GitHub security-reporting channel when available. Include:
 - suggested mitigation; and
 - whether active exploitation is known.
 
-If private reporting is unavailable, contact the repository owner privately before
+If private reporting is unavailable, contact the directory owner privately before
 opening a public issue.

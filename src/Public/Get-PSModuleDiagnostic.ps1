@@ -1,17 +1,17 @@
 function Get-PSModuleDiagnostic {
     <#
     .SYNOPSIS
-    Returns ordered repository inspector execution diagnostics.
+    Returns ordered directory inspector execution diagnostics.
 
     .DESCRIPTION
     Returns typed plugin execution diagnostics from an existing inspection result,
-    or runs repository inspection and returns its diagnostics directly.
+    or runs directory inspection and returns its diagnostics directly.
 
     .PARAMETER InputObject
     An inspection result returned by Get-PSModuleInspection.
 
     .PARAMETER Specification
-    Path to the repository specification when running a new inspection.
+    Path to the specification when running a new inspection.
 
     .PARAMETER PluginPath
     One or more additional plugin roots when running a new inspection.

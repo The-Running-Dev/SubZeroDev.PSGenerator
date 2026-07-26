@@ -4,7 +4,7 @@ description: Deterministic module artifacts and their runtime roles.
 sidebar_position: 4
 ---
 
-# Generated output
+# Generated Output
 
 The default generated directory is `artifacts/PSModule`.
 
@@ -19,13 +19,13 @@ artifacts/PSModule/
 ├── Public/
 │   └── <CommandName>.ps1
 └── Scripts/
-    └── ... packaged repository scripts ...
+    └── ... packaged directory scripts ...
 ```
 
 Directories are created only when needed. A specification with no commands imports
 without a `Public` directory.
 
-## Module manifest
+## Module Manifest
 
 `<ModuleName>.psd1` declares:
 
@@ -37,12 +37,12 @@ without a `Public` directory.
 
 The manifest is validated before packaging completes.
 
-## Module loader
+## Module Loader
 
 `<ModuleName>.psm1` dot-sources every generated public command in deterministic name
 order and exports the resulting functions.
 
-## Public commands
+## Public Commands
 
 Each command has one parseable `.ps1` file containing:
 
@@ -57,7 +57,7 @@ Each command has one parseable `.ps1` file containing:
 
 Generated files do not depend on the generator at runtime.
 
-## Markdown command references
+## Markdown Command References
 
 `Documentation/<CommandName>.md` contains:
 
@@ -70,16 +70,16 @@ Generated files do not depend on the generator at runtime.
 The page derives from the same normalized model as comment-based help. CI verifies
 that the content survives image packaging and installation byte-for-byte.
 
-## Model metadata
+## Model Metadata
 
 `Metadata/model.json` is deterministic UTF-8 JSON representing module identity,
 container image, commands, parameters, validations, completions, and mappings.
 
 `Build-PSModule` returns this file as its pipeline output.
 
-## Packaged scripts
+## Packaged Scripts
 
-When inferred source commands exist, the complete repository `scripts` tree is
+When inferred source commands exist, the complete directory `scripts` tree is
 copied to `Scripts` once. Relative paths and supporting non-PowerShell files are
 preserved.
 
@@ -91,22 +91,22 @@ Generated wrappers resolve their source relative to the installed module:
 
 ## Determinism
 
-Repeated builds from the same specification and repository inputs produce identical
+Repeated builds from the same specification and directory inputs produce identical
 generated files. Output is reset only after specification and model validation pass.
 If validation fails, existing output remains unchanged.
 
 The outer NuGet archive may contain packaging metadata such as ZIP timestamps; the
 deterministic contract applies to the generated module files.
 
-## Source control and build artifacts
+## Source Control and Build Artifacts
 
 Recommended ownership:
 
 | Content | Recommendation |
 | --- | --- |
 | `PSModule/PSModule.psd1` | Commit |
-| Repository `scripts` | Commit |
-| Trusted repository plugins | Commit and review |
+| Directory `scripts` | Commit |
+| Trusted local plugins | Commit and review |
 | `artifacts/PSModule` | Generate in build/CI |
 | `.nupkg` | Publish or retain as CI artifact |
 | Installed module directory | Local user state |

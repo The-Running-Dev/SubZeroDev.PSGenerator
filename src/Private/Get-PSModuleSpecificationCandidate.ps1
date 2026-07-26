@@ -2,20 +2,20 @@ function Get-PSModuleSpecificationCandidate {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory)]
-        [string] $RepositoryPath
+        [string] $DirectoryPath
     )
 
-    $RepositoryPath = [IO.Path]::TrimEndingDirectorySeparator(
-        [IO.Path]::GetFullPath($RepositoryPath)
+    $DirectoryPath = [IO.Path]::TrimEndingDirectorySeparator(
+        [IO.Path]::GetFullPath($DirectoryPath)
     )
-    $repositoryName = Split-Path $RepositoryPath -Leaf
-    $moduleName = [regex]::Replace($repositoryName, '[^A-Za-z0-9]', '')
+    $directoryName = Split-Path $DirectoryPath -Leaf
+    $moduleName = [regex]::Replace($directoryName, '[^A-Za-z0-9]', '')
     if ([string]::IsNullOrWhiteSpace($moduleName) -or $moduleName[0] -notmatch '[A-Za-z]') {
-        $moduleName = "Repository$moduleName"
+        $moduleName = "Directory$moduleName"
     }
 
     $containerImage = $moduleName
-    $readmePath = Join-Path $RepositoryPath 'README.md'
+    $readmePath = Join-Path $DirectoryPath 'README.md'
     if (Test-Path -LiteralPath $readmePath -PathType Leaf) {
         $readme = Get-Content -LiteralPath $readmePath -Raw
         $imageMatch = [regex]::Match(
@@ -25,7 +25,7 @@ function Get-PSModuleSpecificationCandidate {
         if ($imageMatch.Success) { $containerImage = $imageMatch.Groups['Image'].Value }
     }
 
-    $scriptsPath = Join-Path $RepositoryPath 'scripts'
+    $scriptsPath = Join-Path $DirectoryPath 'scripts'
     $powerShellFiles = @(
         if (Test-Path -LiteralPath $scriptsPath -PathType Container) {
             Get-ChildItem -LiteralPath $scriptsPath -Recurse -File |
@@ -36,7 +36,7 @@ function Get-PSModuleSpecificationCandidate {
     function TestNestedRepository {
         param ([string] $Path)
         $directory = Split-Path $Path -Parent
-        while ($directory -and -not [string]::Equals($directory, $RepositoryPath, [StringComparison]::OrdinalIgnoreCase)) {
+        while ($directory -and -not [string]::Equals($directory, $DirectoryPath, [StringComparison]::OrdinalIgnoreCase)) {
             if (Test-Path -LiteralPath (Join-Path $directory '.git')) { return $true }
             $parent = Split-Path $directory -Parent
             if ($parent -eq $directory) { break }
@@ -80,7 +80,7 @@ function Get-PSModuleSpecificationCandidate {
     foreach ($file in $powerShellFiles | Sort-Object FullName) {
         if (TestNestedRepository -Path $file.FullName) { continue }
 
-        $relativePath = [IO.Path]::GetRelativePath($RepositoryPath, $file.FullName).Replace('\', '/')
+        $relativePath = [IO.Path]::GetRelativePath($DirectoryPath, $file.FullName).Replace('\', '/')
         $tokens = $null
         $parseErrors = $null
         $source = Get-Content -LiteralPath $file.FullName -Raw -ErrorAction Stop
@@ -151,7 +151,7 @@ function Get-PSModuleSpecificationCandidate {
     }
 
     [ordered]@{
-        Id             = "repository.$($moduleName.ToLowerInvariant())"
+        Id             = "directory.$($moduleName.ToLowerInvariant())"
         GeneratedBy    = 'SubZeroDev.PSGenerator'
         ModuleName     = $moduleName
         ModuleVersion  = '0.1.0'

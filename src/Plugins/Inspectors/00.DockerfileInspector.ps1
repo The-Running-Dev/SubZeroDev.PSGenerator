@@ -4,7 +4,7 @@ param (
 )
 
 $dockerfileItems = @(
-    Get-ChildItem -LiteralPath $Context.RepositoryPath -File |
+    Get-ChildItem -LiteralPath $Context.DirectoryPath -File |
         Where-Object { $_.Name -eq 'Dockerfile' -or $_.Name -like 'Dockerfile.*' -or $_.Name -like '*.Dockerfile' }
 )
 [Array]::Sort(

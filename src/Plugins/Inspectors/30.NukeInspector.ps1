@@ -15,7 +15,7 @@ function Resolve-SchemaDefinition {
     return $Node
 }
 
-$nukeDirectory = Join-Path $Context.RepositoryPath '.nuke'
+$nukeDirectory = Join-Path $Context.DirectoryPath '.nuke'
 [string[]] $configuredParameterNames = @()
 $parameterFile = Join-Path $nukeDirectory 'parameters.json'
 if (Test-Path -LiteralPath $parameterFile -PathType Leaf) {
@@ -76,11 +76,11 @@ if ($Context.Inspection.Contains('DotNetProjects')) {
     } | ForEach-Object Path)
 }
 [string[]] $buildScripts = @()
-$buildScriptItems = @(Get-ChildItem -LiteralPath $Context.RepositoryPath -Recurse -File -Filter 'build.ps1' |
+$buildScriptItems = @(Get-ChildItem -LiteralPath $Context.DirectoryPath -Recurse -File -Filter 'build.ps1' |
     Where-Object { Test-PSModuleInspectionPath -Context $Context -Path $_.FullName })
 if ($buildScriptItems.Count -gt 0) {
     $buildScripts = @($buildScriptItems | ForEach-Object {
-        [IO.Path]::GetRelativePath($Context.RepositoryPath, $_.FullName).Replace('\', '/')
+        [IO.Path]::GetRelativePath($Context.DirectoryPath, $_.FullName).Replace('\', '/')
     })
     [Array]::Sort($buildScripts, [StringComparer]::Ordinal)
 }

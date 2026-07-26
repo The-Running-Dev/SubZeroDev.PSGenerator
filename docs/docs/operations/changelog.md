@@ -25,7 +25,7 @@ unreleased and will be consolidated into the first Version 1 release notes.
 - `-WhatIf` preview, verbose timing, runtime discovery, and focused Docker errors.
 - Safe `/PSModule` extraction and installation from container images.
 - Inspection for Dockerfiles, Compose, .NET, Node, README, PowerShell, GitHub Actions,
-  NUKE, JSON Schema, and OpenAPI repository artifacts.
+  NUKE, JSON Schema, and OpenAPI directory artifacts.
 - Ordered internal plugin stages and typed execution diagnostics.
 - Missing-specification initialization and command inference beneath `scripts`.
 - Packaging and local execution of inferred scripts and exported module functions.
@@ -44,7 +44,7 @@ unreleased and will be consolidated into the first Version 1 release notes.
 
 ### Changed
 
-- Restricted inferred PowerShell commands to the repository `scripts` directory.
+- Restricted inferred PowerShell commands to the directory `scripts` directory.
 - Preserved complete script trees and relative dependency paths in generated modules.
 - Kept `Build-PSModule` orchestration-only while routing behavior through
   ordered plugins.
@@ -56,10 +56,10 @@ unreleased and will be consolidated into the first Version 1 release notes.
 - Missing or null JSON Schema property collections are handled consistently.
 - Switch parameters normalize to native PowerShell `switch`.
 - Metadata validation now occurs before packaging providers run.
-- Local NuGet repository verification constructs valid absolute file URIs on Windows
+- Local NuGet directory verification constructs valid absolute file URIs on Windows
   and Linux.
 
-## Release-note process
+## Release-Note Process
 
 Before publishing:
 

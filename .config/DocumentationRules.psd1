@@ -18,9 +18,14 @@
         @{ Required = 'JSON Schema'; Variants = @('Json Schema', 'json schema') }
         @{ Required = 'OpenAPI'; Variants = @('OpenApi', 'Open API', 'openapi') }
         @{ Required = 'NUKE'; Variants = @('Nuke build', 'nuke') }
+
+        # Guards against the v1 rename regressing. The product is PSGenerator
+        # and its commands are *-PSModule; the old names must not reappear.
+        @{ Required = 'PSGenerator'; Variants = @('ContainerPSGenerator') }
+        @{ Required = 'PSModule'; Variants = @('ContainerModule') }
     )
 
-    # Path segments never scanned. Fixture repositories are test input rather
+    # Path segments never scanned. Fixture directories are test input rather
     # than documentation, and generated or vendored trees are not authored here.
     ExcludedSegments = @(
         '.git'

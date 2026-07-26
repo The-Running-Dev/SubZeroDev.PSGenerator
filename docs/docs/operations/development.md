@@ -1,12 +1,12 @@
 ---
 title: Development and CI
-description: Set up the repository and run quality, test, coverage, packaging, and container checks.
+description: Set up the directory and run quality, test, coverage, packaging, and container checks.
 sidebar_position: 1
 ---
 
 # Development and CI
 
-## Repository layout
+## Directory Layout
 
 ```text
 src/                 Generator module
@@ -21,12 +21,12 @@ docs/                Docusaurus project and authored documentation
 ```
 
 The documentation build pulls the published docs-template container image from GHCR.
-It does not require a template repository checkout, Git submodule initialization, or
-Node dependency setup in this repository.
+It does not require a template directory checkout, Git submodule initialization, or
+Node dependency setup in this directory.
 
-## Documentation site
+## Documentation Site
 
-Build the repository-specific Docusaurus image locally:
+Build this project's Docusaurus image locally:
 
 ```powershell
 ./docs.ps1 -BuildOnly
@@ -44,24 +44,24 @@ authored Markdown and configuration for local editing.
 The `Docs build` GitHub Actions workflow authenticates to GHCR, verifies
 `ghcr.io/the-running-dev/docs-template:latest`, builds the production site, copies
 `/template/artifacts` from the build container, and uploads it for GitHub Pages.
-It prefers the repository secret `REGISTRY_TOKEN` and falls back to the workflow's
+It prefers the directory secret `REGISTRY_TOKEN` and falls back to the workflow's
 `GITHUB_TOKEN`. `REGISTRY_TOKEN` must have `read:packages`; the fallback works only
-when the published package grants this repository read access.
+when the published package grants this directory read access.
 
-## Import the development module
+## Import the Development Module
 
 ```powershell
 Import-Module ./src/SubZeroDev.PSGenerator.psd1 -Force
 Get-Command -Module SubZeroDev.PSGenerator
 ```
 
-## Static analysis
+## Static Analysis
 
 ```powershell
 ./build/Invoke-Quality.ps1 -InstallDependencies
 ```
 
-The gate pins PSScriptAnalyzer 1.25.0 and analyzes repository-owned PowerShell under
+The gate pins PSScriptAnalyzer 1.25.0 and analyzes directory-owned PowerShell under
 `src`, `build`, `examples`, `tests`, and `tests-e2e` using
 `.config/PSScriptAnalyzerSettings.psd1`.
 
@@ -71,7 +71,7 @@ After the dependency is installed:
 ./build/Invoke-Quality.ps1
 ```
 
-## Documentation links and terminology
+## Documentation Links and Terminology
 
 ```powershell
 ./build/Test-Documentation.ps1
@@ -105,7 +105,7 @@ Frozen version snapshots under `docs/versioned_docs` are excluded: they are
 historical copies, and a correction belongs in `docs/docs` or in the snapshot
 itself rather than being reported on every run.
 
-## Unit and integration tests
+## Unit and Integration Tests
 
 ```powershell
 Invoke-Pester -Path ./tests -Output Detailed
@@ -115,7 +115,7 @@ CI first stages the generator into a clean module directory and points tests at 
 manifest. This prevents the development source tree from masking missing package
 files.
 
-## PowerShell 7.4 baseline
+## PowerShell 7.4 Baseline
 
 The baseline script requires an exact 7.4 runtime:
 
@@ -126,7 +126,7 @@ The baseline script requires an exact 7.4 runtime:
 It stages and imports the generator, generates the minimal module, verifies both
 manifests require PowerShell 7.4, imports the generated module, and checks its export.
 
-## NuGet package
+## NuGet Package
 
 ```powershell
 ./build/Test-GeneratorNuGetPackage.ps1 -InstallDependencies
@@ -143,7 +143,7 @@ This:
 
 Output is under `artifacts/packages`.
 
-## Container end-to-end tests
+## Container End-to-End Tests
 
 Docker must be running:
 
@@ -179,7 +179,7 @@ The script builds `.act/Dockerfile` as a local runner and runs:
 `act` uses Linux containers and does not reproduce the hosted Windows runner.
 GitHub Actions remains authoritative for Windows.
 
-## Hosted reports
+## Hosted Reports
 
 GitHub Actions publishes:
 

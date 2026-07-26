@@ -1,24 +1,24 @@
 function Initialize-PSModuleSpecification {
     <#
     .SYNOPSIS
-    Creates an initial container module specification from repository inspection.
+    Creates an initial container module specification from directory inspection.
 
     .DESCRIPTION
-    Creates a missing PSModule specification using repository identity, documented
-    container image references, standalone scripts beneath the repository's scripts
+    Creates a missing PSModule specification using the directory name, documented
+    container image references, standalone scripts beneath the directory's scripts
     directory, and functions explicitly exported by modules beneath that same boundary.
 
     The generated specification is a scaffold. Review inferred commands and add their
     descriptions and help before publishing. Inferred scripts and exported module
     functions execute from the packaged scripts tree. Add explicit runtime mappings
     only for authored commands that invoke a container; inference does not guess
-    repository-specific container intent.
+    container intent specific to the inspected directory.
 
-    .PARAMETER Repository
-    Repository to inspect.
+    .PARAMETER Directory
+    Directory to inspect.
 
     .PARAMETER Specification
-    Specification path relative to Repository, or an absolute path.
+    Specification path relative to Directory, or an absolute path.
 
     .PARAMETER Force
     Replaces an existing specification.
@@ -29,7 +29,7 @@ function Initialize-PSModuleSpecification {
     [CmdletBinding(SupportsShouldProcess)]
     param (
         [Parameter()]
-        [string] $Repository = '.',
+        [string] $Directory = '.',
 
         [Parameter()]
         [string] $Specification = 'PSModule/PSModule.psd1',
@@ -41,17 +41,17 @@ function Initialize-PSModuleSpecification {
         [switch] $PassThru
     )
 
-    if (-not (Test-Path -LiteralPath $Repository -PathType Container)) {
-        throw [System.IO.DirectoryNotFoundException]::new("Repository was not found: '$Repository'.")
+    if (-not (Test-Path -LiteralPath $Directory -PathType Container)) {
+        throw [System.IO.DirectoryNotFoundException]::new("Directory was not found: '$Directory'.")
     }
-    $repositoryPath = [IO.Path]::TrimEndingDirectorySeparator(
-        [IO.Path]::GetFullPath((Resolve-Path -LiteralPath $Repository).ProviderPath)
+    $directoryPath = [IO.Path]::TrimEndingDirectorySeparator(
+        [IO.Path]::GetFullPath((Resolve-Path -LiteralPath $Directory).ProviderPath)
     )
     $specificationPath = if ([IO.Path]::IsPathRooted($Specification)) {
         [IO.Path]::GetFullPath($Specification)
     }
     else {
-        [IO.Path]::GetFullPath((Join-Path $repositoryPath $Specification))
+        [IO.Path]::GetFullPath((Join-Path $directoryPath $Specification))
     }
 
     if ((Test-Path -LiteralPath $specificationPath -PathType Leaf) -and -not $Force) {
@@ -61,11 +61,11 @@ function Initialize-PSModuleSpecification {
     }
     if (-not $PSCmdlet.ShouldProcess($specificationPath, 'Create container module specification')) { return }
 
-    $definition = Get-PSModuleSpecificationCandidate -RepositoryPath $repositoryPath
+    $definition = Get-PSModuleSpecificationCandidate -DirectoryPath $directoryPath
     Write-Verbose (
         "Discovered {0} command candidate(s) while initializing '{1}'." -f
         @($definition.Commands).Count,
-        $repositoryPath
+        $directoryPath
     )
     $source = ConvertTo-PSModuleSpecificationSource -Specification $definition
     $directory = Split-Path $specificationPath -Parent

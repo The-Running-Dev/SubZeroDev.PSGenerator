@@ -12,7 +12,7 @@ function Test-PSModuleInspectionPath {
     ) + [IO.Path]::DirectorySeparatorChar
     if ($fullPath.StartsWith($outputPrefix, [StringComparison]::OrdinalIgnoreCase)) { return $false }
 
-    $segments = @($fullPath.Substring($Context.RepositoryPath.Length).Split(
+    $segments = @($fullPath.Substring($Context.DirectoryPath.Length).Split(
         [IO.Path]::DirectorySeparatorChar,
         [StringSplitOptions]::RemoveEmptyEntries
     ))
@@ -23,7 +23,7 @@ function Test-PSModuleInspectionPath {
     $directory = Split-Path $fullPath -Parent
     while ($directory -and -not [string]::Equals(
         $directory,
-        $Context.RepositoryPath,
+        $Context.DirectoryPath,
         [StringComparison]::OrdinalIgnoreCase
     )) {
         if (Test-Path -LiteralPath (Join-Path $directory '.git')) { return $false }

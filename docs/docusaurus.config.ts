@@ -4,7 +4,7 @@ import type * as Preset from '@docusaurus/preset-classic';
 const isProduction = process.env.NODE_ENV === 'production';
 
 const config: Config = {
-  title: 'SubZeroDev.PSGenerator',
+  title: 'PSGenerator',
   tagline: 'Generate native PowerShell modules for containerized applications',
   url: isProduction
     ? 'https://psgenerator.subzerodev.com'

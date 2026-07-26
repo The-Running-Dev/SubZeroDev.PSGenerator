@@ -6,7 +6,7 @@ sidebar_position: 5
 
 # Troubleshooting
 
-## PowerShell version is unsupported
+## PowerShell Version Is Unsupported
 
 **Symptom:** manifest import or baseline validation reports a runtime below 7.4.
 
@@ -17,7 +17,7 @@ $PSVersionTable.PSVersion
 Install PowerShell 7.4 or later. `Test-PowerShellBaseline.ps1` intentionally requires
 exactly 7.4.x even when development uses a newer runtime.
 
-## Specification was not found
+## Specification Was Not Found
 
 Default path:
 
@@ -34,10 +34,10 @@ Build-PSModule -Specification ./config/MyModule.psd1
 Or initialize:
 
 ```powershell
-Initialize-PSModuleSpecification -Repository .
+Initialize-PSModuleSpecification -Directory .
 ```
 
-## Validation fails
+## Validation Fails
 
 Run validation independently:
 
@@ -56,7 +56,7 @@ Common causes:
 - a mapping property does not match its parameter type; or
 - invalid help or example strings.
 
-## No inferred commands appear
+## No Inferred Commands Appear
 
 Inference reads only `scripts/**/*.ps1` and explicitly exported functions in
 `scripts/**/*.psm1`.
@@ -72,22 +72,22 @@ $inspection.Data.PowerShellFiles |
 Move intended public entry points beneath `scripts`, fix parsing, and explicitly
 export module functions.
 
-## Scaffold does not refresh
+## Scaffold Does Not Refresh
 
-The local repository harness preserves authored specifications and any scaffold with
+The local directory harness preserves authored specifications and any scaffold with
 runtime mappings. This prevents inference from overwriting intent.
 
 To deliberately replace a specification:
 
 ```powershell
 Initialize-PSModuleSpecification `
-    -Repository . `
+    -Directory . `
     -Force
 ```
 
 Review or save the existing PSD1 first.
 
-## Generated command calls Docker unexpectedly
+## Generated Command Calls Docker Unexpectedly
 
 Only commands with `SourceKind = 'Script'` or `ModuleFunction` use packaged local
 source. A `SourcePath` alone does not select a script inside a container.
@@ -104,7 +104,7 @@ $model.Commands |
 Regenerate the scaffold from a source beneath `scripts` or author explicit container
 mappings.
 
-## Packaged script cannot find a sibling file
+## Packaged Script Cannot Find a Sibling File
 
 Scripts should resolve dependencies relative to their own location:
 
@@ -116,7 +116,7 @@ Import-Module $commonModule -Force
 Do not use `$PWD` for packaged-source dependencies; it refers to the caller's current
 directory, not the script directory.
 
-## Docker is missing
+## Docker Is Missing
 
 ```powershell
 Get-Command docker
@@ -130,7 +130,7 @@ Invoke-MyCommand -WhatIf
 Install-PSModule example/image:latest -WhatIf
 ```
 
-## Docker exits non-zero
+## Docker Exits Non-zero
 
 Run with verbose tracing:
 
@@ -148,7 +148,7 @@ Copy the reported arguments into a direct Docker invocation, then inspect:
 - device/GPU capabilities; and
 - resource-limit syntax.
 
-## Install-PSModule fails
+## Install-PSModule Fails
 
 The image must contain exactly one top-level manifest at `/PSModule`.
 
@@ -165,7 +165,7 @@ Test-ModuleManifest ./artifacts/ModuleInspection/*.psd1
 Use `-Force` only when replacing a destination intentionally. Existing destinations
 remain untouched when staged validation fails.
 
-## Inspector fails on repository data
+## Inspector Fails on Directory Data
 
 Run inspection and detailed diagnostics:
 
@@ -176,9 +176,9 @@ $inspection | Get-PSModuleDiagnostic -Detailed
 
 Current parsers may terminate on malformed `.csproj`, `package.json`,
 `.nuke/parameters.json`, OpenAPI JSON, and authoritative `*.schema.json`. See
-[Repository inspection](../reference/inspection.md) for supported subsets.
+[Directory inspection](../reference/inspection.md) for supported subsets.
 
-## Plugin fails
+## Plugin Fails
 
 The error names the plugin and stage. Confirm:
 
@@ -186,12 +186,12 @@ The error names the plugin and stage. Confirm:
 - the script declares `Context`;
 - the selected root exists only once;
 - expected context properties exist at that stage;
-- paths are repository-relative; and
+- paths are directory-relative; and
 - the plugin writes through the context instead of relying on pipeline output.
 
-Repository plugins are not sandboxed.
+Local plugins are not sandboxed.
 
-## act differs from GitHub Actions
+## act Differs from GitHub Actions
 
 `act` runs Linux containers and cannot reproduce hosted Windows. It also uses nested
 Docker behavior and shared mounts that differ from hosted runners.
@@ -199,7 +199,7 @@ Docker behavior and shared mounts that differ from hosted runners.
 Use `act` for rapid Linux feedback, direct Pester on Windows for host feedback, and
 GitHub Actions as the authoritative cross-platform result.
 
-## Package is not visible
+## Package Is Not Visible
 
 Merging the publishing workflow does not publish a package. A published GitHub
 Release with a tag matching `v<ModuleVersion>` triggers publication.
@@ -213,7 +213,7 @@ gh run list --workflow publish.yml
 
 If there is no release and no workflow run, no package was pushed.
 
-## GitHub Packages authentication fails
+## GitHub Packages Authentication Fails
 
 Consumer operations require credentials. Use a classic PAT with `read:packages`,
 your GitHub username, and the owner feed:

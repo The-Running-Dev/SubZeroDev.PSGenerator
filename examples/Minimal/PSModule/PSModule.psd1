@@ -14,23 +14,23 @@
 
             Examples = @(
                 @{
-                    Code = "Invoke-Example -Repository . -Message 'hello'"
-                    Description = 'Runs the example container for the current repository.'
+                    Code = "Invoke-Example -Directory . -Message 'hello'"
+                    Description = 'Runs the example container for the current directory.'
                 }
             )
 
             Parameters = @(
                 @{
-                    Id        = 'parameter.repository'
-                    Name      = 'Repository'
-                    Description = 'Repository directory mounted read-only at /repository.'
+                    Id        = 'parameter.directory'
+                    Name      = 'Directory'
+                    Description = 'Directory mounted read-only at /workspace.'
                     Type      = 'DirectoryInfo'
                     Mandatory = $true
 
                     Mappings = @(
                         @{
                             Type   = 'Mount'
-                            Target = '/repository'
+                            Target = '/workspace'
                             Access = 'ReadOnly'
                         }
                     )

@@ -4,7 +4,7 @@ description: Public PSGenerator command syntax, parameters, and outputs.
 sidebar_position: 2
 ---
 
-# Command reference
+# Command Reference
 
 Import the generator before using these commands:
 
@@ -25,7 +25,7 @@ Build-PSModule `
 
 | Parameter | Default | Description |
 | --- | --- | --- |
-| `Specification` | `PSModule/PSModule.psd1` | Repository PSD1 |
+| `Specification` | `PSModule/PSModule.psd1` | Directory PSD1 |
 | `Output` | `artifacts/PSModule` | Generated module directory |
 | `PluginPath` | Conventional sibling `Plugins` | Additional trusted plugin roots |
 
@@ -61,11 +61,11 @@ definition objects.
 
 ## Initialize-PSModuleSpecification
 
-Inspects a repository and writes an initial scaffold:
+Inspects a directory and writes an initial scaffold:
 
 ```powershell
 Initialize-PSModuleSpecification `
-    [-Repository <string>] `
+    [-Directory <string>] `
     [-Specification <string>] `
     [-Force] `
     [-PassThru] `
@@ -74,7 +74,7 @@ Initialize-PSModuleSpecification `
 
 | Parameter | Default | Description |
 | --- | --- | --- |
-| `Repository` | `.` | Repository to inspect |
+| `Directory` | `.` | Directory to inspect |
 | `Specification` | `PSModule/PSModule.psd1` | Relative or absolute destination |
 | `Force` | False | Replace an existing specification |
 | `PassThru` | False | Return the created `FileInfo` |
@@ -95,7 +95,7 @@ Returns `SubZeroDev.PSGenerator.InspectionResult`:
 
 | Property | Meaning |
 | --- | --- |
-| `RepositoryPath` | Resolved repository root |
+| `DirectoryPath` | Resolved directory |
 | `SpecificationPath` | Resolved PSD1 |
 | `Data` | Ordered inspection dictionary |
 | `PluginExecutions` | Ordered execution records |
@@ -160,7 +160,7 @@ Install-PSModule `
 
 Returns the installed directory as `DirectoryInfo`.
 
-## Generated commands
+## Generated Commands
 
 Generated container-backed commands:
 

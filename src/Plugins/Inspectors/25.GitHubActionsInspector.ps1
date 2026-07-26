@@ -1,6 +1,6 @@
 param ([Parameter(Mandatory)] [psobject] $Context)
 
-$workflowRoot = Join-Path $Context.RepositoryPath '.github' 'workflows'
+$workflowRoot = Join-Path $Context.DirectoryPath '.github' 'workflows'
 [object[]] $items = @()
 if (Test-Path -LiteralPath $workflowRoot -PathType Container) {
     $items = @(Get-ChildItem -LiteralPath $workflowRoot -File | Where-Object { $_.Extension -in @('.yml', '.yaml') })

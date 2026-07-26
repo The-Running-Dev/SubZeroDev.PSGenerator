@@ -1,7 +1,7 @@
 param ([Parameter(Mandatory)] [psobject] $Context)
 
 $names = '^(?i:(?:openapi|swagger).*)\.(?:json|ya?ml)$'
-$items = @(Get-ChildItem -LiteralPath $Context.RepositoryPath -Recurse -File | Where-Object {
+$items = @(Get-ChildItem -LiteralPath $Context.DirectoryPath -Recurse -File | Where-Object {
     $_.Name -match $names -and
     (Test-PSModuleInspectionPath -Context $Context -Path $_.FullName)
 })
@@ -31,6 +31,6 @@ $documents = foreach ($item in $items) {
         }
     }
     [Array]::Sort($paths, [StringComparer]::Ordinal)
-    [ordered]@{ Path = [IO.Path]::GetRelativePath($Context.RepositoryPath, $item.FullName).Replace('\', '/'); SpecificationVersion = $version; Title = $title; ApiVersion = $apiVersion; Paths = $paths }
+    [ordered]@{ Path = [IO.Path]::GetRelativePath($Context.DirectoryPath, $item.FullName).Replace('\', '/'); SpecificationVersion = $version; Title = $title; ApiVersion = $apiVersion; Paths = $paths }
 }
 $Context.Inspection['OpenApiDocuments'] = @($documents)

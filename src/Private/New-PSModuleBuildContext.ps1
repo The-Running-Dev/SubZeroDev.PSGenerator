@@ -16,7 +16,7 @@ function New-PSModuleBuildContext {
     )
     $specification = Import-PSModuleSpecification -Path $resolvedSpecificationPath
     $specificationDirectory = Split-Path $resolvedSpecificationPath -Parent
-    $repositoryPath = if ((Split-Path $specificationDirectory -Leaf) -eq 'PSModule') {
+    $directoryPath = if ((Split-Path $specificationDirectory -Leaf) -eq 'PSModule') {
         Split-Path $specificationDirectory -Parent
     }
     else {
@@ -27,7 +27,7 @@ function New-PSModuleBuildContext {
         PSTypeName        = 'SubZeroDev.PSGenerator.BuildContext'
         SpecificationPath = $resolvedSpecificationPath
         OutputPath        = $resolvedOutputPath
-        RepositoryPath    = $repositoryPath
+        DirectoryPath    = $directoryPath
         Specification     = $specification
         Inspection        = [ordered] @{}
         Model             = $null

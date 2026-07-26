@@ -1,19 +1,19 @@
 # LLMs Discoverable PowerShell Interface Specification
 
 > **Not published documentation.** This is a planning brief describing changes to
-> a *different* repository, `The-Running-Dev/LLMs`. It lives outside `docs/` so it
+> a *different* directory, `The-Running-Dev/LLMs`. It lives outside `docs/` so it
 > does not appear on the PSGenerator documentation site, where a reader
 > would reasonably mistake another project's `setup/` layout for this one's.
 
 ## Purpose
 
 Use this document as an implementation prompt for
-`The-Running-Dev/LLMs`. It describes the smallest repository change needed to
+`The-Running-Dev/LLMs`. It describes the smallest directory change needed to
 give `SubZeroDev.PSGenerator` an unambiguous PowerShell interface to
 discover.
 
 This specification is based on the complete documentation set in the pinned
-LLMs checkout, including the root documentation, `setup/docs`, repository
+LLMs checkout, including the root documentation, `setup/docs`, directory
 instructions and roadmap, and its documentation-site sources.
 
 The work must preserve the existing setup architecture. It is not a rewrite of
@@ -82,7 +82,7 @@ container module.
 
 ## Required discoverable structure
 
-Add a small facade module at the repository root:
+Add a small facade module at the directory:
 
 ```text
 PowerShell/
@@ -176,7 +176,7 @@ Create `PowerShell/LLMs.psd1` with:
 - `CmdletsToExport = @()`
 - `VariablesToExport = @()`
 - `AliasesToExport = @()`
-- repository URL, project URL, license URL, and useful tags under
+- directory URL, project URL, license URL, and useful tags under
   `PrivateData.PSData` when known
 
 Do not use wildcard exports.
@@ -227,7 +227,7 @@ PSGenerator should be able to:
    Docker, package managers, or documentation synchronization.
 
 The manifest is the authoritative public boundary. File presence elsewhere in
-the repository is not sufficient to make a command public.
+the directory is not sufficient to make a command public.
 
 ## Compatibility and security constraints
 

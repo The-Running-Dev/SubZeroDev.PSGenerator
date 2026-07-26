@@ -1,4 +1,4 @@
-# Repository workflow
+# Directory workflow
 
 When the user says **"do next todo"**, perform this workflow autonomously:
 
@@ -30,13 +30,13 @@ When the user says **"generate documentation"**, use this prompt:
 > Generate or refresh the project documentation from the current implementation.
 > Treat source code, public command help, specifications, tests, examples, workflows,
 > and TODOs as the source of truth. First inspect the existing Docusaurus layout and
-> verify that copied template metadata belongs to this repository,
+> verify that copied template metadata belongs to this directory,
 > then write concise Markdown with front matter, ordered categories, working relative
 > links, runnable examples, explicit support boundaries, and no invented behavior.
 > Cover getting started, guides, reference, architecture, development, releases,
 > security, and troubleshooting as applicable. Preserve unrelated work. Validate
 > front matter, category JSON, local links, the Docusaurus production build, and the
-> relevant repository quality and test suites before committing.
+> relevant directory quality and test suites before committing.
 
 Invoke the complete workflow with **"generate documentation"**. To limit its scope,
 append a subject, for example: **"generate documentation for runtime mappings"**.
@@ -54,8 +54,8 @@ append a subject, for example: **"generate documentation for runtime mappings"**
 - Run `./docs.ps1 -BuildOnly` to validate the image, `./docs.ps1` to serve a baked
   build, or `./docs.ps1 -Live` for bind-mounted authoring. Use `-Port`, `-Tag`, and
   `-BaseImage` only when an override is needed.
-- Treat titles, tags, URLs, comments, and prose copied from another repository as
-  placeholders until verified against this repository.
+- Treat titles, tags, URLs, comments, and prose copied from another directory as
+  placeholders until verified against this directory.
 
 ### Durable lessons
 

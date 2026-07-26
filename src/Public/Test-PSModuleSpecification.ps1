@@ -9,7 +9,7 @@ function Test-PSModuleSpecification {
     produce a terminating error with source and object identity context when available.
 
     .PARAMETER Specification
-    Path to the repository's PowerShell data-file specification.
+    Path to the directory's PowerShell data-file specification.
     #>
     [CmdletBinding()]
     [OutputType([bool])]

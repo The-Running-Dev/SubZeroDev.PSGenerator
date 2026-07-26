@@ -4,9 +4,9 @@ description: Complete Version 1 PSModule.psd1 property reference.
 sidebar_position: 1
 ---
 
-# Specification reference
+# Specification Reference
 
-The default repository specification is:
+The default specification is:
 
 ```text
 PSModule/PSModule.psd1
@@ -15,11 +15,11 @@ PSModule/PSModule.psd1
 It must be a PowerShell data file that imports as an `IDictionary`. Use arrays for
 all collections, including single-item collections.
 
-## Complete example
+## Complete Example
 
 ```powershell
 @{
-    Id             = 'repository.example'
+    Id             = 'directory.example'
     ModuleName     = 'ExampleContainer'
     ModuleVersion  = '0.1.0'
     ContainerImage = 'ghcr.io/example/example-container:latest'
@@ -74,7 +74,7 @@ all collections, including single-item collections.
 }
 ```
 
-## Root object
+## Root Object
 
 | Property | Type | Required | Default | Rules |
 | --- | --- | --- | --- | --- |
@@ -104,7 +104,7 @@ An ID:
 IDs appear in model metadata and validation context. Use stable semantic IDs rather
 than array positions.
 
-## Command object
+## Command Object
 
 | Property | Type | Required | Rules |
 | --- | --- | --- | --- |
@@ -126,7 +126,7 @@ Get-Report2
 
 Names such as `build`, `Invoke-My-Tool`, and `Invoke-Tool_Name` are rejected.
 
-## Example object
+## Example Object
 
 | Property | Type | Required | Rules |
 | --- | --- | --- | --- |
@@ -135,7 +135,7 @@ Names such as `build`, `Invoke-My-Tool`, and `Invoke-Tool_Name` are rejected.
 
 Examples are rendered into comment-based help and generated Markdown.
 
-## Parameter object
+## Parameter Object
 
 | Property | Type | Required | Default | Rules |
 | --- | --- | --- | --- | --- |
@@ -151,7 +151,7 @@ Examples are rendered into comment-based help and generated Markdown.
 Parameter names begin with a letter or underscore and then contain letters, numbers,
 or underscores. Names are unique without regard to case within their command.
 
-## Parameter types
+## Parameter Types
 
 The type name is emitted directly into generated PowerShell. Supported syntax is a
 simple or namespace-qualified name with an optional array suffix:
@@ -177,7 +177,7 @@ Common useful types include:
 `SwitchParameter` and its namespace-qualified form normalize to `switch`.
 Unresolvable types fail when the generated module is imported.
 
-## Validation objects
+## Validation Objects
 
 | Type | Required properties | Rules |
 | --- | --- | --- |
@@ -187,7 +187,7 @@ Unresolvable types fail when the generated module is imported.
 
 Unknown validation types are rejected.
 
-## Completion objects
+## Completion Objects
 
 Version 1 supports one completion type:
 
@@ -201,7 +201,7 @@ Version 1 supports one completion type:
 Values are non-empty strings and unique without regard to case across all completion
 providers on the parameter. Unknown completion types are rejected.
 
-## Mapping objects
+## Mapping Objects
 
 Every mapping requires `Type`. Supported values are:
 
@@ -221,27 +221,27 @@ Unknown mapping types are rejected. See
 [Runtime mappings](../guides/runtime-mappings.md) for properties, type constraints,
 runtime validation, and examples.
 
-## Inference-owned source properties
+## Inference-Owned Source Properties
 
 Generated scaffolds may add:
 
 | Property | Location | Meaning |
 | --- | --- | --- |
 | `GeneratedBy` | Root | Marks generator ownership for safe refresh |
-| `SourcePath` | Command | Path beneath the repository `scripts` directory |
+| `SourcePath` | Command | Path beneath the directory `scripts` directory |
 | `SourceKind` | Command | `Script` or `ModuleFunction` |
 
 These properties support script inference and packaged local execution. They are not
 a general mechanism for executing arbitrary files outside `scripts`.
 
-## Additional properties
+## Additional Properties
 
 Version 1 validators reject unsupported types inside known typed collections.
 Unrecognized properties elsewhere are not a stable extension contract; they may
 remain in the original `Definition` object but are not guaranteed to affect
-generation. Repository-specific behavior belongs in a trusted plugin.
+generation. Directory-specific behavior belongs in a trusted plugin.
 
-## Validate and inspect
+## Validate and Inspect
 
 ```powershell
 Test-PSModuleSpecification `

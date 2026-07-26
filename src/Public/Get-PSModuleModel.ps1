@@ -8,7 +8,7 @@ function Get-PSModuleModel {
     object model consumed by later generator stages.
 
     .PARAMETER Specification
-    Path to the repository's PowerShell data-file specification.
+    Path to the directory's PowerShell data-file specification.
     #>
     [CmdletBinding()]
     param (

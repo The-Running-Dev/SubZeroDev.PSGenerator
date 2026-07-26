@@ -57,11 +57,11 @@ Describe 'SubZeroDev.PSGenerator module' {
 }
 
 Describe 'Packaged generator module' {
-    It 'rejects repository and source directories as package output' {
+    It 'rejects directory and source directories as package output' {
         $packagingScript = Join-Path $PSScriptRoot '..' 'build' 'New-GeneratorModulePackage.ps1'
-        $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
+        $directoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 
-        foreach ($unsafePath in @($repositoryRoot, (Join-Path $repositoryRoot 'src'))) {
+        foreach ($unsafePath in @($directoryRoot, (Join-Path $directoryRoot 'src'))) {
             {
                 & $packagingScript -Output $unsafePath
             } | Should -Throw "*Generator package output path is unsafe*"
@@ -118,19 +118,19 @@ Describe 'Packaged generator module' {
 
 Describe 'Container module inspection diagnostics' {
     BeforeEach {
-        $repositoryPath = Join-Path $TestDrive 'DiagnosticRepository'
-        $specificationDirectory = Join-Path $repositoryPath 'PSModule'
+        $directoryPath = Join-Path $TestDrive 'DiagnosticDirectory'
+        $specificationDirectory = Join-Path $directoryPath 'PSModule'
         New-Item -Path $specificationDirectory -ItemType Directory -Force | Out-Null
         $specificationPath = Join-Path $specificationDirectory 'PSModule.psd1'
         Set-Content -LiteralPath $specificationPath -Value '@{ Commands = @() }'
-        Set-Content -LiteralPath (Join-Path $repositoryPath 'Dockerfile') -Value 'FROM alpine:3.20'
+        Set-Content -LiteralPath (Join-Path $directoryPath 'Dockerfile') -Value 'FROM alpine:3.20'
     }
 
     It 'returns typed inspection data without creating build output' {
         $result = Get-PSModuleInspection -Specification $specificationPath
 
         $result.PSObject.TypeNames | Should -Contain 'SubZeroDev.PSGenerator.InspectionResult'
-        $result.RepositoryPath | Should -Be $repositoryPath
+        $result.DirectoryPath | Should -Be $directoryPath
         $result.Data.Dockerfiles[0].Stages[0].Image | Should -Be 'alpine:3.20'
         $result.PluginExecutions.Count | Should -BeGreaterThan 0
         Test-Path -LiteralPath (Join-Path $specificationDirectory '.container-module-inspection') |
@@ -636,7 +636,7 @@ Describe 'Container module build context' {
             $context.PSObject.TypeNames | Should -Contain 'SubZeroDev.PSGenerator.BuildContext'
             $context.SpecificationPath | Should -Be ([System.IO.Path]::GetFullPath($SpecificationPath))
             $context.OutputPath | Should -Be ([System.IO.Path]::GetFullPath($OutputPath))
-            $context.RepositoryPath | Should -Be (Split-Path $SpecificationPath -Parent)
+            $context.DirectoryPath | Should -Be (Split-Path $SpecificationPath -Parent)
             $context.Specification.Commands[0].Name | Should -Be 'Invoke-Example'
             $context.Inspection.Count | Should -Be 0
         }
@@ -908,7 +908,7 @@ unlabelled
     }
 }
 
-Describe 'Remaining repository inspector chain' {
+Describe 'Remaining directory inspector chain' {
     BeforeEach {
         foreach ($path in @('.github', '.nuke', 'build', 'scripts', 'schemas', 'api')) {
             Remove-Item -LiteralPath (Join-Path $TestDrive $path) -Recurse -Force -ErrorAction SilentlyContinue
@@ -1491,9 +1491,9 @@ Describe 'Mount mapping validation' {
     Commands = @(
         @{ Name = 'Invoke-Example'; Parameters = @(
             @{
-                Name = 'Repository'
+                Name = 'Directory'
                 Type = 'DirectoryInfo'
-                Mappings = @(@{ Type = 'Mount'; Target = '/repository'; Access = 'ReadOnly' })
+                Mappings = @(@{ Type = 'Mount'; Target = '/directory'; Access = 'ReadOnly' })
             }
         ) }
     )
@@ -1509,7 +1509,7 @@ Describe 'Mount mapping validation' {
 @{
     Commands = @(
         @{ Name = 'Invoke-Example'; Parameters = @(
-            @{ Name = 'Repository'; Type = 'DirectoryInfo'; Mappings = @(
+            @{ Name = 'Directory'; Type = 'DirectoryInfo'; Mappings = @(
                 @{ Type = 'Mount'; Access = 'ReadOnly' }
             ) }
         ) }
@@ -1527,8 +1527,8 @@ Describe 'Mount mapping validation' {
 @{
     Commands = @(
         @{ Name = 'Invoke-Example'; Parameters = @(
-            @{ Name = 'Repository'; Type = 'DirectoryInfo'; Mappings = @(
-                @{ Type = 'Mount'; Target = '/repository'; Access = ' ' }
+            @{ Name = 'Directory'; Type = 'DirectoryInfo'; Mappings = @(
+                @{ Type = 'Mount'; Target = '/directory'; Access = ' ' }
             ) }
         ) }
     )
@@ -1545,8 +1545,8 @@ Describe 'Mount mapping validation' {
 @{
     Commands = @(
         @{ Name = 'Invoke-Example'; Parameters = @(
-            @{ Name = 'Repository'; Type = 'DirectoryInfo'; Mappings = @(
-                @{ Type = 'Mount'; Target = '/repository'; Access = 'OwnerOnly' }
+            @{ Name = 'Directory'; Type = 'DirectoryInfo'; Mappings = @(
+                @{ Type = 'Mount'; Target = '/directory'; Access = 'OwnerOnly' }
             ) }
         ) }
     )
@@ -2050,11 +2050,11 @@ Describe 'Container module object model' {
                         Description = 'Runs the example.'
                         Parameters = @(
                             @{
-                                Id = 'parameter.repository'
-                                Name = 'Repository'
+                                Id = 'parameter.directory'
+                                Name = 'Directory'
                                 Type = 'DirectoryInfo'
                                 Mappings = @(
-                                    @{ Type = 'Mount'; Target = '/repository'; Access = 'ReadOnly' }
+                                    @{ Type = 'Mount'; Target = '/directory'; Access = 'ReadOnly' }
                                 )
                             }
                         )
@@ -2072,12 +2072,12 @@ Describe 'Container module object model' {
             $command.Name | Should -Be 'Invoke-Example'
             $command.Description | Should -Be 'Runs the example.'
             $parameter.PSObject.TypeNames | Should -Contain 'SubZeroDev.PSGenerator.Model.Parameter'
-            $parameter.Id | Should -Be 'parameter.repository'
+            $parameter.Id | Should -Be 'parameter.directory'
             $parameter.Type | Should -Be 'DirectoryInfo'
             $parameter.Mandatory | Should -BeFalse
             $mapping.PSObject.TypeNames | Should -Contain 'SubZeroDev.PSGenerator.Model.Mapping'
             $mapping.Type | Should -Be 'Mount'
-            $mapping.Definition.Target | Should -Be '/repository'
+            $mapping.Definition.Target | Should -Be '/directory'
             [object]::ReferenceEquals($model.Definition, $definition) | Should -BeTrue
         }
     }
@@ -2136,7 +2136,7 @@ Describe 'Container module command source generation' {
 @{
     Commands = @(
         @{ Name = 'Invoke-Example'; Parameters = @(
-            @{ Name = 'Repository'; Type = 'DirectoryInfo'; Mandatory = $true }
+            @{ Name = 'Directory'; Type = 'DirectoryInfo'; Mandatory = $true }
             @{ Name = 'Tags'; Type = 'string[]' }
         ) }
     )
@@ -2157,7 +2157,7 @@ Describe 'Container module command source generation' {
         $parseErrors | Should -BeNullOrEmpty
         $firstContent | Should -Match 'function Invoke-Example'
         $firstContent | Should -Match '\[Parameter\(Mandatory = \$true\)\]'
-        $firstContent | Should -Match '\[System\.IO\.DirectoryInfo\] \$Repository,'
+        $firstContent | Should -Match '\[System\.IO\.DirectoryInfo\] \$Directory,'
         $firstContent | Should -Match '\[string\[\]\] \$Tags'
         $firstContent | Should -Not -Match "`r`n"
 
@@ -2300,12 +2300,12 @@ Describe 'Container module manifest generation' {
 
 Describe 'Container module output reset' {
     It 'produces an identical complete package across repeated builds' {
-        $repositoryPath = Join-Path $TestDrive 'deterministic-package-repository'
+        $directoryPath = Join-Path $TestDrive 'deterministic-package-directory'
         $specificationDirectory = New-Item -Path (
-            Join-Path $repositoryPath 'PSModule'
+            Join-Path $directoryPath 'PSModule'
         ) -ItemType Directory -Force
         $scriptsDirectory = New-Item -Path (
-            Join-Path $repositoryPath 'scripts'
+            Join-Path $directoryPath 'scripts'
         ) -ItemType Directory -Force
         $supportDirectory = New-Item -Path (
             Join-Path $scriptsDirectory 'support'
@@ -2345,7 +2345,7 @@ param([string] $Name)
     )
 }
 '@
-        $outputPath = Join-Path $repositoryPath 'artifacts' 'PSModule'
+        $outputPath = Join-Path $directoryPath 'artifacts' 'PSModule'
         $getPackageSnapshot = {
             param ([string] $Path)
 
@@ -2942,45 +2942,45 @@ Describe 'Install-PSModule' {
     }
 }
 
-Describe 'Test-LocalRepository script' {
+Describe 'Test-Directory script' {
     BeforeAll {
-        $repositoryPath = Join-Path $TestDrive 'Repository'
-        $specificationDirectory = Join-Path $repositoryPath 'PSModule'
+        $directoryPath = Join-Path $TestDrive 'Directory'
+        $specificationDirectory = Join-Path $directoryPath 'PSModule'
         New-Item -Path $specificationDirectory -ItemType Directory -Force | Out-Null
         Set-Content -LiteralPath (Join-Path $specificationDirectory 'PSModule.psd1') -Value @'
-@{ Commands = @(@{ Name = 'Invoke-ExternalRepository'; Parameters = @() }) }
+@{ Commands = @(@{ Name = 'Invoke-ExternalDirectory'; Parameters = @() }) }
 '@
-        $scriptPath = Join-Path $PSScriptRoot '..' 'build' 'Test-LocalRepository.ps1'
+        $scriptPath = Join-Path $PSScriptRoot '..' 'build' 'Test-Directory.ps1'
     }
 
-    It 'returns the target repository model and restores the caller location' {
+    It 'returns the target directory model and restores the caller location' {
         $originalLocation = Get-Location
 
-        $model = & $scriptPath -Repository $repositoryPath
+        $model = & $scriptPath -Directory $directoryPath
 
-        $model.Commands[0].Name | Should -Be 'Invoke-ExternalRepository'
+        $model.Commands[0].Name | Should -Be 'Invoke-ExternalDirectory'
         (Get-Location).Path | Should -Be $originalLocation.Path
     }
 
-    It 'generates repository metadata and restores the caller location' {
+    It 'generates directory metadata and restores the caller location' {
         $originalLocation = Get-Location
 
-        $artifact = & $scriptPath -Repository $repositoryPath -Generate -Output './generated'
+        $artifact = & $scriptPath -Directory $directoryPath -Generate -Output './generated'
 
-        $artifact.FullName | Should -Be (Join-Path $repositoryPath 'generated' 'Metadata' 'model.json')
+        $artifact.FullName | Should -Be (Join-Path $directoryPath 'generated' 'Metadata' 'model.json')
         (Get-Location).Path | Should -Be $originalLocation.Path
     }
 
-    It 'initializes a missing specification from repository PowerShell and documentation' {
+    It 'initializes a missing specification from directory PowerShell and documentation' {
         $originalLocation = Get-Location
-        $repositoryPath = Join-Path $TestDrive 'InferredRepository'
-        $scriptsPath = New-Item -Path (Join-Path $repositoryPath 'scripts') -ItemType Directory -Force
+        $directoryPath = Join-Path $TestDrive 'InferredDirectory'
+        $scriptsPath = New-Item -Path (Join-Path $directoryPath 'scripts') -ItemType Directory -Force
         $modulesPath = New-Item -Path (Join-Path $scriptsPath 'modules') -ItemType Directory -Force
-        Set-Content -LiteralPath (Join-Path $repositoryPath 'README.md') -Value @'
-# Inferred Repository
+        Set-Content -LiteralPath (Join-Path $directoryPath 'README.md') -Value @'
+# Inferred Directory
 docker run --rm ghcr.io/example/inferred:latest
 '@
-        Set-Content -LiteralPath (Join-Path $repositoryPath 'container-tool.ps1') -Value @'
+        Set-Content -LiteralPath (Join-Path $directoryPath 'container-tool.ps1') -Value @'
 param([string] $Tag)
 '@
         Set-Content -LiteralPath (Join-Path $scriptsPath 'install-tool.ps1') -Value @'
@@ -2991,65 +2991,65 @@ param(
 )
 '@
         Set-Content -LiteralPath (Join-Path $modulesPath 'Tools.psm1') -Value @'
-function Test-RepositoryTool { param([string] $Path) }
-Export-ModuleMember -Function @('Test-RepositoryTool')
+function Test-DirectoryTool { param([string] $Path) }
+Export-ModuleMember -Function @('Test-DirectoryTool')
 '@
 
-        & $scriptPath -Repository ($repositoryPath + [IO.Path]::DirectorySeparatorChar) | Out-Null
+        & $scriptPath -Directory ($directoryPath + [IO.Path]::DirectorySeparatorChar) | Out-Null
 
-        $specificationPath = Join-Path $repositoryPath 'PSModule' 'PSModule.psd1'
+        $specificationPath = Join-Path $directoryPath 'PSModule' 'PSModule.psd1'
         $definition = Import-PowerShellDataFile $specificationPath
         $definition.GeneratedBy | Should -Be 'SubZeroDev.PSGenerator'
-        $definition.ModuleName | Should -Be 'InferredRepository'
+        $definition.ModuleName | Should -Be 'InferredDirectory'
         $definition.ContainerImage | Should -Be 'ghcr.io/example/inferred:latest'
-        $definition.Commands.Name | Should -Be @('Invoke-InstallTool', 'Test-RepositoryTool')
+        $definition.Commands.Name | Should -Be @('Invoke-InstallTool', 'Test-DirectoryTool')
         $definition.Commands[0].SourceKind | Should -Be 'Script'
         $definition.Commands[0].Parameters.Name | Should -Be @('Name', 'Optional', 'Force')
         $definition.Commands[0].Parameters[0].Mandatory | Should -BeTrue
         $definition.Commands[0].Parameters[1].Mandatory | Should -BeFalse
         $definition.Commands[0].Parameters[2].Type | Should -Be 'switch'
         $definition.Commands[1].SourceKind | Should -Be 'ModuleFunction'
-        Test-Path -LiteralPath (Join-Path $repositoryPath 'artifacts' 'PSModule' 'Public' 'Invoke-ContainerTool.ps1') |
+        Test-Path -LiteralPath (Join-Path $directoryPath 'artifacts' 'PSModule' 'Public' 'Invoke-ContainerTool.ps1') |
             Should -BeFalse
-        Test-Path -LiteralPath (Join-Path $repositoryPath 'artifacts' 'PSModule' 'Public' 'Invoke-InstallTool.ps1') |
+        Test-Path -LiteralPath (Join-Path $directoryPath 'artifacts' 'PSModule' 'Public' 'Invoke-InstallTool.ps1') |
             Should -BeTrue
-        Test-Path -LiteralPath (Join-Path $repositoryPath 'artifacts' 'PSModule' 'Public' 'Test-RepositoryTool.ps1') |
+        Test-Path -LiteralPath (Join-Path $directoryPath 'artifacts' 'PSModule' 'Public' 'Test-DirectoryTool.ps1') |
             Should -BeTrue
         (Get-Command -Name Invoke-InstallTool -ErrorAction Stop).ModuleName |
-            Should -Be 'InferredRepository'
+            Should -Be 'InferredDirectory'
         (Get-Location).Path | Should -Be $originalLocation.Path
     }
 
     It 'refreshes an empty specification but preserves authored commands' {
-        $repositoryPath = Join-Path $TestDrive 'RefreshRepository'
-        $specificationDirectory = New-Item -Path (Join-Path $repositoryPath 'PSModule') -ItemType Directory -Force
-        $scriptsPath = New-Item -Path (Join-Path $repositoryPath 'scripts') -ItemType Directory -Force
+        $directoryPath = Join-Path $TestDrive 'RefreshDirectory'
+        $specificationDirectory = New-Item -Path (Join-Path $directoryPath 'PSModule') -ItemType Directory -Force
+        $scriptsPath = New-Item -Path (Join-Path $directoryPath 'scripts') -ItemType Directory -Force
         $specificationPath = Join-Path $specificationDirectory 'PSModule.psd1'
         Set-Content -LiteralPath $specificationPath -Value '@{ ModuleName = ''Old''; Commands = @() }'
         Set-Content -LiteralPath (Join-Path $scriptsPath 'run-tool.ps1') -Value 'param([string] $Value)'
 
-        & $scriptPath -Repository $repositoryPath | Out-Null
+        & $scriptPath -Directory $directoryPath | Out-Null
 
         $refreshed = Import-PowerShellDataFile $specificationPath
-        $refreshed.ModuleName | Should -Be 'RefreshRepository'
+        $refreshed.ModuleName | Should -Be 'RefreshDirectory'
         $refreshed.Commands.Name | Should -Be 'Invoke-RunTool'
-        Test-Path -LiteralPath (Join-Path $repositoryPath 'artifacts' 'PSModule' 'Public' 'Invoke-RunTool.ps1') |
+        Test-Path -LiteralPath (Join-Path $directoryPath 'artifacts' 'PSModule' 'Public' 'Invoke-RunTool.ps1') |
             Should -BeTrue
 
         $authoredSource = "@{ ModuleName = 'Authored'; Commands = @(@{ Name = 'Invoke-Authored'; Parameters = @() }) }"
         Set-Content -LiteralPath $specificationPath -Value $authoredSource
-        & $scriptPath -Repository $repositoryPath | Out-Null
+        & $scriptPath -Directory $directoryPath | Out-Null
 
         (Get-Content -LiteralPath $specificationPath -Raw).Trim() | Should -Be $authoredSource
     }
 
     It 'refreshes a legacy generated scaffold using only scripts-directory sources' {
-        $repositoryPath = Join-Path $TestDrive 'LegacyGeneratedRepository'
-        $specificationDirectory = New-Item -Path (Join-Path $repositoryPath 'PSModule') -ItemType Directory -Force
+        $directoryPath = Join-Path $TestDrive 'LegacyGeneratedDirectory'
+        $specificationDirectory = New-Item -Path (Join-Path $directoryPath 'PSModule') -ItemType Directory -Force
         $specificationPath = Join-Path $specificationDirectory 'PSModule.psd1'
         Set-Content -LiteralPath $specificationPath -Value @'
 @{
-    ModuleName = 'LegacyGeneratedRepository'
+    ModuleName = 'LegacyGeneratedDirectory'
     Commands = @(
         @{
             Name = 'Invoke-Existing'
@@ -3061,86 +3061,86 @@ Export-ModuleMember -Function @('Test-RepositoryTool')
     )
 }
 '@
-        Set-Content -LiteralPath (Join-Path $repositoryPath 'setup.ps1') -Value 'param([switch] $Ignored)'
-        $scriptsPath = New-Item -Path (Join-Path $repositoryPath 'scripts') -ItemType Directory -Force
+        Set-Content -LiteralPath (Join-Path $directoryPath 'setup.ps1') -Value 'param([switch] $Ignored)'
+        $scriptsPath = New-Item -Path (Join-Path $directoryPath 'scripts') -ItemType Directory -Force
         Set-Content -LiteralPath (Join-Path $scriptsPath 'setup.ps1') -Value 'param([switch] $Force)'
 
-        $commands = @(& $scriptPath -Repository $repositoryPath -ListCommands)
+        $commands = @(& $scriptPath -Directory $directoryPath -ListCommands)
         $definition = Import-PowerShellDataFile $specificationPath
 
         $definition.Commands.Name | Should -Be 'Invoke-Setup'
         $definition.Commands[0].Parameters.Name | Should -Be 'Force'
         $commands.Name | Should -Contain 'Invoke-Setup'
-        Remove-Module LegacyGeneratedRepository -Force
+        Remove-Module LegacyGeneratedDirectory -Force
     }
 
     It 'imports the generated module and lists commands for immediate testing' {
-        $commands = @(& $scriptPath -Repository $repositoryPath -ListCommands -Output './listed')
+        $commands = @(& $scriptPath -Directory $directoryPath -ListCommands -Output './listed')
 
-        $commands.Name | Should -Contain 'Invoke-ExternalRepository'
-        (Get-Command Invoke-ExternalRepository -ErrorAction Stop).ModuleName | Should -Be 'PSModule'
+        $commands.Name | Should -Contain 'Invoke-ExternalDirectory'
+        (Get-Command Invoke-ExternalDirectory -ErrorAction Stop).ModuleName | Should -Be 'PSModule'
 
         Remove-Module PSModule -Force
     }
 
-    It 'returns no commands when repository discovery produces an empty module' {
-        $emptyRepositoryPath = Join-Path $TestDrive 'EmptyRepository'
-        New-Item -Path $emptyRepositoryPath -ItemType Directory -Force | Out-Null
+    It 'returns no commands when directory discovery produces an empty module' {
+        $emptyDirectoryPath = Join-Path $TestDrive 'EmptyDirectory'
+        New-Item -Path $emptyDirectoryPath -ItemType Directory -Force | Out-Null
 
-        $commands = @(& $scriptPath -Repository $emptyRepositoryPath -ListCommands)
+        $commands = @(& $scriptPath -Directory $emptyDirectoryPath -ListCommands)
 
         $commands.Count | Should -Be 0
         Test-Path -LiteralPath (
-            Join-Path $emptyRepositoryPath 'artifacts' 'PSModule' 'Public'
+            Join-Path $emptyDirectoryPath 'artifacts' 'PSModule' 'Public'
         ) | Should -BeFalse
-        Remove-Module EmptyRepository -Force -ErrorAction SilentlyContinue
+        Remove-Module EmptyDirectory -Force -ErrorAction SilentlyContinue
     }
 }
 
-Describe 'Maintained repository integration fixtures' {
+Describe 'Maintained directory integration fixtures' {
     BeforeAll {
-        $fixtureRoot = Join-Path $PSScriptRoot 'fixtures' 'repositories'
-        $localRepositoryScript = Join-Path $PSScriptRoot '..' 'build' 'Test-LocalRepository.ps1'
+        $fixtureRoot = Join-Path $PSScriptRoot 'fixtures' 'directories'
+        $localDirectoryScript = Join-Path $PSScriptRoot '..' 'build' 'Test-Directory.ps1'
     }
 
     It 'initializes, packages, imports, and invokes the script-only fixture' {
-        $repositoryPath = Join-Path $TestDrive 'ScriptOnlyRepository'
+        $directoryPath = Join-Path $TestDrive 'ScriptOnlyDirectory'
         Copy-Item -LiteralPath (Join-Path $fixtureRoot 'ScriptOnly') `
-            -Destination $repositoryPath -Recurse
+            -Destination $directoryPath -Recurse
 
-        $commands = @(& $localRepositoryScript -Repository $repositoryPath -ListCommands)
+        $commands = @(& $localDirectoryScript -Directory $directoryPath -ListCommands)
         $definition = Import-PowerShellDataFile (
-            Join-Path $repositoryPath 'PSModule' 'PSModule.psd1'
+            Join-Path $directoryPath 'PSModule' 'PSModule.psd1'
         )
 
         try {
             $definition.GeneratedBy | Should -Be 'SubZeroDev.PSGenerator'
-            $definition.ModuleName | Should -Be 'ScriptOnlyRepository'
+            $definition.ModuleName | Should -Be 'ScriptOnlyDirectory'
             $definition.ContainerImage | Should -Be 'ghcr.io/example/script-fixture:latest'
             $definition.Commands.Name | Should -Be 'Invoke-WriteGreeting'
             $definition.Commands[0].SourceKind | Should -Be 'Script'
             $definition.Commands[0].Parameters.Name | Should -Be @('Name', 'Uppercase')
             $commands.Name | Should -Contain 'Invoke-WriteGreeting'
             Test-Path -LiteralPath (
-                Join-Path $repositoryPath 'artifacts' 'PSModule' 'Scripts' 'support' 'settings.json'
+                Join-Path $directoryPath 'artifacts' 'PSModule' 'Scripts' 'support' 'settings.json'
             ) | Should -BeTrue
 
             Invoke-WriteGreeting -Name 'Codex' -Uppercase | Should -Be 'HELLO, CODEX!'
         }
         finally {
-            Remove-Module ScriptOnlyRepository -Force -ErrorAction SilentlyContinue
+            Remove-Module ScriptOnlyDirectory -Force -ErrorAction SilentlyContinue
         }
     }
 
     It 'inspects and generates the authored build-agent fixture' {
-        $repositoryPath = Join-Path $TestDrive 'BuildAgentRepository'
+        $directoryPath = Join-Path $TestDrive 'BuildAgentDirectory'
         Copy-Item -LiteralPath (Join-Path $fixtureRoot 'BuildAgent') `
-            -Destination $repositoryPath -Recurse
-        $specificationPath = Join-Path $repositoryPath 'PSModule' 'PSModule.psd1'
+            -Destination $directoryPath -Recurse
+        $specificationPath = Join-Path $directoryPath 'PSModule' 'PSModule.psd1'
 
         $inspection = Get-PSModuleInspection -Specification $specificationPath
-        $commands = @(& $localRepositoryScript -Repository $repositoryPath -ListCommands)
-        $generatedCommandPath = Join-Path $repositoryPath `
+        $commands = @(& $localDirectoryScript -Directory $directoryPath -ListCommands)
+        $generatedCommandPath = Join-Path $directoryPath `
             'artifacts' 'PSModule' 'Public' 'Invoke-BuildAgent.ps1'
         $generatedCommand = Get-Content -LiteralPath $generatedCommandPath -Raw
 
@@ -3180,8 +3180,12 @@ Describe 'Maintained repository integration fixtures' {
             $generatedCommand | Should -Match ([regex]::Escape('CONFIGURATION'))
             $generatedCommand | Should -Match ([regex]::Escape('/workspace'))
             {
+                # The fixture deliberately names its own parameter Repository.
+                # Generated commands take their parameter names from the
+                # authored specification, so this also proves the rename did not
+                # reach into a user's own naming choices.
                 Invoke-BuildAgent `
-                    -Repository $repositoryPath `
+                    -Repository $directoryPath `
                     -Target Test `
                     -Configuration Release `
                     -WhatIf
@@ -3243,9 +3247,9 @@ Describe 'Minimal runnable container example' {
 
 Describe 'Discovered PowerShell source execution' {
     It 'invokes a discovered script with its bound parameters instead of Docker' {
-        $repositoryPath = Join-Path $TestDrive 'source-repository'
-        $specificationDirectory = New-Item -Path (Join-Path $repositoryPath 'PSModule') -ItemType Directory -Force
-        $scriptsDirectory = New-Item -Path (Join-Path $repositoryPath 'scripts') -ItemType Directory -Force
+        $directoryPath = Join-Path $TestDrive 'source-directory'
+        $specificationDirectory = New-Item -Path (Join-Path $directoryPath 'PSModule') -ItemType Directory -Force
+        $scriptsDirectory = New-Item -Path (Join-Path $directoryPath 'scripts') -ItemType Directory -Force
         $sourcePath = Join-Path $scriptsDirectory 'run-source.ps1'
         $helperDirectory = New-Item -Path (Join-Path $scriptsDirectory 'modules') -ItemType Directory -Force
         Set-Content -LiteralPath (Join-Path $helperDirectory 'Common.ps1') -Value @'
@@ -3256,7 +3260,7 @@ function Write-SourceResult {
 '@
         $supportDirectory = New-Item -Path (Join-Path $scriptsDirectory 'support') -ItemType Directory -Force
         Set-Content -LiteralPath (Join-Path $supportDirectory 'settings.json') -Value '{ "packaged": true }'
-        $resultPath = Join-Path $repositoryPath 'result.txt'
+        $resultPath = Join-Path $directoryPath 'result.txt'
         Set-Content -LiteralPath $sourcePath -Value @'
 param([Parameter(Mandatory)][string] $Value, [Parameter(Mandatory)][string] $ResultPath)
 . (Join-Path $PSScriptRoot 'modules/Common.ps1')
@@ -3277,7 +3281,7 @@ Write-SourceResult -Path $ResultPath -Value $Value
     })
 }
 '@
-        $outputPath = Join-Path $repositoryPath 'artifacts'
+        $outputPath = Join-Path $directoryPath 'artifacts'
 
         Build-PSModule -Specification $specificationPath -Output $outputPath | Out-Null
         $module = Import-Module (Join-Path $outputPath 'SourceExample.psd1') -Force -PassThru
@@ -3301,7 +3305,7 @@ Write-SourceResult -Path $ResultPath -Value $Value
             $generatedCommandSource | Should -Match (
                 [regex]::Escape("Join-Path `$moduleRoot '$expectedPackagedPath'")
             )
-            $generatedCommandSource | Should -Not -Match [regex]::Escape($repositoryPath)
+            $generatedCommandSource | Should -Not -Match [regex]::Escape($directoryPath)
             Get-Content -LiteralPath $resultPath -Raw | Should -Match '^executed'
             $verboseOutput -join "`n" | Should -Match 'Invoking discovered PowerShell source'
             $verboseOutput -join "`n" | Should -Match 'PowerShell source finished after'
@@ -3313,11 +3317,11 @@ Write-SourceResult -Path $ResultPath -Value $Value
     }
 
     It 'invokes a discovered exported module function module-qualified instead of Docker' {
-        $repositoryPath = Join-Path $TestDrive 'module-source-repository'
-        $specificationDirectory = New-Item -Path (Join-Path $repositoryPath 'PSModule') -ItemType Directory -Force
-        $modulesDirectory = New-Item -Path (Join-Path $repositoryPath 'scripts' 'modules') -ItemType Directory -Force
+        $directoryPath = Join-Path $TestDrive 'module-source-directory'
+        $specificationDirectory = New-Item -Path (Join-Path $directoryPath 'PSModule') -ItemType Directory -Force
+        $modulesDirectory = New-Item -Path (Join-Path $directoryPath 'scripts' 'modules') -ItemType Directory -Force
         $sourcePath = Join-Path $modulesDirectory 'SourceTools.psm1'
-        $resultPath = Join-Path $repositoryPath 'module-result.txt'
+        $resultPath = Join-Path $directoryPath 'module-result.txt'
         Set-Content -LiteralPath $sourcePath -Value @'
 function Invoke-SourceTool {
     param([Parameter(Mandatory)][string] $Value, [Parameter(Mandatory)][string] $ResultPath)
@@ -3340,7 +3344,7 @@ Export-ModuleMember -Function Invoke-SourceTool
     })
 }
 '@
-        $outputPath = Join-Path $repositoryPath 'artifacts'
+        $outputPath = Join-Path $directoryPath 'artifacts'
 
         Build-PSModule -Specification $specificationPath -Output $outputPath | Out-Null
         $module = Import-Module (Join-Path $outputPath 'ModuleSourceExample.psd1') -Force -PassThru
@@ -3362,9 +3366,9 @@ Export-ModuleMember -Function Invoke-SourceTool
     }
 
     It 'rejects an authored PowerShell source outside the scripts directory' {
-        $repositoryPath = Join-Path $TestDrive 'outside-source-repository'
-        $specificationDirectory = New-Item -Path (Join-Path $repositoryPath 'PSModule') -ItemType Directory -Force
-        Set-Content -LiteralPath (Join-Path $repositoryPath 'outside.ps1') -Value 'param()'
+        $directoryPath = Join-Path $TestDrive 'outside-source-directory'
+        $specificationDirectory = New-Item -Path (Join-Path $directoryPath 'PSModule') -ItemType Directory -Force
+        Set-Content -LiteralPath (Join-Path $directoryPath 'outside.ps1') -Value 'param()'
         $specificationPath = Join-Path $specificationDirectory 'PSModule.psd1'
         Set-Content -LiteralPath $specificationPath -Value @'
 @{
@@ -3380,9 +3384,9 @@ Export-ModuleMember -Function Invoke-SourceTool
 
         {
             Build-PSModule -Specification $specificationPath -Output (
-                Join-Path $repositoryPath 'artifacts'
+                Join-Path $directoryPath 'artifacts'
             )
-        } | Should -Throw "*must be beneath the repository's 'scripts' directory*"
+        } | Should -Throw "*must be beneath the directory's 'scripts' directory*"
     }
 }
 
@@ -3590,7 +3594,7 @@ validated elsewhere.
         $result.Output | Should -Match 'across 1 Markdown file\(s\)'
     }
 
-    It 'passes across the repository documentation set' {
+    It 'passes across the directory documentation set' {
         $result = Invoke-DocumentationGate -Path (Join-Path $PSScriptRoot '..')
 
         $result.Failed | Should -BeFalse
