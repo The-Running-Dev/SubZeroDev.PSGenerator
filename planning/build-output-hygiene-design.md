@@ -60,6 +60,10 @@ of `tests/fixtures`; source inputs remain reviewable.
 - The maintained BuildAgent fixture remains complete and inspectable.
 - Generator outputs retain their existing explicit ignore rules.
 
+Both of the first two were checked ahead of implementation by applying the two
+patterns through a temporary excludes file: the representative fixture paths above
+match, and feeding every tracked path to `git check-ignore` returns nothing.
+
 ## Non-goals
 
 - Removing already tracked build products; none currently exist.

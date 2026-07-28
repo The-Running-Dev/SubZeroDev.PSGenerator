@@ -26,6 +26,8 @@ Tasks:
 - [ ] Remove `pull_request.paths` from `container.yml`.
 - [ ] Remove `pull_request.paths` from `docs.yml`.
 - [ ] Preserve path-filtered `main` push behavior.
+- [ ] Confirm the `ghcr.io/the-running-dev/docs-template` package is publicly
+  readable, so the documentation context can pass without repository secrets.
 - [ ] Confirm all ten intended checks appear on a pull request containing only a
   planning or Markdown change.
 - [ ] Confirm documentation deployment remains skipped on pull requests.
@@ -34,6 +36,7 @@ Tasks:
 Exit criteria:
 
 - Every pull request creates all ten future required contexts.
+- A fork pull request can pull the documentation base image.
 - All existing workflows pass on Windows and Linux where applicable.
 
 ### Administrative change: Enforce checks and branch cleanup
@@ -77,19 +80,28 @@ Exit criteria:
 
 Tasks:
 
-- [ ] Add a private, side-effect-free collision discovery helper.
-- [ ] Invoke it from `Initialize-PSModuleSpecification` after candidate inference.
+- [ ] Add a private collision discovery helper that returns data and writes no
+  warnings. It is not side-effect-free: `Get-Command` may import installed
+  modules, which the design accepts in exchange for complete detection.
+- [ ] Exclude existing commands belonging to the scaffolded module, so refreshing
+  a directory whose generated module is installed stays quiet.
+- [ ] Invoke it from `Initialize-PSModuleSpecification` after candidate inference,
+  leaving `-WhatIf` with no collision reporting.
 - [ ] Emit one stable advisory warning per colliding candidate.
 - [ ] Preserve candidate names and deterministic specification output.
 - [ ] Add Windows/Linux Pester coverage for collision, no-collision, ordering,
-  `-WhatIf`, and determinism cases.
+  self-collision, `-WhatIf`, and determinism cases.
+- [ ] Cover the helper's identity-formatting and no-collision branches so the
+  packaged coverage gate does not regress.
 - [ ] Update script-inference and troubleshooting documentation.
 
 Exit criteria:
 
 - `convertto-json.ps1` warns about the built-in `ConvertTo-Json`.
+- Refreshing a directory whose generated module is already loaded warns about
+  nothing.
 - The inferred command remains in the specification.
-- Full local and hosted quality gates pass.
+- Full local and hosted quality gates pass, including packaged coverage.
 
 ## Dependency Order
 
@@ -112,6 +124,25 @@ must wait for PR 1.
 | Repository settings | API readback and JSON diff | Required-check block/pass exercise |
 | Build-output hygiene | `git check-ignore`, fixture build, clean status | Existing quality and Pester jobs |
 | Collision warnings | Focused and full Pester suites | Windows and Linux Pester jobs |
+
+## Already Verified
+
+Checked against the repository before implementation, so it does not need
+rediscovering:
+
+- The path-filter premise, from real check runs. A planning-only pull request
+  reports eight contexts; a pull request touching `src/`, `docs/`, and `README.md`
+  reports all ten, matching the recorded names exactly.
+- The two `.gitignore` patterns, through a temporary excludes file. No tracked
+  path becomes ignored.
+- The collision mechanics. `convertto-json.ps1` infers `ConvertTo-Json`, and
+  `Get-Command` returns one cmdlet from `Microsoft.PowerShell.Utility`, which
+  supplies every field the warning text needs.
+- The warning site. `Initialize-PSModuleDirectory` delegates to
+  `Initialize-PSModuleSpecification`, so one call site covers both entry points.
+
+Still unverified: the current `Main` ruleset contents and
+`delete_branch_on_merge`. Both need the administrative export in the step below.
 
 ## Completion Evidence
 

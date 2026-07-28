@@ -43,8 +43,44 @@ The detector must:
 - evaluate the final inferred name, not the source filename;
 - report the candidate `SourcePath`;
 - sort and de-duplicate existing command identities for stable warning text;
-- issue one warning per colliding inferred command; and
+- issue one warning per colliding inferred command;
+- ignore existing commands whose module is the module being scaffolded; and
 - avoid importing or executing directory-provided code.
+
+### Module auto-loading
+
+`Get-Command` resolves a name against `PSModulePath`, so it can import an
+installed module that the session had not loaded. Detection keeps that behavior
+rather than suppressing it.
+
+Setting `$PSModuleAutoLoadingPreference = 'None'` around the lookup would make the
+helper inert, but it also reduces detection to whatever is already loaded. In a
+`pwsh -NoProfile -Command` session that starts with no modules loaded, the lookup
+then returns nothing at all for `ConvertTo-Json`, which is the collision this
+feature exists to report. Suppression trades a real diagnostic for a smaller
+side effect.
+
+Complete detection is the right trade because the risk being reported is a
+resolution change in the *consumer's* session, where the competing module will
+auto-load on the same terms. The cost is explicit: initialization may import
+installed modules, and on a cold session with a large `PSModulePath` the lookup
+adds noticeable latency. The helper is not side-effect-free, and nothing in the
+plan should describe it that way.
+
+The directory being inspected is never placed on `PSModulePath`, so this does not
+import or execute directory-provided code.
+
+### Commands from the scaffolded module
+
+`Initialize-PSModuleDirectory` refreshes a generated specification by calling
+`Initialize-PSModuleSpecification -Force`. If an earlier build of the same module
+is installed or imported, every inferred command would otherwise collide with its
+own previous build and warn on a routine refresh.
+
+The detector therefore discards existing commands whose `ModuleName` equals the
+candidate module name, which `Get-PSModuleSpecificationCandidate` already returns
+as `ModuleName`. The helper needs that name as an input alongside the candidate
+list.
 
 ### Behavior
 
@@ -56,6 +92,13 @@ A collision is advisory:
   metadata;
 - do not alter command ordering; and
 - preserve `-Force`, `-PassThru`, and `ShouldProcess` behavior.
+
+`-WhatIf` reports no collisions. `Initialize-PSModuleSpecification` returns at its
+`ShouldProcess` call before candidate discovery runs, and detection stays after
+that call, so a preview keeps scanning no files and parsing no scripts. Warning on
+a preview would mean doing the full directory parse for a command that writes
+nothing. This is a deliberate limit, not an oversight: a user who wants the
+warning runs the command.
 
 The warning should identify the inferred name, its source, the existing command
 type and module/source where available, and the two remedies: rename the script or
@@ -95,8 +138,17 @@ Add cross-platform Pester coverage that:
 4. proves a unique inferred command emits no collision warning;
 5. proves multiple results are ordered and do not duplicate warning identities;
 6. proves `-WhatIf` does not write a specification or perform post-approval
-   collision reporting; and
-7. proves repeated initialization produces byte-identical specification content.
+   collision reporting;
+7. proves repeated initialization produces byte-identical specification content;
+   and
+8. proves an existing command belonging to the scaffolded module produces no
+   warning, so refreshing a directory whose generated module is already loaded
+   stays quiet.
+
+Cover the helper's identity-formatting and no-collision branches directly. The
+Pester job enforces `MINIMUM_PACKAGED_COVERAGE_PERCENT` on both command and line
+coverage of the packaged module, so a new private function reached only through
+one happy-path test can push the gate below its threshold.
 
 Update the script-inference guide and troubleshooting page with the warning,
 advisory semantics, and explicit-authoring escape hatch.
