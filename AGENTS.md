@@ -23,6 +23,12 @@ When the user says **"do next todo"**, perform this workflow autonomously:
 Use concise progress updates. Report the selected TODO item, test results, pull
 request URL, merge commit, and any work that remains intentionally untouched.
 
+## Model
+
+Sessions in this repository use `opusplan` via `.claude/settings.json`: Opus while
+planning, Sonnet while implementing. Override it in `.claude/settings.local.json`
+rather than editing the tracked file.
+
 ## Authorship
 
 Do not add assistant attribution to anything this repository publishes. Commit
