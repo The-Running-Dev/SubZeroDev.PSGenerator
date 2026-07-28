@@ -27,8 +27,16 @@ Maintenance-script classification lands immediately before the inference
 fixture: the fixture's own baseline depends on it, and the gap it closes
 already exists in shipped script inference, independent of anything else in
 this set. The inference fixture can then drive implementation.
-Release-candidate validation comes last, after the quality and lifecycle
-commands it orchestrates are stable.
+
+Materialization (PR 9) depends on both the merged candidates (PR 7) and the
+hardened inspectors (PR 8), so it comes after both rather than before either.
+New inspectors added from PR 5 onward should use PR 8's hardened traversal,
+issue, and malformed-input contracts from their first commit; materializing a
+candidate into a generated command is also the point where an inspector
+regression first becomes visible as wrong output, which is a reason to have
+the hardening in place before that point, not after it. Release-candidate
+validation comes last, after the quality and lifecycle commands it
+orchestrates are stable.
 
 ```mermaid
 flowchart LR
@@ -37,9 +45,9 @@ flowchart LR
     K --> C["BuildAgent inference fixture"]
     C --> D["Evidence model and C# inspector"]
     D --> E["Metadata and dispatch inspectors"]
-    E --> F["Candidate merge and materialization"]
+    E --> F["Candidate merge and conflict policy"]
     B --> G["Remaining inspector hardening"]
-    F --> H["Complete inference lifecycle"]
+    F --> H["Inference materialization and lifecycle"]
     G --> H
     H --> I["Release-candidate harness"]
     I --> J["Manual clean-run workflow"]
@@ -195,22 +203,7 @@ Exit criteria:
 - compatible overlaps merge deterministically;
 - incompatible evidence is visible and never silently selected.
 
-### PR 8: Inference materialization and lifecycle
-
-Tasks:
-
-- materialize accepted candidates into inferred specifications;
-- generate wrappers, manifest exports, help, and mappings;
-- test build, import, command listing, help, and harmless invocation;
-- verify repository-relative runtime path resolution;
-- update user and extension-author documentation.
-
-Exit criteria:
-
-- the empty fixture produces usable commands without authored mappings;
-- the authored fixture remains unchanged and passing.
-
-### PR 9: Remaining inspector hardening
+### PR 8: Remaining inspector hardening
 
 Tasks:
 
@@ -225,6 +218,27 @@ Exit criteria:
 
 - every inspector follows the same failure policy;
 - all supported subsets and recovery behavior have focused tests.
+
+### PR 9: Inference materialization and lifecycle
+
+New inspectors added since PR 5 use the hardened traversal, issue, and
+malformed-input contracts from PR 8 rather than being retrofitted onto them.
+Materializing candidates into a specification is the point where an inspector
+regression would first become visible as a wrong generated command, so it
+comes after the inspectors it depends on are hardened, not before.
+
+Tasks:
+
+- materialize accepted candidates into inferred specifications;
+- generate wrappers, manifest exports, help, and mappings;
+- test build, import, command listing, help, and harmless invocation;
+- verify repository-relative runtime path resolution;
+- update user and extension-author documentation.
+
+Exit criteria:
+
+- the empty fixture produces usable commands without authored mappings;
+- the authored fixture remains unchanged and passing.
 
 ### PR 10: Release-candidate harness
 

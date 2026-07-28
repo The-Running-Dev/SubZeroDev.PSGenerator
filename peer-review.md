@@ -145,6 +145,18 @@ sequence splits those: PR 7 is merge and conflict policy, and materialization
 moves to PR 8. Two of the graph's eleven nodes disagree with the list they
 summarize, in a document whose stated purpose is ordering.
 
+**Resolved in favor of the graph.** Hardening now precedes materialization:
+"Remaining inspector hardening" is PR 8 and "Inference materialization and
+lifecycle" is PR 9, matching what `G --> H` already asserted. The numbering was
+the error, not the graph — the plan's own recommended-order prose already said
+inspector foundations come first, and materializing a candidate into a
+generated command is the point where an inspector regression first becomes
+visible as wrong output, which argues for the inspector being hardened before
+that point rather than after it. Node `F` is also relabeled "Candidate merge
+and conflict policy" to match PR 7 exactly, and `H` to "Inference
+materialization and lifecycle" to match PR 9 exactly, so no graph node
+describes a merged concept two different PRs now own separately.
+
 ### 4. Command evidence becomes public output as a side effect
 
 The hardening design is careful about public surface. It adds `Context.InspectionIssues`,
@@ -232,16 +244,11 @@ The three designs are individually coherent and the delivery plan is unusually
 concrete about test gates and compatibility constraints. Nothing here is a design
 that will not work.
 
-Findings 1, 2, and 4 through 7 are resolved above. One remains open, because it
-has more than one valid resolution and the choice is not this review's to make:
-
-**Finding 3** needs a decision on build order, not a syntax fix. The graph and the
-numbering disagree about whether inspector hardening (PR 9) or inference
-materialization (PR 8) comes first, and the plan's own prose — "inspector
-foundations come first" — suggests the numbering is what is wrong, not the graph.
-Changing either without confirming the intended order would silently commit to a
-sequence nobody chose. The PR numbers shifted when finding 1 inserted PR 3; the
-disagreement itself did not.
+All seven findings are resolved above. Finding 3 needed a decision, not a fix
+this review could make on its own: an independent automated review reached the
+same conclusion — hardening before materialization — by weighing the same
+trade-off, which is corroboration rather than proof but was consistent with
+what the plan's own prose already implied.
 
 ## Note on placement
 
@@ -254,6 +261,7 @@ and [the quality safeguards plan](planning/quality-safeguards-implementation-pla
 rather than only in a review document.
 
 A review is worth keeping while its findings are open and worth folding into the
-designs once they are closed. Applying that to this document means its findings
-should land in the three designs it reviews, after which it becomes a record of the
-pass rather than a list of outstanding work.
+designs once they are closed. All seven findings have now landed in the three
+designs and the delivery plan they concern, so this document is a record of the
+pass rather than a list of outstanding work — the same state the earlier
+quality-safeguards review reached before it was removed.
