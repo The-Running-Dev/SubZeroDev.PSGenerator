@@ -85,6 +85,8 @@ if ($findings.Count -gt 0) {
     throw "PowerShell quality checks failed with $($findings.Count) finding(s)."
 }
 
+& (Join-Path $PSScriptRoot 'Test-RepositoryHygiene.ps1')
+
 Write-Host (
     "PowerShell quality checks passed with PSScriptAnalyzer $requiredAnalyzerVersion " +
     "across $($analysisRoots.Count) owned source roots."

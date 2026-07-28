@@ -83,7 +83,9 @@ default.
 
 The gate pins PSScriptAnalyzer 1.25.0 and analyzes repository-owned PowerShell under
 `src`, `build`, `examples`, `tests`, and `tests-e2e` using
-`.config/PSScriptAnalyzerSettings.psd1`.
+`.config/PSScriptAnalyzerSettings.psd1`. It also runs the repository-hygiene gate,
+which confirms nested `.NET` `bin` and `obj` output is ignored without hiding any
+tracked source path.
 
 After the dependency is installed:
 

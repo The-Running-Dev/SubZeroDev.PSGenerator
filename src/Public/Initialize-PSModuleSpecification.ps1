@@ -62,11 +62,43 @@ function Initialize-PSModuleSpecification {
     if (-not $PSCmdlet.ShouldProcess($specificationPath, 'Create container module specification')) { return }
 
     $definition = Get-PSModuleSpecificationCandidate -DirectoryPath $directoryPath
+    $definition['Id'] = Resolve-PSModuleSpecificationId `
+        -SpecificationPath $specificationPath `
+        -InferredId $definition.Id
     Write-Verbose (
         "Discovered {0} command candidate(s) while initializing '{1}'." -f
         @($definition.Commands).Count,
         $directoryPath
     )
+
+    $collisions = @(
+        Get-PSModuleCommandCollision `
+            -Command @($definition.Commands) `
+            -ModuleName $definition.ModuleName `
+            -SpecificationId $definition.Id
+    )
+    foreach ($collision in $collisions) {
+        $existingIdentities = @(
+            foreach ($existingCommand in $collision.ExistingCommands) {
+                $qualifiedName = if ($existingCommand.ModuleName) {
+                    "$($existingCommand.ModuleName)\$($existingCommand.Name)"
+                }
+                elseif ($existingCommand.Source) {
+                    "$($existingCommand.Source)\$($existingCommand.Name)"
+                }
+                else {
+                    $existingCommand.Name
+                }
+                "$($existingCommand.CommandType) '$qualifiedName'"
+            }
+        )
+        Write-Warning (
+            "Inferred command '$($collision.Name)' from '$($collision.SourcePath)' " +
+            "collides with existing $($existingIdentities -join ', ') and may shadow it " +
+            'after import. Rename the script or author the command explicitly.'
+        )
+    }
+
     $source = ConvertTo-PSModuleSpecificationSource -Specification $definition
     $directory = Split-Path $specificationPath -Parent
     $null = New-Item -Path $directory -ItemType Directory -Force

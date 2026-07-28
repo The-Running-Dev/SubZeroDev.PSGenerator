@@ -6,11 +6,6 @@ name: Container
 
 on:
   pull_request:
-    paths:
-      - 'Dockerfile'
-      - '.dockerignore'
-      - 'src/**'
-      - '.github/workflows/container.yml'
   push:
     branches:
       - main
