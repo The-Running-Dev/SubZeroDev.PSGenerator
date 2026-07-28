@@ -24,6 +24,32 @@ Every inspected input is classified before parsing:
 An inspector must not terminate the whole pipeline for a malformed optional
 input. It also must not silently ignore a malformed authoritative input.
 
+### Issues on the failure path
+
+`Get-PSModuleInspection` returns `Issues` only on success. A plugin that throws
+for an authoritative failure propagates through
+`Invoke-PSModulePluginPipeline` and `Invoke-PSModuleInspection` as an
+exception, so `Get-PSModuleInspection` never returns the result object that
+would have carried `Issues` — a caller catching that exception has no
+documented way to reach the stable code and path the classification table
+above promises. This is true today: `Invoke-PSModulePluginPipeline` already
+wraps every plugin exception in `System.InvalidOperationException` unless
+`$_.Exception.Data['PSModule.PreserveType']` says otherwise, and it collects
+`$Context.PluginExecutions` in a `finally` block regardless of which path is
+taken.
+
+The issue channel follows that existing pattern rather than inventing a
+second return shape. Every issue recorded before the fatal one, plus the
+fatal one itself, is attached to the thrown exception as
+`$_.Exception.Data['PSModule.InspectionIssues']`, an array of the same typed
+records `Issues` would have contained on success. A caller that wants
+structured detail from an authoritative failure reads
+`$_.Exception.Data['PSModule.InspectionIssues']` from the catch block; a
+caller that only wants the message keeps working unchanged, since the
+exception's own message is unaffected. `Get-PSModuleInspection` itself still
+throws rather than returning a partial result — a caller must not mistake
+inspection run against an authoritative failure for a complete one.
+
 ## Structured inspection issues
 
 Plugin execution diagnostics and source-data issues are different concepts. Keep

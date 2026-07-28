@@ -145,6 +145,26 @@ field names and meanings are additive-only once released, and a breaking change
 to an existing field follows the same compatibility bar as any other public
 property of the inspection result.
 
+Because `CommandEvidence` is public the moment an inspector emits it, a secret
+default or configured value must never reach `Value` as a literal, in `Data`,
+in a generated artifact, or anywhere else derived from it. Marking a parameter
+secret happens through its own evidence record — `Property = 'Secret'`,
+`Value = $true` — which does not by itself keep a sibling record's literal
+`Value` out of the public result if that sibling is a different `Property` on
+the same `Subject`, such as a NUKE-configured default. Whether a subject is
+secret is not always knowable to the inspector that reads its literal value:
+the `[Secret]` attribute and the configured default can come from different
+files, inspected by different plugins, in either order.
+
+A redaction pass therefore runs once, after every inspector has finished and
+before `Get-PSModuleInspection` builds its result: for every `Subject` with at
+least one `Secret = $true` record, every other record for that `Subject` whose
+`Property` denotes a literal default or configured value has its `Value`
+replaced with a fixed redaction marker. `Kind`, `SourcePath`, `Confidence`,
+`Authoritative`, and `Inspector` are preserved, so provenance and confidence
+stay inspectable without the literal ever appearing in `Data` or in anything
+serialized from it.
+
 ## Source precedence
 
 For the same property, use this order:
@@ -161,9 +181,14 @@ may authoritatively name a command while C# provides its parameter description.
 
 Equal-precedence incompatible values produce a conflict diagnostic and suppress
 that candidate. A lower-precedence incompatible value produces a warning and is
-retained as provenance, but the higher-precedence value wins. Secrets are never
-downgraded: if any credible source marks a parameter secret, the merged
-parameter is secret.
+retained as provenance, but the higher-precedence value wins — unless the
+lower-precedence value is itself `Authoritative`. An authoritative record's
+disagreement is always a conflict regardless of relative precedence, and
+suppresses the candidate the same as an equal-precedence conflict: precedence
+decides which value wins when sources merely differ in confidence, but it does
+not license silently overriding a source the field table already says
+disagreement must stop inference for. Secrets are never downgraded: if any
+credible source marks a parameter secret, the merged parameter is secret.
 
 ## C# source inspector
 
@@ -288,6 +313,11 @@ Add focused tests for:
 - literal PowerShell exports, dispatch, and `ValidateSet`;
 - precedence and compatible merging;
 - conflict diagnostics and candidate suppression;
+- a lower-precedence but `Authoritative` disagreement suppressing the
+  candidate rather than losing silently to the higher-precedence value;
+- a parameter marked secret by one source having its default or configured
+  value redacted in `Data`, even when that value comes from a different
+  source inspected in either order;
 - deterministic ordering and path normalization;
 - complete inference, generation, import, help, and invocation using a mocked or
   harmless build executable.
@@ -316,6 +346,9 @@ authored-specification behavior.
 - Discovery produces explainable, repository-relative evidence.
 - At least two build commands are inferred without running repository code.
 - Parameters preserve type, help, validation, defaults, and secret handling.
-- Conflicts are visible and never silently choose equal-precedence values.
+- A secret parameter's literal default or configured value never reaches
+  `Data`, a generated artifact, or anything serialized from either.
+- Conflicts are visible and never silently choose equal-precedence values,
+  and an authoritative disagreement is never silently resolved by precedence.
 - Generated wrappers invoke structured static prefixes without absolute paths.
 - Repeated Windows and Linux runs produce equivalent ordered output.

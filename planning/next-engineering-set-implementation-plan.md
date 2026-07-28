@@ -62,15 +62,21 @@ Tasks:
 - add `InspectionIssues` to the build context;
 - add the validated private issue helper;
 - expose `Issues` from `Get-PSModuleInspection`;
+- attach collected issues to a thrown authoritative-failure exception via
+  `.Exception.Data['PSModule.InspectionIssues']`, matching the existing
+  `PSModule.PreserveType` pattern in `Invoke-PSModulePluginPipeline`;
 - add `Get-PSModuleDiagnostic -IncludeIssues`;
 - preserve default plugin-execution diagnostic output;
-- add ordering, redaction, and compatibility tests;
+- add ordering, redaction, and compatibility tests, including a test that
+  catches an authoritative failure and reads issues from `.Exception.Data`;
 - document issue codes and consumer behavior.
 
 Exit criteria:
 
 - existing callers receive the same default diagnostic records;
-- optional issue records are typed, stable, ordered, and tested.
+- optional issue records are typed, stable, ordered, and tested;
+- a caller catching an authoritative failure can read the same typed issue
+  records `Issues` would have returned on success.
 
 ### PR 2: Harden shared traversal
 
@@ -162,12 +168,22 @@ Tasks:
 - discover build entries and `*Params` inheritance;
 - parse XML docs, attributes, defaults, arrays, generics, and nullables;
 - detect cycles and unresolved bases;
-- add provenance and unsupported-subset issues.
+- add provenance and unsupported-subset issues;
+- add the redaction pass that runs once over the complete `CommandEvidence`
+  collection before `Get-PSModuleInspection` builds its result, replacing the
+  `Value` of any default/configured-value record with a fixed marker when its
+  `Subject` has a `Secret = $true` record from any source;
+- add a test where the `[Secret]` attribute and the literal default come from
+  different sources inspected in each order, proving redaction does not
+  depend on inspection order.
 
 Exit criteria:
 
 - representative C# sources produce normalized evidence without compilation;
-- unsupported or malformed optional sources do not erase other evidence.
+- unsupported or malformed optional sources do not erase other evidence;
+- a secret parameter's literal value never reaches `Get-PSModuleInspection`'s
+  `Data`, regardless of which source asserted the value and which asserted
+  the secret classification, or their relative order.
 
 ### PR 6: Generated metadata and PowerShell dispatch
 
@@ -192,6 +208,9 @@ Tasks:
 
 - group evidence by normalized build type;
 - implement property-specific precedence;
+- suppress a candidate whenever any `Authoritative` record disagrees with
+  another, regardless of which one has higher precedence, not only at equal
+  precedence;
 - merge parameters without weakening secret classification;
 - represent static invocation as executable plus argument tokens;
 - emit stable conflict issues;
@@ -201,7 +220,9 @@ Tasks:
 Exit criteria:
 
 - compatible overlaps merge deterministically;
-- incompatible evidence is visible and never silently selected.
+- incompatible evidence is visible and never silently selected;
+- a lower-precedence `Authoritative` disagreement suppresses the candidate
+  instead of losing quietly to the higher-precedence value.
 
 ### PR 8: Remaining inspector hardening
 
@@ -299,6 +320,8 @@ RC documentation phase changes.
 - do not make Docker-BuildAgent or any other external repository a test
   dependency;
 - do not publish artifacts while validating an RC;
+- never let a secret parameter's literal value reach `Get-PSModuleInspection`'s
+  `Data`, a generated artifact, or a thrown exception's message or data;
 - keep each implementation PR independently reviewable.
 
 ## Completion definition
@@ -311,7 +334,11 @@ This engineering set is complete when:
   inferred as a public command, in this and any other repository using script
   inference;
 - malformed optional inputs warn and continue while authoritative inputs fail
-  predictably;
+  predictably, and a caller catching an authoritative failure can still read
+  the structured issues that led to it;
+- an authoritative disagreement is never silently resolved by precedence,
+  and a secret parameter's literal value is never exposed regardless of
+  which source asserted it or when;
 - recursive inspection cannot escape or loop outside its repository;
 - the complete MVP lifecycle passes from a clean hosted runner;
 - a redacted evidence bundle proves the exact source and outputs validated.
