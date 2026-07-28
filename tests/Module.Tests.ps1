@@ -364,6 +364,30 @@ Add-PSModuleInspectionIssue -Context $Context -Severity Error -Code 'PARSE_AAA' 
         }
     }
 
+    It 'orders paths ordinally rather than by culture-sensitive comparison' {
+        Set-Content -LiteralPath (Join-Path $pluginRoot 'Inspectors' '00.First.ps1') -Value @'
+param ([psobject] $Context)
+Add-PSModuleInspectionIssue -Context $Context -Severity Warning -Code 'PARSE_A' -Inspector 'First' -Path 'apple.ps1' -Message 'lowercase leading path'
+Add-PSModuleInspectionIssue -Context $Context -Severity Warning -Code 'PARSE_B' -Inspector 'First' -Path 'Zebra.ps1' -Message 'uppercase leading path'
+'@
+
+        InModuleScope SubZeroDev.PSGenerator -Parameters @{ PluginRoot = $pluginRoot } {
+            param ($PluginRoot)
+            $context = [pscustomobject]@{
+                PluginExecutions = [System.Collections.Generic.List[object]]::new()
+                InspectionIssues = [System.Collections.Generic.List[object]]::new()
+            }
+
+            Invoke-PSModulePluginPipeline -Context $context -Path $PluginRoot | Out-Null
+            $issues = @(Get-PSModuleInspectionIssue -Context $context)
+
+            # Ordinal comparison sorts 'Zebra.ps1' before 'apple.ps1' because uppercase
+            # code points precede lowercase ones. A culture-sensitive, case-insensitive
+            # comparison would put 'apple.ps1' first instead.
+            $issues.Path | Should -Be @('Zebra.ps1', 'apple.ps1')
+        }
+    }
+
     It 'exposes only the documented issue fields' {
         Set-Content -LiteralPath (Join-Path $pluginRoot 'Inspectors' '00.First.ps1') -Value @'
 param ([psobject] $Context)

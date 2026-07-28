@@ -10,13 +10,28 @@ function Get-PSModuleInspectionIssue {
     }
 
     # Order is inspector execution order, then repository-relative path, then code.
-    # AppendIndex is the final tiebreaker so ordering never depends on Sort-Object's
-    # own stability guarantees.
-    $ordered = @($Context.InspectionIssues) | Sort-Object -Property @(
-        @{ Expression = { $_.InspectorExecutionOrder } }
-        @{ Expression = { $_.Path } }
-        @{ Expression = { $_.Code } }
-        @{ Expression = { $_.AppendIndex } }
+    # AppendIndex is a final tiebreaker that also makes every comparison decisive,
+    # so [Array]::Sort's lack of a stability guarantee cannot affect the result.
+    # Path and Code compare ordinally, matching the repository's other cross-host
+    # deterministic sorts (for example Get-PSModulePlugin's filename ordering),
+    # rather than Sort-Object's culture-sensitive, case-insensitive default.
+    $ordered = @($Context.InspectionIssues)
+    [Array]::Sort(
+        $ordered,
+        [System.Collections.Generic.Comparer[object]]::Create({
+            param ($left, $right)
+
+            $comparison = $left.InspectorExecutionOrder.CompareTo($right.InspectorExecutionOrder)
+            if ($comparison -ne 0) { return $comparison }
+
+            $comparison = [System.StringComparer]::Ordinal.Compare($left.Path, $right.Path)
+            if ($comparison -ne 0) { return $comparison }
+
+            $comparison = [System.StringComparer]::Ordinal.Compare($left.Code, $right.Code)
+            if ($comparison -ne 0) { return $comparison }
+
+            return $left.AppendIndex.CompareTo($right.AppendIndex)
+        })
     )
 
     foreach ($issue in $ordered) {
