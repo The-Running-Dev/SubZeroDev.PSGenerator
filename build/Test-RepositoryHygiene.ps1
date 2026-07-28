@@ -12,6 +12,12 @@ param ()
 Set-StrictMode -Version 3.0
 $ErrorActionPreference = 'Stop'
 
+# git check-ignore reports "nothing ignored" as exit code 1, which this script
+# treats as success. Leaving native exit codes out of $ErrorActionPreference keeps
+# that from becoming a terminating error if a caller, or a future default, turns
+# $PSNativeCommandUseErrorActionPreference on.
+$PSNativeCommandUseErrorActionPreference = $false
+
 $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $representativeBuildOutput = @(
     'tests/fixtures/directories/BuildAgent/src/Build/bin/Debug/example.dll'

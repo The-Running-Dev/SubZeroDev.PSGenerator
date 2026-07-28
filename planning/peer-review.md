@@ -124,6 +124,10 @@ That one manipulates a process-wide environment variable and is both necessary a
 correctly written. Only the preference handling should be removed, from the code
 and from the design sentence that requires it.
 
+**Resolved.** The capture and the restore branch are gone, and the two design
+sentences that mandated them now say why the scoped assignment needs neither. The
+`PSModulePath` restore is untouched.
+
 ### 3. The hygiene gate's success path is one preference flip from failing
 
 `Test-RepositoryHygiene.ps1` pipes every tracked path through `git check-ignore
@@ -141,6 +145,9 @@ happy path; this hardens the same insight against a preference the script does n
 control. Set `$PSNativeCommandUseErrorActionPreference = $false` beside the
 existing preferences.
 
+**Resolved.** The preference is now set explicitly, with the reason recorded
+beside it.
+
 ### 4. The quality gate announces success before the check it added runs
 
 `Invoke-Quality.ps1` prints "PowerShell quality checks passed…" and then invokes
@@ -149,6 +156,9 @@ banner immediately followed by a throw.
 
 Either move the invocation above the success message, or fold the hygiene result
 into a single summary written once both gates have passed.
+
+**Resolved.** The invocation now runs before the success message, so the banner
+is only reached once both gates have passed.
 
 ### 5. The protection design names job identifiers where it means display names
 
@@ -163,6 +173,10 @@ values breaks the required check and blocks merging indefinitely.
 
 In a document whose stated purpose is exact naming, this misdirects the precise
 rename it exists to warn about. Correct the sentence to name the display fields.
+
+**Resolved.** The design now names the `name:` values that compose the context and
+states separately that the `verify` keys do not appear in it, so the distinction is
+explicit rather than implied.
 
 ### 6. Two planning documents describe a state that no longer exists
 
@@ -180,6 +194,13 @@ This cuts against the repository's own durable lesson about not writing remember
 values as facts. Mark these sections explicitly as the pre-change state, or restate
 them in the past tense with a pointer to the completion evidence.
 
+**Resolved.** Both sections are restated in the past tense and retitled — "State
+Before Implementation" and "Verified Before Implementation" — each pointing
+forward to the completion evidence. A third passage found while making the change
+was corrected the same way: the design cited pull request #66 in the present tense
+as the planning-only example that reports eight contexts, which stopped being true
+once that pull request grew source and workflow changes.
+
 ### 7. The after-evidence is not comparable to the before-evidence
 
 The implementation plan's administrative task reads "Read back and **diff** the
@@ -195,6 +216,13 @@ settings the design promises to preserve when it requires that the implementatio
 The summary is useful and its `EnforcementValidation` block is the strongest
 evidence in the set. But the diff the task claims cannot be reproduced from the
 archive. Store the raw post-change ruleset document alongside the summary.
+
+**Partly resolved.** The task no longer claims a diff; it records the readback and
+summary that were actually produced, and the completion evidence states plainly
+that until the raw document is archived, preservation of `bypass_actors`,
+`enforcement`, and `conditions` rests on the write rather than on a readback. The
+archive itself remains an open task: reading the ruleset needs administrative API
+access this review had no way to exercise.
 
 ## Missed by this review
 
@@ -217,9 +245,14 @@ on. Clearing the process-wide `PSModulePath` for the duration of the candidate
 loop is real, and is the reason the restore sits in a `finally`; removing the
 mutation entirely would mean giving up the second barrier that keeps `Get-Command`
 from analyzing an installed module, which is a larger change than the exposure
-warrants. The objection to absolute pull-request links is not a rule this
-repository holds: a pull request has no relative form, and `TODO.md` already links
-to one absolutely.
+warrants. The objection to absolute pull-request links does not survive contact
+with the repository: a pull request has no relative form at all, and `README.md`
+and `docs/docs/developing/TODO.md` both link to repository files absolutely by
+deliberate decision, because each is rendered somewhere a relative target would
+not resolve. A later rule violation asking for `planning/` to move under
+`docs/docs/` was declined for the opposite reason to the one it assumed:
+everything under `docs/docs/` is published, and `planning/` exists so that
+material which should not appear on the site has somewhere to live.
 
 ## Assessment
 
@@ -231,6 +264,16 @@ design states explicitly and the implementation could not deliver, with the
 corresponding test case reduced to the half that passes. It is resolved above,
 along with the index staleness the automated review caught.
 
-Findings 3 and 4 are cheap hardening of the new build tooling. Findings 5 through 7
-are accuracy corrections to documents whose entire value is being exact about
-names, state, and evidence. All five remain open.
+Findings 2 through 4 were hardening of the new build tooling and the removal of
+ceremony that implied a hazard which did not exist. Findings 5 and 6 were accuracy
+corrections to documents whose entire value is being exact about names and state.
+All are resolved.
+
+Finding 7 is the one that remains, and only in part. Its documentation half is
+done; archiving the raw post-change ruleset needs administrative API access, and
+is tracked as an open task in the implementation plan.
+
+Two errors in this review were found and corrected while resolving the rest: an
+earlier revision cited `TODO.md` as precedent for absolute internal links, when
+that link points at a different repository, and the assessment counted five open
+findings while listing six.

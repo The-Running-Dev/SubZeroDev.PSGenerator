@@ -47,8 +47,10 @@ Get-Command -Name $name -All -ErrorAction SilentlyContinue
 Import-PowerShellDataFile -LiteralPath $manifestPath
 ```
 
-The implementation must save and restore `PSModuleAutoLoadingPreference` in a
-`finally` block. While performing exact current-session lookups it temporarily
+The implementation assigns `PSModuleAutoLoadingPreference` without a scope
+modifier, which confines it to the detection function. It therefore cannot outlive
+the call and needs no saving or restoring; only `PSModulePath` does, because that
+one is process-wide. While performing exact current-session lookups it temporarily
 removes `PSModulePath`, preventing PowerShell command discovery from analyzing or
 importing an available module despite the preference. It separately inventories
 conventionally located manifests, reads them through the restricted PowerShell
@@ -91,8 +93,8 @@ The detector must:
 `Get-Command` can auto-load a matching installed module even when
 `-ListImported` is used. Import-time code would then execute merely to produce an
 advisory warning. Detection prevents that by setting
-`PSModuleAutoLoadingPreference` to `None` only around the session lookup and
-restoring its previous value in `finally`.
+`PSModuleAutoLoadingPreference` to `None` in its own scope for the duration of the
+session lookup, which leaves the caller's preference untouched.
 
 Literal module-manifest data supplies the second source. For example,
 `Microsoft.PowerShell.Utility` declares `ConvertTo-Json`, so the common collision

@@ -194,10 +194,9 @@ function Get-PSModuleCommandCollision {
         $availableCommandIndex = $cacheVariable.Value.Index
     }
 
-    $localPreference = Get-Variable `
-        -Name 'PSModuleAutoLoadingPreference' `
-        -Scope Local `
-        -ErrorAction SilentlyContinue
+    # Assigning the preference without a scope modifier confines it to this
+    # function, so it cannot outlive the call and needs no restoration. Clearing
+    # PSModulePath does need one: that is process-wide state.
     $originalModulePath = $env:PSModulePath
     try {
         $PSModuleAutoLoadingPreference = 'None'
@@ -277,17 +276,5 @@ function Get-PSModuleCommandCollision {
     }
     finally {
         $env:PSModulePath = $originalModulePath
-        if ($null -eq $localPreference) {
-            Remove-Variable `
-                -Name 'PSModuleAutoLoadingPreference' `
-                -Scope Local `
-                -ErrorAction SilentlyContinue
-        }
-        else {
-            Set-Variable `
-                -Name 'PSModuleAutoLoadingPreference' `
-                -Value $localPreference.Value `
-                -Scope Local
-        }
     }
 }

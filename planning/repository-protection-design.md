@@ -12,28 +12,33 @@ Make the existing quality gates enforceable on `main` and preserve automatic
 merged-branch cleanup, without creating required checks that some pull requests
 can never satisfy.
 
-## Current State
+## State Before Implementation
 
-The repository-level `Main` ruleset is active for the default branch. It currently:
+This section records the repository as it stood when the design was written. The
+required-check rule described below has since been added; see the
+[implementation plan](quality-safeguards-implementation-plan.md) for what the
+ruleset carries now.
 
-- blocks branch deletion and non-fast-forward pushes;
-- requires pull requests;
-- requires review-thread resolution;
-- permits squash and rebase merges; and
-- has no bypass actors.
+The repository-level `Main` ruleset was active for the default branch. It:
 
-It does not require status checks.
+- blocked branch deletion and non-fast-forward pushes;
+- required pull requests;
+- required review-thread resolution;
+- permitted squash and rebase merges; and
+- had no bypass actors.
 
-`delete_branch_on_merge` has since been enabled by the repository owner, ahead of
-the administrative step and independently of the ruleset. A live API readback
-confirms it is `true`. Repository merge settings also confirm merge commits are
-disabled while squash and rebase are enabled.
+It did not require status checks.
 
-The live ruleset is repository ruleset `Main`, ID `19771450`. It targets the
-default branch, has active enforcement and no bypass actors, and contains
-deletion, non-fast-forward, and pull-request rules. It still has no required
-status-check rule. Export the complete document again immediately before any
-write so a concurrent settings change is not overwritten.
+`delete_branch_on_merge` had already been enabled by the repository owner, ahead
+of the administrative step and independently of the ruleset. A live API readback
+confirmed it was `true`. Repository merge settings also confirmed merge commits
+were disabled while squash and rebase were enabled.
+
+The live ruleset was repository ruleset `Main`, ID `19771450`. It targeted the
+default branch, had active enforcement and no bypass actors, and contained
+deletion, non-fast-forward, and pull-request rules, with no required status-check
+rule. The complete document was to be exported again immediately before any write,
+so a concurrent settings change could not be overwritten.
 
 Six jobs in `.github/workflows/test.yml` run for every pull request. Two of them
 are matrixed over Windows and Linux, so they report eight check contexts:
@@ -56,21 +61,28 @@ GitHub does not create a check context when a workflow is excluded by an event
 path filter. Requiring either path-filtered context now would leave unrelated pull
 requests permanently waiting for a check that will never exist.
 
-This is observed, not inferred. Pull request #66 changes only `TODO-Next.md` and
-`planning/`, and reports exactly the eight `test.yml` contexts; neither
-path-filtered context appears. Pull request #62 touches `src/`, `docs/`, and
-`README.md`, and reports all ten, with the names above matching character for
-character, including the `caller / job` prefix on the documentation context.
+This was observed, not inferred. At the time of this reading, pull request #66
+changed only `TODO-Next.md` and `planning/`, and reported exactly the eight
+`test.yml` contexts; neither path-filtered context appeared. Pull request #62
+touched `src/`, `docs/`, and `README.md`, and reported all ten, with the names
+above matching character for character, including the `caller / job` prefix on the
+documentation context. Pull request #66 has since grown source and workflow
+changes, so it no longer demonstrates the path-filtered case.
 
-Pull request #62 also shows `Deploy documentation` present as a check context with
-conclusion `skipped`, which is why it stays out of the required set: a rule should
-not depend on how a skipped conclusion is counted.
+Pull request #62 also showed `Deploy documentation` present as a check context
+with conclusion `skipped`, which is why it stays out of the required set: a rule
+should not depend on how a skipped conclusion is counted.
 
-Context ten is the fragile one. Its name is composed from two job names in two
-files — `verify` in `docs.yml` and `verify` in `docs-ci.yml` — so renaming either
-changes the reported context. The old required name would then remain expected and
-block merging indefinitely. Renaming either job means updating the ruleset in the
-same change.
+Context ten is the fragile one. Its name is composed from the `name:` fields of
+two jobs in two files — `Verify documentation` in `docs.yml` and `Verify
+Documentation Build` in `docs-ci.yml` — so editing either value changes the
+reported context. The old required name would then remain expected and block
+merging indefinitely.
+
+The job keys are `verify` in both files, and they do not appear in the context at
+all: renaming a key changes nothing, while renaming the `name:` beside it breaks
+the required check. Editing either `name:` means updating the ruleset in the same
+change.
 
 ## Design
 

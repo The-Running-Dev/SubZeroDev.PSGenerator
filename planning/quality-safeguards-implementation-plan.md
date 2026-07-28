@@ -51,7 +51,14 @@ Tasks:
 - [x] Enable strict required-check freshness.
 - [x] Preserve deletion, non-fast-forward, pull-request, review-thread, merge-method,
   condition, and bypass settings.
-- [x] Read back and diff the resulting repository and ruleset configuration.
+- [x] Read back the resulting repository and ruleset configuration and record the
+  required contexts, integration ID, strict freshness, preserved rule types, and
+  pull-request parameters as a summary.
+- [ ] Archive the complete post-change ruleset document beside that summary. The
+  summary is not comparable with the pre-change archive, which is the full API
+  response, so the two cannot be diffed. `bypass_actors`, `enforcement`, and
+  `conditions` are absent from the summary and are exactly the settings this
+  change promises to preserve.
 - [x] Validate pending-check blocking and successful-check release on PR #66.
 - [ ] Confirm automatic remote branch deletion after PR #66 is eventually merged.
 
@@ -138,31 +145,32 @@ availability run to expose and pass all ten contexts.
 | Build-output hygiene | `git check-ignore`, fixture build, clean status | Existing quality and Pester jobs |
 | Collision warnings | Focused and full Pester suites | Windows and Linux Pester jobs |
 
-## Already Verified
+## Verified Before Implementation
 
-Checked against the repository before implementation, so it does not need
-rediscovering:
+Checked against the repository before implementation, so it did not need
+rediscovering. Recorded in the past tense because the repository has since
+changed; see Completion Evidence for the state that followed.
 
 - The path-filter premise, from real check runs. A planning-only pull request
-  reports eight contexts; a pull request touching `src/`, `docs/`, and `README.md`
-  reports all ten, matching the recorded names exactly.
+  reported eight contexts; a pull request touching `src/`, `docs/`, and
+  `README.md` reported all ten, matching the recorded names exactly.
 - The two `.gitignore` patterns, through a temporary excludes file. No tracked
-  path becomes ignored.
+  path became ignored.
 - The collision mechanics. `convertto-json.ps1` infers `ConvertTo-Json`, and
   the manifest for `Microsoft.PowerShell.Utility` declares
-  `ConvertTo-Json`, which supplies every field the warning text needs without
+  `ConvertTo-Json`, which supplied every field the warning text needs without
   analyzing or importing the module.
 - The warning site. `Initialize-PSModuleDirectory` delegates to
   `Initialize-PSModuleSpecification`, so one call site covers both entry points.
 - The documentation base image is publicly readable. An anonymous registry token
-  reads its manifest, while the same request for an inaccessible package is
+  read its manifest, while the same request for an inaccessible package was
   refused. Fork pull requests are not blocked by it.
 
-The live API readback confirms ruleset `Main` (ID `19771450`) contains deletion,
+The live API readback confirmed ruleset `Main` (ID `19771450`) contained deletion,
 non-fast-forward, and pull-request rules with no bypass actors and no required
-checks. It also confirms `delete_branch_on_merge = true`, merge commits disabled,
-and squash and rebase enabled. Archive the ruleset again immediately before
-writing so concurrent changes cannot be lost.
+checks. It also confirmed `delete_branch_on_merge = true`, merge commits disabled,
+and squash and rebase enabled. The ruleset was to be archived again immediately
+before writing, so concurrent changes could not be lost.
 
 ## Completion Evidence
 
@@ -172,3 +180,12 @@ Ruleset `Main` remains ID `19771450`; its before/after API evidence is archived
 under [`planning/evidence`](evidence/). The hosted implementation run exposed
 and passed all ten required contexts on Windows and Linux. Automatic branch
 deletion can only be observed after the draft PR is reviewed and merged.
+
+The two archived artifacts are not of the same kind.
+`main-ruleset-before-required-checks.json` is the complete API response;
+`main-ruleset-after-required-checks.json` is a summary, and its
+`EnforcementValidation` block — pending checks producing `BLOCKED`, ten successful
+checks producing `CLEAN` — is the strongest evidence in the set. Until the raw
+post-change document is archived beside it, preservation of `bypass_actors`,
+`enforcement`, and `conditions` rests on the write having sent the existing rules
+back unchanged, not on a readback that shows it.
