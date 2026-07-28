@@ -62,6 +62,9 @@ function Initialize-PSModuleSpecification {
     if (-not $PSCmdlet.ShouldProcess($specificationPath, 'Create container module specification')) { return }
 
     $definition = Get-PSModuleSpecificationCandidate -DirectoryPath $directoryPath
+    $definition['Id'] = Resolve-PSModuleSpecificationId `
+        -SpecificationPath $specificationPath `
+        -InferredId $definition.Id
     Write-Verbose (
         "Discovered {0} command candidate(s) while initializing '{1}'." -f
         @($definition.Commands).Count,

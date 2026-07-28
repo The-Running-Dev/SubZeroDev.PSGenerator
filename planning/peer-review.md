@@ -93,6 +93,17 @@ Resolve by choosing one:
 The second is smaller and honest. The first is a change to a value written into
 every generated manifest, so it is a contract decision rather than a fix.
 
+**Resolved.** The automated review reached the same conclusion independently, and
+the first option was taken. The inferred identity is now the module name followed
+by a random suffix minted once when the specification is first written, and
+initialization reuses whatever valid `Id` an existing specification already
+records. Refreshing therefore keeps its identity and stays byte-identical, while
+two directories inferring the same module name receive different identities and
+warn about each other. A random suffix keeps the documented promise that the
+provenance carries no source-directory path or machine-specific value, so a
+repository cloned elsewhere still generates the same manifest. Test items 11 and
+12 cover both halves.
+
 ### 2. The auto-loading preference save and restore is dead ceremony
 
 `Get-PSModuleCommandCollision.ps1` reads `PSModuleAutoLoadingPreference` through
@@ -185,16 +196,41 @@ The summary is useful and its `EnforcementValidation` block is the strongest
 evidence in the set. But the diff the task claims cannot be reproduced from the
 archive. Store the raw post-change ruleset document alongside the summary.
 
+## Missed by this review
+
+Recorded so the gap in this pass is visible rather than quietly absorbed.
+
+The automated review found a staleness bug this review did not report. The parsed
+available-command index was cached against the `PSModulePath` string alone and
+held in module scope, so a module installed, removed, or edited beneath a root
+that did not itself change left the diagnostics reporting the previous state for
+the life of the session — newly available collisions missed, withdrawn exports
+still warned about.
+
+It is now cached against the full path, length, and write time of the manifests it
+was built from. Locating those files is cheap and parsing them is not, so the
+inventory runs every call while only the expensive step is cached. Test item 13
+covers it.
+
+Two further observations from the automated review were considered and not acted
+on. Clearing the process-wide `PSModulePath` for the duration of the candidate
+loop is real, and is the reason the restore sits in a `finally`; removing the
+mutation entirely would mean giving up the second barrier that keeps `Get-Command`
+from analyzing an installed module, which is a larger change than the exposure
+warrants. The objection to absolute pull-request links is not a rule this
+repository holds: a pull request has no relative form, and `TODO.md` already links
+to one absolutely.
+
 ## Assessment
 
 None of these is a live defect. The hosted run is green on all ten required
 contexts, and the safeguards do what the pull request says they do.
 
-Finding 1 is the only one with behavioral consequence: a safety property the
-design states explicitly and the implementation cannot deliver, with the
-corresponding test case reduced to the half that passes. It should be settled
-before merge, because it decides what goes into every generated manifest.
+Finding 1 was the only one with behavioral consequence: a safety property the
+design states explicitly and the implementation could not deliver, with the
+corresponding test case reduced to the half that passes. It is resolved above,
+along with the index staleness the automated review caught.
 
 Findings 3 and 4 are cheap hardening of the new build tooling. Findings 5 through 7
 are accuracy corrections to documents whose entire value is being exact about
-names, state, and evidence.
+names, state, and evidence. All five remain open.

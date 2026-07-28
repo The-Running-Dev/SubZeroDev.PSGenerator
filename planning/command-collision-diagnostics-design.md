@@ -51,9 +51,17 @@ The implementation must save and restore `PSModuleAutoLoadingPreference` in a
 `finally` block. While performing exact current-session lookups it temporarily
 removes `PSModulePath`, preventing PowerShell command discovery from analyzing or
 importing an available module despite the preference. It separately inventories
-conventionally located manifests once per `PSModulePath`, reads them through the
-restricted PowerShell data-file reader, and caches their literal
-`FunctionsToExport`, `CmdletsToExport`, and `AliasesToExport` values. Loaded
+conventionally located manifests, reads them through the restricted PowerShell
+data-file reader, and caches their literal `FunctionsToExport`,
+`CmdletsToExport`, and `AliasesToExport` values.
+
+Locating those manifests is cheap and parsing them is not, so the inventory runs
+on every call while the parsed index is cached against the full path, length, and
+write time of the files it was built from. Keying the cache on the `PSModulePath`
+string alone would go stale for the life of the session: a module installed,
+removed, or edited beneath a root that did not itself change would leave the
+diagnostics reporting the previous state. `PSModulePath` needs no separate key,
+because changing it changes the discovered file set. Loaded
 functions, aliases, cmdlets, applications, and installed manifests differ by host.
 Warnings can therefore vary by environment, but the generated specification must
 not.
@@ -115,6 +123,26 @@ different specification ID, or a legacy generated manifest without provenance
 still warns. A legacy generated module can warn once during its first refresh;
 the newly generated manifest then carries the marker required for quiet future
 refreshes.
+
+The specification ID has to carry identity the module name does not, so an
+inferred ID derived from the module name alone is not sufficient. Two unrelated
+directories with the same name would infer the same ID, and each would suppress
+the other's collisions — the failure this section exists to prevent, reachable
+through the ordinary path rather than a contrived one.
+
+The inferred ID is therefore the module name followed by a random suffix minted
+once, when the specification is first written. Initialization reuses whatever
+valid `Id` an existing specification already records, so:
+
+- refreshing a directory keeps its identity and stays byte-identical;
+- a generated module still matches its own earlier build and stays quiet;
+- two directories inferring the same module name receive different identities
+  and warn about each other; and
+- an explicitly authored `Id` is preserved rather than replaced.
+
+A random suffix keeps the provenance free of any source-directory path or other
+machine-specific value, so a repository cloned to a different location still
+generates the same manifest.
 
 ### Behavior
 
@@ -193,7 +221,12 @@ Add cross-platform Pester coverage that:
 9. proves an unmarked or differently identified same-name module still warns; and
 10. places a synthetic module with import-time sentinel code on `PSModulePath`,
     discovers its explicitly declared command, and proves the module was not
-    imported and the sentinel did not run.
+    imported and the sentinel did not run;
+11. proves a refresh preserves the identity the specification already records;
+12. proves two directories inferring the same module name receive different
+    identities and warn about each other; and
+13. proves a manifest installed beneath an unchanged module root between two
+    calls is discovered rather than served from a stale index.
 
 Cover the helper's identity-formatting and no-collision branches directly. The
 Pester job enforces `MINIMUM_PACKAGED_COVERAGE_PERCENT` on both command and line

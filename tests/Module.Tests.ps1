@@ -3879,6 +3879,132 @@ Export-ModuleMember -Function Invoke-ProvenanceCollision
             Remove-Module ProvenanceCollisionDirectory -Force -ErrorAction SilentlyContinue
         }
     }
+
+    It 'keeps one durable specification identity across refreshes' {
+        $directoryPath = Join-Path $TestDrive 'IdentityRefreshDirectory'
+        $scriptsPath = New-Item `
+            -Path (Join-Path $directoryPath 'scripts') `
+            -ItemType Directory `
+            -Force
+        Set-Content `
+            -LiteralPath (Join-Path $scriptsPath 'identity-refresh.ps1') `
+            -Value 'param()'
+
+        $specification = Initialize-PSModuleSpecification `
+            -Directory $directoryPath `
+            -PassThru `
+            -WarningAction SilentlyContinue
+        $firstId = (Import-PowerShellDataFile -LiteralPath $specification.FullName).Id
+
+        Initialize-PSModuleSpecification `
+            -Directory $directoryPath `
+            -Force `
+            -WarningAction SilentlyContinue
+        $secondId = (Import-PowerShellDataFile -LiteralPath $specification.FullName).Id
+
+        $firstId | Should -Match '^directory\.identityrefreshdirectory\.[0-9a-f]{32}$'
+        $secondId | Should -BeExactly $firstId
+    }
+
+    It 'warns when a same-name module was generated from a different directory' {
+        $firstDirectory = Join-Path $TestDrive 'first' 'SharedNameDirectory'
+        $secondDirectory = Join-Path $TestDrive 'second' 'SharedNameDirectory'
+        foreach ($directoryPath in @($firstDirectory, $secondDirectory)) {
+            $scriptsPath = New-Item `
+                -Path (Join-Path $directoryPath 'scripts') `
+                -ItemType Directory `
+                -Force
+            Set-Content `
+                -LiteralPath (Join-Path $scriptsPath 'shared-name-collision.ps1') `
+                -Value 'param()'
+        }
+
+        $null = Initialize-PSModuleDirectory -Directory $firstDirectory
+        try {
+            $firstId = (Import-PowerShellDataFile -LiteralPath (
+                Join-Path $firstDirectory 'PSModule' 'PSModule.psd1'
+            )).Id
+
+            $warnings = @()
+            Initialize-PSModuleSpecification `
+                -Directory $secondDirectory `
+                -WarningVariable warnings `
+                -WarningAction SilentlyContinue
+            $secondId = (Import-PowerShellDataFile -LiteralPath (
+                Join-Path $secondDirectory 'PSModule' 'PSModule.psd1'
+            )).Id
+
+            $secondId | Should -Not -BeExactly $firstId
+            $warnings.Count | Should -Be 1
+            $warnings[0].Message |
+                Should -Match 'SharedNameDirectory\\Invoke-SharedNameCollision'
+        }
+        finally {
+            Remove-Module SharedNameDirectory -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'discovers a manifest installed beneath an unchanged module root' {
+        $modulePathRoot = New-Item `
+            -Path (Join-Path $TestDrive 'CacheModules') `
+            -ItemType Directory `
+            -Force
+        $directoryPath = Join-Path $TestDrive 'CacheCollisionDirectory'
+        $scriptsPath = New-Item `
+            -Path (Join-Path $directoryPath 'scripts') `
+            -ItemType Directory `
+            -Force
+        Set-Content `
+            -LiteralPath (Join-Path $scriptsPath 'cache-collision-fixture.ps1') `
+            -Value 'param()'
+
+        $originalModulePath = $env:PSModulePath
+        try {
+            $env:PSModulePath = @(
+                $modulePathRoot.FullName
+                $originalModulePath
+            ) -join [IO.Path]::PathSeparator
+
+            $beforeWarnings = @()
+            Initialize-PSModuleSpecification `
+                -Directory $directoryPath `
+                -WarningVariable beforeWarnings `
+                -WarningAction SilentlyContinue
+
+            # Installed after the first lookup cached its index, without changing
+            # PSModulePath itself.
+            $installedModulePath = New-Item `
+                -Path (Join-Path $modulePathRoot.FullName 'CacheCollisionModule') `
+                -ItemType Directory `
+                -Force
+            Set-Content `
+                -LiteralPath (Join-Path $installedModulePath 'CacheCollisionModule.psd1') `
+                -Value @'
+@{
+    ModuleVersion = '1.0.0'
+    FunctionsToExport = @('Invoke-CacheCollisionFixture')
+    CmdletsToExport = @()
+    VariablesToExport = @()
+    AliasesToExport = @()
+}
+'@
+
+            $afterWarnings = @()
+            Initialize-PSModuleSpecification `
+                -Directory $directoryPath `
+                -Force `
+                -WarningVariable afterWarnings `
+                -WarningAction SilentlyContinue
+
+            $beforeWarnings.Count | Should -Be 0
+            $afterWarnings.Count | Should -Be 1
+            $afterWarnings[0].Message |
+                Should -Match 'CacheCollisionModule\\Invoke-CacheCollisionFixture'
+        }
+        finally {
+            $env:PSModulePath = $originalModulePath
+        }
+    }
 }
 
 Describe 'Generated documentation drift' {

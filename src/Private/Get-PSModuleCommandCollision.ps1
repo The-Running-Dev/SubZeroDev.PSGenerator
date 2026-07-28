@@ -59,7 +59,73 @@ function Get-PSModuleCommandCollision {
         }
     }
 
-    $cacheKey = [string] $env:PSModulePath
+    # Locating the manifests is cheap; parsing them is not. The inventory therefore
+    # runs on every call and the parsed index is cached against the state of the
+    # files it was built from, so installing, removing, or editing a module beneath
+    # an unchanged PSModulePath root cannot leave the diagnostics stale.
+    $moduleRoots = @(
+        foreach ($moduleRoot in (
+            $env:PSModulePath -split [IO.Path]::PathSeparator |
+                Where-Object { $_ } |
+                Sort-Object -Unique
+        )) {
+            try {
+                if (Test-Path `
+                    -LiteralPath $moduleRoot `
+                    -PathType Container `
+                    -ErrorAction Stop) {
+                    $moduleRoot
+                }
+            }
+            catch [System.UnauthorizedAccessException] {
+                continue
+            }
+            catch [System.IO.IOException] {
+                continue
+            }
+        }
+    )
+    $manifestFiles = @(
+        foreach ($moduleRoot in $moduleRoots) {
+            foreach ($moduleDirectory in @(
+                Get-ChildItem `
+                    -LiteralPath $moduleRoot `
+                    -Directory `
+                    -ErrorAction SilentlyContinue
+            )) {
+                $directManifest = Join-Path `
+                    $moduleDirectory.FullName `
+                    "$($moduleDirectory.Name).psd1"
+                if (Test-Path -LiteralPath $directManifest -PathType Leaf) {
+                    Get-Item -LiteralPath $directManifest
+                }
+
+                foreach ($versionDirectory in @(
+                    Get-ChildItem `
+                        -LiteralPath $moduleDirectory.FullName `
+                        -Directory `
+                        -ErrorAction SilentlyContinue
+                )) {
+                    $versionManifest = Join-Path `
+                        $versionDirectory.FullName `
+                        "$($moduleDirectory.Name).psd1"
+                    if (Test-Path -LiteralPath $versionManifest -PathType Leaf) {
+                        Get-Item -LiteralPath $versionManifest
+                    }
+                }
+            }
+        }
+    )
+    $orderedManifests = @($manifestFiles | Sort-Object FullName -Unique)
+
+    # Full path, length, and write time together detect an added, removed,
+    # replaced, or edited manifest. PSModulePath needs no separate key: changing
+    # it changes the discovered file set.
+    $cacheKey = (
+        $orderedManifests | ForEach-Object {
+            '{0}|{1}|{2:o}' -f $_.FullName, $_.Length, $_.LastWriteTimeUtc
+        }
+    ) -join "`n"
     $cacheVariable = Get-Variable `
         -Name 'PSModuleAvailableCommandCache' `
         -Scope Script `
@@ -70,61 +136,7 @@ function Get-PSModuleCommandCollision {
                 [System.StringComparer]::OrdinalIgnoreCase
             )
 
-        $moduleRoots = @(
-            foreach ($moduleRoot in (
-                $env:PSModulePath -split [IO.Path]::PathSeparator |
-                    Where-Object { $_ } |
-                    Sort-Object -Unique
-            )) {
-                try {
-                    if (Test-Path `
-                        -LiteralPath $moduleRoot `
-                        -PathType Container `
-                        -ErrorAction Stop) {
-                        $moduleRoot
-                    }
-                }
-                catch [System.UnauthorizedAccessException] {
-                    continue
-                }
-                catch [System.IO.IOException] {
-                    continue
-                }
-            }
-        )
-        $manifestFiles = @(
-            foreach ($moduleRoot in $moduleRoots) {
-                foreach ($moduleDirectory in @(
-                    Get-ChildItem `
-                        -LiteralPath $moduleRoot `
-                        -Directory `
-                        -ErrorAction SilentlyContinue
-                )) {
-                    $directManifest = Join-Path `
-                        $moduleDirectory.FullName `
-                        "$($moduleDirectory.Name).psd1"
-                    if (Test-Path -LiteralPath $directManifest -PathType Leaf) {
-                        Get-Item -LiteralPath $directManifest
-                    }
-
-                    foreach ($versionDirectory in @(
-                        Get-ChildItem `
-                            -LiteralPath $moduleDirectory.FullName `
-                            -Directory `
-                            -ErrorAction SilentlyContinue
-                    )) {
-                        $versionManifest = Join-Path `
-                            $versionDirectory.FullName `
-                            "$($moduleDirectory.Name).psd1"
-                        if (Test-Path -LiteralPath $versionManifest -PathType Leaf) {
-                            Get-Item -LiteralPath $versionManifest
-                        }
-                    }
-                }
-            }
-        )
-
-        foreach ($manifestFile in $manifestFiles | Sort-Object FullName -Unique) {
+        foreach ($manifestFile in $orderedManifests) {
             try {
                 $manifest = Import-PowerShellDataFile `
                     -LiteralPath $manifestFile.FullName `

@@ -98,6 +98,12 @@ Tasks:
 - [x] Cover the helper's identity-formatting and no-collision branches so the
   packaged coverage gate does not regress.
 - [x] Update script-inference and troubleshooting documentation.
+- [x] Give the inferred specification a durable random identity, preserved across
+  refreshes, so two directories inferring the same module name stay
+  distinguishable.
+- [x] Cache the parsed manifest index against manifest path, length, and write
+  time rather than the `PSModulePath` string, so an installed, removed, or edited
+  module is not missed for the life of the session.
 
 Exit criteria:
 
