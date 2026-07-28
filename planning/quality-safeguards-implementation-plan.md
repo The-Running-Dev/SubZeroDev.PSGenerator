@@ -52,7 +52,7 @@ Tasks:
 - [x] Preserve deletion, non-fast-forward, pull-request, review-thread, merge-method,
   condition, and bypass settings.
 - [x] Read back and diff the resulting repository and ruleset configuration.
-- [ ] Validate pending-check blocking and successful-check release on PR #66.
+- [x] Validate pending-check blocking and successful-check release on PR #66.
 - [ ] Confirm automatic remote branch deletion after PR #66 is eventually merged.
 
 Exit criteria:
