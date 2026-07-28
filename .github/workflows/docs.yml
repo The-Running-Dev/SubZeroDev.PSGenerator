@@ -7,13 +7,6 @@ name: Docs
 
 on:
   pull_request:
-    paths:
-      - '.github/workflows/docs.yml'
-      - '.github/workflows/docs-ci.yml'
-      - '.github/workflows/docs-deploy.yml'
-      - 'docs/**'
-      - 'docs.ps1'
-      - 'README.md'
   push:
     branches:
       - main
