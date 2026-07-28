@@ -6,9 +6,12 @@ Proposed.
 
 ## Objective
 
-Warn when an inferred command will shadow a command already discoverable in the
+Warn when an inferred command will shadow a command already resolvable from the
 current PowerShell session, while preserving the inferred specification and all
 deterministic generation contracts.
+
+"Resolvable from" is wider than "loaded in": detection deliberately reaches
+installed modules the session has not imported yet. See Module auto-loading.
 
 ## Current Behavior
 
@@ -119,6 +122,10 @@ formatting. Keep `Initialize-PSModuleSpecification` responsible for emitting
 warnings. This separates host discovery from specification inference and makes
 the behavior directly testable.
 
+The helper takes the candidate commands and the candidate `ModuleName`, so it can
+apply the self-collision exclusion above without reaching back into the
+specification.
+
 The helper returns data; it does not call `Write-Warning`. Suggested fields:
 
 - `Name`
@@ -158,12 +165,16 @@ advisory semantics, and explicit-authoring escape hatch.
 - Common collisions are visible before module import.
 - Initialization remains successful and deterministic.
 - No directory-provided script or module is imported to detect collisions.
+- Refreshing a directory whose own generated module is loaded warns about nothing.
 - Warning behavior passes on Windows and Linux PowerShell 7.4.
 
 ## Non-goals
 
 - Preventing all PowerShell command precedence changes.
 - Renaming commands automatically.
+- Suppressing module auto-loading during detection, or otherwise making the
+  lookup free of side effects.
+- Warning during `-WhatIf`.
 - Treating environment-specific warnings as persistent inspection diagnostics.
 - Detecting collisions between authored commands already accepted by specification
   validation.

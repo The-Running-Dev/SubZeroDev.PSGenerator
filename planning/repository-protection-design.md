@@ -20,8 +20,15 @@ The repository-level `Main` ruleset is active for the default branch. It current
 - permits squash and rebase merges; and
 - has no bypass actors.
 
-It does not require status checks. Repository setting
-`delete_branch_on_merge` is `false`.
+It does not require status checks. Repository setting `delete_branch_on_merge` is
+reported as `false`.
+
+Both of those are from the settings interface rather than an API export, and the
+observed branch behavior does not entirely agree: after the recent cleanup, #62's
+head branch went automatically while `feature/replace-docs-workflow` remained.
+Treat this section as the working assumption. The archived export in the
+administrative step is what confirms it, and it must be read before anything is
+written.
 
 Six jobs in `.github/workflows/test.yml` run for every pull request. Two of them
 are matrixed over Windows and Linux, so they report eight check contexts:
@@ -122,7 +129,6 @@ Use a temporary pull request whose files do not match the former container or
 documentation path filters. Confirm:
 
 - all ten contexts are created;
-- the documentation base image is pullable without repository secrets;
 - the branch is blocked while a required context is pending or failing;
 - the branch becomes mergeable when all ten pass;
 - review-thread resolution remains required;
@@ -132,6 +138,11 @@ documentation path filters. Confirm:
 Read the repository and ruleset back through the GitHub API and compare them with
 the archived pre-change document. The only expected setting changes are the new
 required-check rule and `delete_branch_on_merge = true`.
+
+The fork path cannot be exercised this way. A temporary pull request from this
+repository carries `secrets.REGISTRY_TOKEN`, so it proves nothing about a fork.
+Check the package's visibility directly instead — an anonymous pull of
+`ghcr.io/the-running-dev/docs-template`, or the package settings page.
 
 ## Rollback
 

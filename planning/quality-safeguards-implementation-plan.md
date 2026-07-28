@@ -120,7 +120,7 @@ must wait for PR 1.
 
 | Workstream | Local validation | Hosted validation |
 | --- | --- | --- |
-| Workflow availability | Workflow syntax and path review | All ten checks appear and pass |
+| Workflow availability | Workflow syntax and path review | All ten checks appear and pass; base image pullable anonymously |
 | Repository settings | API readback and JSON diff | Required-check block/pass exercise |
 | Build-output hygiene | `git check-ignore`, fixture build, clean status | Existing quality and Pester jobs |
 | Collision warnings | Focused and full Pester suites | Windows and Linux Pester jobs |
@@ -142,7 +142,8 @@ rediscovering:
   `Initialize-PSModuleSpecification`, so one call site covers both entry points.
 
 Still unverified: the current `Main` ruleset contents and
-`delete_branch_on_merge`. Both need the administrative export in the step below.
+`delete_branch_on_merge`. Both need the administrative export above, which is why
+that step exports before it writes.
 
 ## Completion Evidence
 
