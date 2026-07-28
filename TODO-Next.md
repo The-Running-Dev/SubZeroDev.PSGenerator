@@ -25,6 +25,9 @@ Also worth deciding then: whether the image should carry `:1.0.0` alongside
 
 Small, concrete, and each one is a thing that can silently rot.
 
+The first three gaps are designed and sequenced in
+[`planning/quality-safeguards-implementation-plan.md`](planning/quality-safeguards-implementation-plan.md).
+
 - **No status check is required on `main`.** The `Main` ruleset now protects the
   branch — a pull request is required, force pushes and deletion are blocked,
   admins are included, review threads must be resolved, and merges are squash or
