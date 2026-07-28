@@ -50,7 +50,11 @@ execution order, then repository-relative path, then code.
 `Get-PSModuleDiagnostic` retains its current default plugin-execution output and
 gains an `-IncludeIssues` switch. This avoids silently changing the public output
 shape for existing callers. When requested, issue records use a distinct
-`SubZeroDev.PSGenerator.InspectionIssueDiagnostic` type.
+`SubZeroDev.PSGenerator.InspectionIssueDiagnostic` type, emitted after every
+plugin-execution record in the same stream. A caller distinguishes the two by
+type rather than by position, but the fixed order means issues can always be
+read as commentary on a complete execution list rather than interleaved with
+it.
 
 Warnings should be visible during interactive inspection once, while structured
 issues remain available for automation. Tests should avoid depending on rendered

@@ -95,6 +95,14 @@ The fixture must include:
 `Update-ModuleParameters.ps1` is reference behavior and a test oracle. Discovery
 must not invoke it.
 
+Tests must copy the fixture into `$TestDrive` before running inference against
+it, the way the existing inspector tests already do. This fixture is the first
+one designed to be written into rather than only read: inference materializes
+commands into a specification that starts empty. Generating in place against the
+checked-in copy would both modify a tracked file and, since specification
+initialization now mints a random identity for any specification that does not
+already record a valid one, produce different content on every run.
+
 ## Evidence model
 
 Inspectors add records to `Context.Inspection.CommandEvidence`. Each record has
@@ -117,6 +125,14 @@ when multiple sources are involved.
 Paths are repository-relative with `/` separators. Collections are sorted and
 deduplicated with ordinal-ignore-case comparison. Original spelling is retained
 from the highest-precedence source.
+
+`CommandEvidence` is public. `Get-PSModuleInspection` returns
+`Data = $context.Inspection` verbatim, so anything added to
+`Context.Inspection` is part of the command's result whether or not this
+document says so. Treat the field table above as the consumer-visible contract:
+field names and meanings are additive-only once released, and a breaking change
+to an existing field follows the same compatibility bar as any other public
+property of the inspection result.
 
 ## Source precedence
 

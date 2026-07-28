@@ -108,6 +108,12 @@ it applies.
 An implementer following the plan would either rebuild what is there or spend the
 slice discovering that the stated exit criterion was true before they started.
 
+**Resolved.** PR 2 is retitled "Harden shared traversal" and its task list and
+exit criteria now name only the real remaining work — real-path containment,
+symlink cycle protection, casing, relative diagnostic paths — with the existing
+state of `Test-PSModuleInspectionPath` and its adoption stated up front so an
+implementer starts from what is true rather than rediscovering it.
+
 ### 3. The dependency graph contradicts the pull-request numbering
 
 The plan's graph asserts `G --> H`, where `G` is "Remaining inspector hardening"
@@ -139,6 +145,11 @@ Either evidence is internal and should live somewhere `Data` does not expose, or
 is public and deserves the same explicit contract, ordering guarantee, and
 compatibility statement that `Issues` receives.
 
+**Resolved.** The evidence model now states plainly that `CommandEvidence` is
+public because `Data` exposes it whether or not the document says so, and treats
+the field table as the consumer-visible contract: additive-only once released,
+same compatibility bar as any other public property of the inspection result.
+
 ### 5. The combined diagnostic stream has no ordering contract
 
 `-IncludeIssues` is specified to emit a distinct record type into the same output
@@ -150,6 +161,11 @@ A caller piping the result cannot know whether issues arrive interleaved with, b
 or after the executions they relate to, and the two record types share no common
 property to sort or filter on. Either state the interleaving, or emit issues after all
 executions, or give both types a shared discriminator field.
+
+**Resolved.** Issue records are now specified to emit after every
+plugin-execution record in the combined stream, distinguished from them by type
+rather than position, so a caller can always read issues as commentary on a
+complete execution list.
 
 ### 6. The plan defers to a reorganization that already happened
 
@@ -164,6 +180,10 @@ So two checked-in documents now describe the same open work — one saying it is
 deliberately not planning it, the other being the plan — and neither points at the
 other. The deferral should become a cross-reference now that the thing it was waiting
 for has landed.
+
+**Resolved.** The plan now names `TODO-Next.md` §3 directly and states that this
+document is the planning that section deferred to, rather than describing a
+reorganization that has already merged.
 
 ### 7. The fixture-mutation convention is unstated and newly load-bearing
 
@@ -182,20 +202,34 @@ design never names.
 Naming it costs one sentence and removes a failure that would otherwise be found by CI
 rather than by review.
 
+**Resolved.** The dedicated-fixture section now states the `$TestDrive` copy
+convention directly, and names both consequences of skipping it: a modified
+tracked file, and non-deterministic content from the random identity
+specification initialization now mints.
+
 ## Assessment
 
 The three designs are individually coherent and the delivery plan is unusually
 concrete about test gates and compatibility constraints. Nothing here is a design
 that will not work.
 
-Finding 1 is the one that should be settled before implementation starts. It is not a
-wording problem: the fixture as drawn cannot produce the baseline the design asks it to
-produce, and fixing it properly means confronting a roadmap item the plan currently
-sequences nowhere. Findings 2 and 3 would cost an implementer time in the first two
-slices, and both are cheap to correct now.
+Findings 2 and 4 through 7 are resolved above. Two remain open, both deliberately,
+because each has more than one valid resolution and the choice is not this
+review's to make:
 
-Findings 4 through 7 are contract and accuracy gaps of the kind that are much cheaper to
-close in a design than in the release that inherits them.
+**Finding 1** is the one that should be settled before implementation starts. It
+is not a wording problem: the fixture as drawn cannot produce the baseline the
+design asks it to produce, and fixing it properly means confronting a roadmap item
+the plan currently sequences nowhere. Three options are recorded against it,
+ordered by cost, and the correct one depends on how much of the underlying
+maintenance-script classification the next engineering set is meant to close.
+
+**Finding 3** needs a decision on build order, not a syntax fix. The graph and the
+numbering disagree about whether inspector hardening (PR 8) or inference
+materialization (PR 7) comes first, and the plan's own prose — "inspector
+foundations come first" — suggests the numbering is what is wrong, not the graph.
+Changing either without confirming the intended order would silently commit to a
+sequence nobody chose.
 
 ## Note on placement
 

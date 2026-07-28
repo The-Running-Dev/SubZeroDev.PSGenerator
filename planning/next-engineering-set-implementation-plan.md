@@ -14,8 +14,10 @@ Detailed decisions are in:
 - [Inspector hardening](inspector-hardening-design.md)
 - [Release-candidate validation](release-candidate-validation-design.md)
 
-This planning change intentionally does not edit `TODO-Next.md`; that file is
-being reorganized independently.
+This planning change does not edit `TODO-Next.md`. `TODO-Next.md` §3, "Still Open
+on the v1 Roadmap," already names these same three tracks and states they are
+deliberately not re-planned there, so it is not forgotten; this document is that
+planning.
 
 ## Recommended order
 
@@ -57,22 +59,32 @@ Exit criteria:
 - existing callers receive the same default diagnostic records;
 - optional issue records are typed, stable, ordered, and tested.
 
-### PR 2: Safe shared traversal
+### PR 2: Harden shared traversal
+
+`Test-PSModuleInspectionPath` already exists, already excludes the configured
+output directory plus `.git`, `artifacts`, `bin`, `obj`, and `node_modules`, and
+already rejects nested repositories. Every inspector that recurses — project
+manifest, PowerShell, NUKE, configuration schema, and OpenAPI — already gates on
+it; the inspectors that do not gate on it do not recurse. Centralization is
+therefore already done; this PR extends the existing helper rather than creating
+one.
 
 Tasks:
 
-- centralize recursive enumeration and path admission;
-- add repository containment and real-path checks;
-- exclude generated, dependency, cache, output, and VCS directories;
-- reject nested repositories;
-- prevent symlink/junction cycles and duplicate reads;
-- normalize repository-relative paths;
+- resolve real paths so a symlink or junction cannot admit a file outside the
+  repository root;
+- add a visited-real-path set to stop symlink/junction cycles and duplicate
+  reads;
+- normalize comparisons for platform casing rules;
+- produce repository-relative `/` paths for diagnostics;
 - add cross-platform casing, spaces, nesting, and link fixtures.
 
 Exit criteria:
 
-- every recursive inspector uses the same traversal helper;
-- no admitted file resolves outside the repository.
+- no admitted file resolves outside the repository, including through a
+  symlink or junction;
+- a symlink cycle terminates traversal instead of looping;
+- diagnostics report repository-relative paths on Windows and Linux.
 
 ### PR 3: BuildAgent inference fixture and baseline
 
