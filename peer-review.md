@@ -85,6 +85,23 @@ Three ways out, in increasing cost:
 - sequence the maintenance-script classification ahead of this fixture and make it
   a prerequisite, which is the only option that resolves the underlying roadmap item.
 
+**Resolved with the third option.** A new PR 3, "Maintenance-script
+classification," is inserted ahead of the fixture and every later PR is
+renumbered. It extends `Get-PSModuleSpecificationCandidate` — already-shipped
+code, not something this engineering set introduces — to recognize a
+`.FUNCTIONALITY Maintenance` comment-based-help tag and exclude a tagged script
+from command inference while keeping it discoverable as evidence. The parser
+this needs already exists: the script scan already builds an AST with
+`[Management.Automation.Language.Parser]::ParseInput`, and `GetHelpContent()`
+reads comment-based help, `.FUNCTIONALITY` included, from that same AST.
+
+Only `Update-ModuleParameters.ps1` needed the tag. `BuildAgent.psm1`'s exported
+functions were always legitimate evidence — the fixture's "no false commands"
+claim was precise as written, since a generator script becoming a command is
+false and a wrapper module's exports becoming commands is not. The fixture's
+own text is unchanged; the gap was purely that nothing yet existed to make the
+generator script's exclusion true.
+
 ### 2. PR 2 asks for centralization that has already happened
 
 The plan describes PR 2 as "centralize recursive enumeration and path admission",
@@ -117,14 +134,16 @@ implementer starts from what is true rather than rediscovering it.
 ### 3. The dependency graph contradicts the pull-request numbering
 
 The plan's graph asserts `G --> H`, where `G` is "Remaining inspector hardening"
-and `H` is "Complete inference lifecycle". In the numbered sequence those are
-PR 8 and PR 7 respectively, so the graph requires PR 8 to land before PR 7 while
-the numbering says the reverse.
+and `H` is "Complete inference lifecycle". In the numbered sequence those are,
+after PR 3 was inserted for finding 1, PR 9 and PR 8 respectively, so the graph
+requires PR 9 to land before PR 8 while the numbering says the reverse. The
+insertion changed which numbers are involved; it did not change the
+disagreement.
 
 The graph also labels `F` as "Candidate merge and materialization", but the
-sequence splits those: PR 6 is merge and conflict policy, and materialization moves
-to PR 7. Two of ten nodes disagree with the list they summarize, in a document
-whose stated purpose is ordering.
+sequence splits those: PR 7 is merge and conflict policy, and materialization
+moves to PR 8. Two of the graph's eleven nodes disagree with the list they
+summarize, in a document whose stated purpose is ordering.
 
 ### 4. Command evidence becomes public output as a side effect
 
@@ -213,23 +232,16 @@ The three designs are individually coherent and the delivery plan is unusually
 concrete about test gates and compatibility constraints. Nothing here is a design
 that will not work.
 
-Findings 2 and 4 through 7 are resolved above. Two remain open, both deliberately,
-because each has more than one valid resolution and the choice is not this
-review's to make:
-
-**Finding 1** is the one that should be settled before implementation starts. It
-is not a wording problem: the fixture as drawn cannot produce the baseline the
-design asks it to produce, and fixing it properly means confronting a roadmap item
-the plan currently sequences nowhere. Three options are recorded against it,
-ordered by cost, and the correct one depends on how much of the underlying
-maintenance-script classification the next engineering set is meant to close.
+Findings 1, 2, and 4 through 7 are resolved above. One remains open, because it
+has more than one valid resolution and the choice is not this review's to make:
 
 **Finding 3** needs a decision on build order, not a syntax fix. The graph and the
-numbering disagree about whether inspector hardening (PR 8) or inference
-materialization (PR 7) comes first, and the plan's own prose — "inspector
+numbering disagree about whether inspector hardening (PR 9) or inference
+materialization (PR 8) comes first, and the plan's own prose — "inspector
 foundations come first" — suggests the numbering is what is wrong, not the graph.
 Changing either without confirming the intended order would silently commit to a
-sequence nobody chose.
+sequence nobody chose. The PR numbers shifted when finding 1 inserted PR 3; the
+disagreement itself did not.
 
 ## Note on placement
 

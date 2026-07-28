@@ -89,11 +89,22 @@ The fixture must include:
 - generated `parameters.json`;
 - a PowerShell dispatcher with a literal `ValidateSet`;
 - literal exported module functions;
+- a maintenance-script classification tag on the generator script, proving it
+  stays out of inferred commands while `BuildAgent.psm1`'s exports remain
+  legitimate evidence;
 - one intentional compatible overlap between evidence sources;
 - one intentional conflict used only by focused conflict tests.
 
-`Update-ModuleParameters.ps1` is reference behavior and a test oracle. Discovery
-must not invoke it.
+`Update-ModuleParameters.ps1` is reference behavior and a test oracle; discovery
+must not invoke it. It also carries a `.FUNCTIONALITY Maintenance`
+comment-based-help tag, so `Get-PSModuleSpecificationCandidate` does not infer it
+as a public command. That tag is a prerequisite of this fixture, not a by-product
+of it: the fixture's baseline claim that build evidence produces no false
+commands does not hold until the classification work lands, because the gap is
+in already-shipped script inference and exists independent of anything else in
+this design. `BuildAgent.psm1`'s exported functions carry no such tag and remain
+legitimate inferred command evidence, the same as any other authored module
+beneath `scripts/`.
 
 Tests must copy the fixture into `$TestDrive` before running inference against
 it, the way the existing inspector tests already do. This fixture is the first
@@ -300,6 +311,8 @@ authored-specification behavior.
 
 - The authored BuildAgent fixture continues to pass unchanged.
 - The inference fixture begins with an empty specification.
+- A script tagged `.FUNCTIONALITY Maintenance` is discoverable but never
+  inferred as a command; an untagged script is inferred exactly as before.
 - Discovery produces explainable, repository-relative evidence.
 - At least two build commands are inferred without running repository code.
 - Parameters preserve type, help, validation, defaults, and secret handling.

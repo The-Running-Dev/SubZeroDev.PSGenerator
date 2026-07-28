@@ -22,14 +22,19 @@ planning.
 ## Recommended order
 
 Inspector foundations come first because new evidence inspectors should use the
-same path, issue, and malformed-input contracts from their first commit. The
-inference fixture can then drive implementation. Release-candidate validation
-comes last, after the quality and lifecycle commands it orchestrates are stable.
+same path, issue, and malformed-input contracts from their first commit.
+Maintenance-script classification lands immediately before the inference
+fixture: the fixture's own baseline depends on it, and the gap it closes
+already exists in shipped script inference, independent of anything else in
+this set. The inference fixture can then drive implementation.
+Release-candidate validation comes last, after the quality and lifecycle
+commands it orchestrates are stable.
 
 ```mermaid
 flowchart LR
     A["Inspection issue model"] --> B["Safe traversal policy"]
-    B --> C["BuildAgent inference fixture"]
+    B --> K["Maintenance-script classification"]
+    K --> C["BuildAgent inference fixture"]
     C --> D["Evidence model and C# inspector"]
     D --> E["Metadata and dispatch inspectors"]
     E --> F["Candidate merge and materialization"]
@@ -86,7 +91,44 @@ Exit criteria:
 - a symlink cycle terminates traversal instead of looping;
 - diagnostics report repository-relative paths on Windows and Linux.
 
-### PR 3: BuildAgent inference fixture and baseline
+### PR 3: Maintenance-script classification
+
+`Get-PSModuleSpecificationCandidate` already ships and already infers a public
+command from every `.ps1`/`.psm1` beneath `scripts/`, with no way to mark a
+script as tooling rather than a runtime command. That gap is not specific to
+Docker-BuildAgent-shaped repositories — any repository with a generator or
+maintenance script beneath `scripts/` hits it today — but the BuildAgent
+inference fixture is the first thing in this engineering set to depend on a
+fix, since its baseline requires `Update-ModuleParameters.ps1` to stay a
+generator rather than become a command. This PR must land before that fixture
+is added.
+
+The existing script scan already parses each file's AST with
+`[Management.Automation.Language.Parser]::ParseInput`; `Ast.GetHelpContent()`
+returns the parsed comment-based help block from that same AST, including
+`.FUNCTIONALITY`, so no new parsing infrastructure is required.
+
+Tasks:
+
+- recognize a `.FUNCTIONALITY Maintenance` comment-based-help tag from a
+  script's existing parsed AST, without executing the script;
+- exclude a script carrying that tag from
+  `Get-PSModuleSpecificationCandidate`'s command candidates;
+- keep a classified script traversed and inspectable as evidence rather than
+  silently dropped;
+- leave every script without the tag exactly as inferred today;
+- add a fixture pair — one marked, one not — proving the distinction directly;
+- document the tag in script-inference documentation, since this is a
+  behavior change available to every repository, not only this engineering
+  set's fixture.
+
+Exit criteria:
+
+- a script carrying the tag never becomes an inferred command;
+- an otherwise-identical script without the tag is inferred exactly as before;
+- the exclusion is visible in verbose output, not silent.
+
+### PR 4: BuildAgent inference fixture and baseline
 
 Tasks:
 
@@ -103,7 +145,7 @@ Exit criteria:
   depending on an external checkout;
 - baseline tests are deterministic on Windows and Linux.
 
-### PR 4: Evidence model and C# source inspector
+### PR 5: Evidence model and C# source inspector
 
 Tasks:
 
@@ -119,7 +161,7 @@ Exit criteria:
 - representative C# sources produce normalized evidence without compilation;
 - unsupported or malformed optional sources do not erase other evidence.
 
-### PR 5: Generated metadata and PowerShell dispatch
+### PR 6: Generated metadata and PowerShell dispatch
 
 Tasks:
 
@@ -136,7 +178,7 @@ Exit criteria:
   evidence;
 - no repository module is imported during discovery.
 
-### PR 6: Candidate merge and conflict policy
+### PR 7: Candidate merge and conflict policy
 
 Tasks:
 
@@ -153,7 +195,7 @@ Exit criteria:
 - compatible overlaps merge deterministically;
 - incompatible evidence is visible and never silently selected.
 
-### PR 7: Inference materialization and lifecycle
+### PR 8: Inference materialization and lifecycle
 
 Tasks:
 
@@ -168,7 +210,7 @@ Exit criteria:
 - the empty fixture produces usable commands without authored mappings;
 - the authored fixture remains unchanged and passing.
 
-### PR 8: Remaining inspector hardening
+### PR 9: Remaining inspector hardening
 
 Tasks:
 
@@ -184,7 +226,7 @@ Exit criteria:
 - every inspector follows the same failure policy;
 - all supported subsets and recovery behavior have focused tests.
 
-### PR 9: Release-candidate harness
+### PR 10: Release-candidate harness
 
 Tasks:
 
@@ -200,7 +242,7 @@ Exit criteria:
 - one local command can produce an RC evidence bundle;
 - failures are attributable to a named phase and retain useful reports.
 
-### PR 10: Hosted clean-run validation
+### PR 11: Hosted clean-run validation
 
 Tasks:
 
@@ -236,6 +278,8 @@ RC documentation phase changes.
 
 - preserve authored module specifications and their precedence;
 - preserve the current default `Get-PSModuleDiagnostic` output;
+- keep maintenance-script classification additive: a script without the
+  `.FUNCTIONALITY Maintenance` tag infers exactly as it does today;
 - do not execute inspected repository code;
 - do not add developer-machine absolute paths;
 - do not make Docker-BuildAgent or any other external repository a test
@@ -249,6 +293,9 @@ This engineering set is complete when:
 
 - a realistic empty-spec NUKE/.NET repository produces usable generated
   PowerShell commands from merged static evidence;
+- a script tagged `.FUNCTIONALITY Maintenance` is discoverable but never
+  inferred as a public command, in this and any other repository using script
+  inference;
 - malformed optional inputs warn and continue while authoritative inputs fail
   predictably;
 - recursive inspection cannot escape or loop outside its repository;
