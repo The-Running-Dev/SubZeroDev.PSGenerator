@@ -21,21 +21,17 @@ Revisit at 1.0, and note two things that will matter then:
 Also worth deciding then: whether the image should carry `:1.0.0` alongside
 `:latest` and the date tag, so an image can be matched to a package version.
 
-## 2. Gaps Found During the Rename
+## 2. Quality Safeguards in Draft PR #66
 
-Small, concrete, and each one is a thing that can silently rot.
-
-The first three gaps are designed and sequenced in
+The first three rename gaps are implemented together in draft PR
+[#66](https://github.com/The-Running-Dev/SubZeroDev.PSGenerator/pull/66).
+Detailed implementation and evidence live in
 [`planning/quality-safeguards-implementation-plan.md`](planning/quality-safeguards-implementation-plan.md).
 
-- **No status check is required on `main`.** The `Main` ruleset now protects the
-  branch — a pull request is required, force pushes and deletion are blocked,
-  admins are included, review threads must be resolved, and merges are squash or
-  rebase only. What it does not have is a `required_status_checks` rule, and
-  neither does classic protection, so a red PowerShell quality, documentation,
-  Pester, or docs run still does not block a merge. The deploy-path coverage
-  added in #61 exists specifically to fail before merge rather than after;
-  without required checks it only reports.
+- **Required checks are active on `main`.** Ruleset `Main` (ID `19771450`) now
+  requires the ten GitHub Actions contexts below with strict freshness. The
+  existing PR, review-thread, deletion, non-fast-forward, merge-method, condition,
+  and bypass behavior was preserved.
 
   Add these ten contexts, exactly as CI reports them. A misspelled or unavailable
   required context remains expected or pending and blocks merging indefinitely,
@@ -59,20 +55,15 @@ The first three gaps are designed and sequenced in
 
   Do not require `Deploy documentation`: it is skipped on pull requests by
   design, because its job is gated on `github.event_name == 'push'`.
-- **Automatic branch deletion is enabled.** Nine stale branches accumulated before
-  being cleaned up, all of them pointers into already-merged history.
-  `delete_branch_on_merge = true` is now confirmed through the repository API.
-  Preserve that owner-controlled setting while adding required checks, and verify
-  it with the same temporary merge used to validate the ruleset.
-- **A generated command can shadow an existing one.** Since the inference naming
-  fix, `convertto-json.ps1` produces `ConvertTo-Json`, which shadows the built-in
-  once the module is imported. Documented as a note in the script inference
-  guide, but inference could detect the collision and warn, the same way it warns
-  about source commands without runtime mappings.
-- **`.gitignore` does not cover `bin/` and `obj/`.** The BuildAgent fixture's
-  `.csproj` files produce build output that shows up as untracked noise whenever
-  anything builds them. Those directories are currently empty, so it is quiet
-  right now, and it will come back.
+- **Automatic branch deletion remains enabled.** The repository API confirms
+  `delete_branch_on_merge = true`; observe the actual remote-head deletion after
+  PR #66 is eventually reviewed and merged.
+- **Inferred command collisions are diagnosed.** Inference warns without changing
+  generated command names and statically inspects available manifests without
+  importing or executing their modules.
+- **Nested .NET output is ignored and validated.** Repository quality checks cover
+  `bin/` and `obj/`, ensure tracked paths remain visible, and prevent a successful
+  no-match probe from leaking a failing process code.
 
 ## 3. Still Open on the v1 Roadmap
 

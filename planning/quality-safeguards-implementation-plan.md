@@ -16,20 +16,21 @@ Detailed decisions live in:
 
 ## Delivery Strategy
 
-Deliver the work as small, ordered pull requests. Repository settings are applied
-only after the workflow change that makes every required context available.
+Implement all three workstreams in draft PR
+[#66](https://github.com/The-Running-Dev/SubZeroDev.PSGenerator/pull/66) as one
+review unit. Apply repository settings only after the workflow commit proves
+that every required context is available and green.
 
-### PR 1: Make required checks universally available
+### Workstream 1: Make required checks universally available
 
 Tasks:
 
-- [ ] Remove `pull_request.paths` from `container.yml`.
-- [ ] Remove `pull_request.paths` from `docs.yml`.
-- [ ] Preserve path-filtered `main` push behavior.
-- [ ] Confirm all ten intended checks appear on a pull request containing only a
-  planning or Markdown change.
-- [ ] Confirm documentation deployment remains skipped on pull requests.
-- [ ] Record observed context names and GitHub Actions integration ID in the PR.
+- [x] Remove `pull_request.paths` from `container.yml`.
+- [x] Remove `pull_request.paths` from `docs.yml`.
+- [x] Preserve path-filtered `main` push behavior.
+- [x] Confirm all ten intended checks appear on PR #66 after trigger broadening.
+- [x] Confirm documentation deployment remains skipped on pull requests.
+- [x] Record observed context names and GitHub Actions integration ID in the PR.
 
 Exit criteria:
 
@@ -38,20 +39,21 @@ Exit criteria:
 
 ### Administrative change: Enforce checks and verify branch cleanup
 
-Depends on PR 1 being merged.
+Depends on Workstream 1 producing all ten green contexts.
 
 Tasks:
 
-- [ ] Archive the complete current `Main` ruleset JSON immediately before writing.
+- [x] Archive the complete current `Main` ruleset JSON immediately before writing.
 - [x] Read the current repository merge settings through the API.
 - [x] Verify `delete_branch_on_merge = true`. It was enabled by the repository
   owner independently and must be preserved.
-- [ ] Add the ten GitHub Actions contexts to `required_status_checks`.
-- [ ] Enable strict required-check freshness.
-- [ ] Preserve deletion, non-fast-forward, pull-request, review-thread, merge-method,
+- [x] Add the ten GitHub Actions contexts to `required_status_checks`.
+- [x] Enable strict required-check freshness.
+- [x] Preserve deletion, non-fast-forward, pull-request, review-thread, merge-method,
   condition, and bypass settings.
-- [ ] Read back and diff the resulting repository and ruleset configuration.
-- [ ] Validate blocking, success, and automatic branch deletion with a temporary PR.
+- [x] Read back and diff the resulting repository and ruleset configuration.
+- [ ] Validate pending-check blocking and successful-check release on PR #66.
+- [ ] Confirm automatic remote branch deletion after PR #66 is eventually merged.
 
 Exit criteria:
 
@@ -59,43 +61,43 @@ Exit criteria:
 - Ten successful checks permit merge when review threads are resolved.
 - The merged remote head branch is deleted automatically.
 
-### PR 2: Ignore .NET fixture output
+### Workstream 2: Ignore .NET fixture output
 
 Tasks:
 
-- [ ] Add `bin/` and `obj/` directory rules to `.gitignore`.
-- [ ] Add focused `git check-ignore` validation to the repository quality tests or
+- [x] Add `bin/` and `obj/` directory rules to `.gitignore`.
+- [x] Add focused `git check-ignore` validation to the repository quality tests or
   a small build validation script.
-- [ ] Verify no tracked source path is hidden.
-- [ ] Run the relevant fixture build and confirm no untracked compiler output.
+- [x] Verify no tracked source path is hidden.
+- [x] Build the fixture's `Common.csproj` and confirm no untracked compiler output.
 
 Exit criteria:
 
 - Nested fixture build output stays out of `git status`.
 - Fixture inputs remain tracked and discoverable.
 
-### PR 3: Add inferred-command collision warnings
+### Workstream 3: Add inferred-command collision warnings
 
 Tasks:
 
-- [ ] Add a private collision discovery helper that returns data and writes no
+- [x] Add a private collision discovery helper that returns data and writes no
   warnings or imports. Inspect current-session commands with module auto-loading
   disabled and `PSModulePath` temporarily removed, then merge literal exports read
   directly from conventional module manifests.
-- [ ] Add generated-manifest provenance containing the generator marker and
+- [x] Add generated-manifest provenance containing the generator marker and
   specification ID.
-- [ ] Exclude only an earlier generated module whose name, generator marker, and
+- [x] Exclude only an earlier generated module whose name, generator marker, and
   specification ID match, so unrelated same-name modules still warn.
-- [ ] Invoke it from `Initialize-PSModuleSpecification` after candidate inference,
+- [x] Invoke it from `Initialize-PSModuleSpecification` after candidate inference,
   leaving `-WhatIf` with no collision reporting.
-- [ ] Emit one stable advisory warning per colliding candidate.
-- [ ] Preserve candidate names and deterministic specification output.
-- [ ] Add Windows/Linux Pester coverage for collision, no-collision, ordering,
+- [x] Emit one stable advisory warning per colliding candidate.
+- [x] Preserve candidate names and deterministic specification output.
+- [x] Add Windows/Linux Pester coverage for collision, no-collision, ordering,
   proven self-collision, unrelated same-name modules, non-importing static
   discovery, `-WhatIf`, and determinism cases.
-- [ ] Cover the helper's identity-formatting and no-collision branches so the
+- [x] Cover the helper's identity-formatting and no-collision branches so the
   packaged coverage gate does not regress.
-- [ ] Update script-inference and troubleshooting documentation.
+- [x] Update script-inference and troubleshooting documentation.
 
 Exit criteria:
 
@@ -110,15 +112,16 @@ Exit criteria:
 ## Dependency Order
 
 ```text
-PR 1: workflow availability
+Workflow availability
   └─ administrative ruleset/settings change
 
-PR 2: build-output hygiene
-PR 3: collision warnings
+Build-output hygiene
+Collision warnings
 ```
 
-PR 2 and PR 3 can proceed independently. The administrative repository change
-must wait for PR 1.
+Build-output hygiene and collision warnings are independent workstreams bundled
+into PR #66. The administrative repository change waited for the workflow
+availability run to expose and pass all ten contexts.
 
 ## Validation Matrix
 
@@ -157,6 +160,9 @@ writing so concurrent changes cannot be lost.
 
 ## Completion Evidence
 
-Update `TODO-Next.md` as each workstream finishes. Link merged pull requests and
-record the final ruleset ID, required contexts, and repository setting readback.
-Do not mark repository protection complete from a documentation-only change.
+Implementation and validation are recorded in draft PR
+[#66](https://github.com/The-Running-Dev/SubZeroDev.PSGenerator/pull/66).
+Ruleset `Main` remains ID `19771450`; its before/after API evidence is archived
+under [`planning/evidence`](evidence/). The hosted implementation run exposed
+and passed all ten required contexts on Windows and Linux. Automatic branch
+deletion can only be observed after the draft PR is reviewed and merged.
