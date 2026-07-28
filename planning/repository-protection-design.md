@@ -2,7 +2,9 @@
 
 ## Status
 
-Proposed.
+Accepted. Strict required-check freshness is kept, and the documentation base
+image was confirmed publicly readable, so the fork concern below is closed
+rather than open.
 
 ## Objective
 
@@ -91,11 +93,20 @@ no repository secrets, so `secrets.REGISTRY_TOKEN` is empty and the documentatio
 workflows fall back to the fork's read-only `github.token` to pull their base
 image, `ghcr.io/the-running-dev/docs-template`.
 
-A GitHub Container Registry package is private by default. If that package is
-private, the documentation context cannot pass on a fork pull request, and making
-it required would block every external contribution behind a red check with no
-self-evident cause. Confirm the package is publicly readable as part of the
-workflow change, before the context becomes required.
+A GitHub Container Registry package is private by default. If that package were
+private, the documentation context could not pass on a fork pull request, and
+making it required would block every external contribution behind a red check with
+no self-evident cause.
+
+That package is public. An anonymous registry token fetches its `latest` manifest
+successfully, while the same request for an inaccessible package is refused, so
+the result is a real read rather than a permissive default. The fork path is
+therefore safe today.
+
+What remains is a constraint, not a task: `ghcr.io/the-running-dev/docs-template`
+must stay publicly readable for as long as the documentation context is required.
+Making it private would not fail visibly here — it would fail only on fork pull
+requests, which this repository does not currently receive.
 
 Nothing equivalent applies to the container context. `container.yml` builds and
 smoke-tests locally, and its registry login and push steps are already skipped for
@@ -147,8 +158,9 @@ required-check rule and `delete_branch_on_merge = true`.
 
 The fork path cannot be exercised this way. A temporary pull request from this
 repository carries `secrets.REGISTRY_TOKEN`, so it proves nothing about a fork.
-Check the package's visibility directly instead — an anonymous pull of
-`ghcr.io/the-running-dev/docs-template`, or the package settings page.
+Package visibility is checked directly instead, and already has been: an anonymous
+registry token reads the `docs-template` manifest. Re-run that check if the
+package's visibility is ever changed.
 
 ## Rollback
 

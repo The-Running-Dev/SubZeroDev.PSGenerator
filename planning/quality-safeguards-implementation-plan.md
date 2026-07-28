@@ -26,8 +26,6 @@ Tasks:
 - [ ] Remove `pull_request.paths` from `container.yml`.
 - [ ] Remove `pull_request.paths` from `docs.yml`.
 - [ ] Preserve path-filtered `main` push behavior.
-- [ ] Confirm the `ghcr.io/the-running-dev/docs-template` package is publicly
-  readable, so the documentation context can pass without repository secrets.
 - [ ] Confirm all ten intended checks appear on a pull request containing only a
   planning or Markdown change.
 - [ ] Confirm documentation deployment remains skipped on pull requests.
@@ -36,7 +34,6 @@ Tasks:
 Exit criteria:
 
 - Every pull request creates all ten future required contexts.
-- A fork pull request can pull the documentation base image.
 - All existing workflows pass on Windows and Linux where applicable.
 
 ### Administrative change: Enforce checks and branch cleanup
@@ -140,6 +137,9 @@ rediscovering:
   supplies every field the warning text needs.
 - The warning site. `Initialize-PSModuleDirectory` delegates to
   `Initialize-PSModuleSpecification`, so one call site covers both entry points.
+- The documentation base image is publicly readable. An anonymous registry token
+  reads its manifest, while the same request for an inaccessible package is
+  refused. Fork pull requests are not blocked by it.
 
 Still unverified: the current `Main` ruleset contents and
 `delete_branch_on_merge`. Both need the administrative export above, which is why

@@ -2,7 +2,9 @@
 
 ## Status
 
-Proposed.
+Accepted. Four decisions are settled and listed under Non-goals so they are not
+reopened: detection keeps module auto-loading, the helper is not side-effect-free,
+commands from the scaffolded module are excluded, and `-WhatIf` stays silent.
 
 ## Objective
 
@@ -143,6 +145,17 @@ The helper returns data; it does not call `Write-Warning`. Suggested fields:
 - `ExistingSource`
 
 ## Tests
+
+Build the colliding directory inside `TestDrive`, the way the existing inference
+tests already create a `scripts` directory and write scripts into it. No committed
+fixture is needed: the warning is behavior, not a maintained artifact.
+
+Do not add `convertto-json.ps1` to the `ScriptOnly` fixture. Its integration test
+asserts `Commands.Name | Should -Be 'Write-Greeting'` as a scalar and then indexes
+`Commands[0]` three times. A second script would make that name an array, and
+because candidates are ordered by full path, `convertto-json.ps1` would sort first
+and take over index zero — four assertions break for reasons unrelated to what the
+new test is checking.
 
 Add cross-platform Pester coverage that:
 

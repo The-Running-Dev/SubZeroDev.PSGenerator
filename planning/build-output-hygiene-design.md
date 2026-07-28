@@ -2,7 +2,8 @@
 
 ## Status
 
-Proposed.
+Accepted. Both ignore patterns were exercised against the working tree before
+implementation; see Acceptance Criteria.
 
 ## Objective
 
