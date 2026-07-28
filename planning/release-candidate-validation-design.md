@@ -159,6 +159,24 @@ The existing publish workflow remains the only package-publishing path. It may
 later require a successful RC check for the same SHA, but that policy change is
 separate from this implementation.
 
+### Prerequisite for a future required-check policy
+
+Making an RC check required would mean adding it to the `Main` branch ruleset
+(ID `19771450`), the same ruleset the quality-safeguards work configured with
+the ten checks required today. That work left one task open:
+`planning/quality-safeguards-implementation-plan.md` records that the
+post-change ruleset was captured as a hand-written summary rather than the
+complete API document, so it cannot be diffed against the pre-change archive,
+and `bypass_actors`, `enforcement`, and `conditions` are unverified rather than
+confirmed unchanged.
+
+Any change to `required_status_checks` — including adding an RC context —
+should close that gap first: archive the ruleset's complete API response
+immediately before the write, the same way the pre-change archive was
+captured, so the addition can be diffed rather than assumed safe. This is a
+prerequisite for the policy change noted above, not part of this design's own
+scope.
+
 ## Workflow security
 
 - use SHA-pinned third-party actions;
