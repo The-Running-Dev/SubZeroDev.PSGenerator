@@ -134,6 +134,7 @@ Describe 'Container module inspection diagnostics' {
         $result.DirectoryPath | Should -Be $directoryPath
         $result.Data.Dockerfiles[0].Stages[0].Image | Should -Be 'alpine:3.20'
         $result.PluginExecutions.Count | Should -BeGreaterThan 0
+        @($result.Issues).Count | Should -Be 0
         Test-Path -LiteralPath (Join-Path $specificationDirectory '.container-module-inspection') |
             Should -BeFalse
     }
@@ -309,6 +310,186 @@ throw 'inspection failed'
             $context.PluginExecutions[0].Succeeded | Should -BeFalse
             $context.PluginExecutions[0].Error | Should -Be 'inspection failed'
         }
+    }
+}
+
+Describe 'Structured inspection issues' {
+    BeforeEach {
+        $pluginRoot = Join-Path $TestDrive 'IssuePlugins'
+        if (Test-Path -LiteralPath $pluginRoot) {
+            Remove-Item -LiteralPath $pluginRoot -Recurse -Force
+        }
+        New-Item -Path (Join-Path $pluginRoot 'Inspectors') -ItemType Directory -Force | Out-Null
+    }
+
+    It 'rejects an invalid severity or code from the issue helper' {
+        InModuleScope SubZeroDev.PSGenerator {
+            $context = [pscustomobject]@{
+                InspectionIssues = [System.Collections.Generic.List[object]]::new()
+            }
+
+            { Add-PSModuleInspectionIssue -Context $context -Severity 'Fatal' -Code 'PARSE_X' -Inspector 'Fake' -Message 'm' } |
+                Should -Throw
+
+            { Add-PSModuleInspectionIssue -Context $context -Severity 'Warning' -Code 'lowercase' -Inspector 'Fake' -Message 'm' } |
+                Should -Throw
+        }
+    }
+
+    It 'orders issues by inspector execution order, then path, then code' {
+        Set-Content -LiteralPath (Join-Path $pluginRoot 'Inspectors' '00.First.ps1') -Value @'
+param ([psobject] $Context)
+Add-PSModuleInspectionIssue -Context $Context -Severity Warning -Code 'PARSE_ZEBRA' -Inspector 'First' -Path 'z.ps1' -Message 'z issue'
+Add-PSModuleInspectionIssue -Context $Context -Severity Warning -Code 'PARSE_ALPHA' -Inspector 'First' -Path 'a.ps1' -Message 'a issue'
+'@
+        Set-Content -LiteralPath (Join-Path $pluginRoot 'Inspectors' '10.Second.ps1') -Value @'
+param ([psobject] $Context)
+Add-PSModuleInspectionIssue -Context $Context -Severity Error -Code 'PARSE_AAA' -Inspector 'Second' -Path 'a.ps1' -Message 'second issue'
+'@
+
+        InModuleScope SubZeroDev.PSGenerator -Parameters @{ PluginRoot = $pluginRoot } {
+            param ($PluginRoot)
+            $context = [pscustomobject]@{
+                PluginExecutions = [System.Collections.Generic.List[object]]::new()
+                InspectionIssues = [System.Collections.Generic.List[object]]::new()
+            }
+
+            Invoke-PSModulePluginPipeline -Context $context -Path $PluginRoot | Out-Null
+            $issues = @(Get-PSModuleInspectionIssue -Context $context)
+
+            $issues.Count | Should -Be 3
+            $issues.Code | Should -Be @('PARSE_ALPHA', 'PARSE_ZEBRA', 'PARSE_AAA')
+            $issues.Path | Should -Be @('a.ps1', 'z.ps1', 'a.ps1')
+            $issues.Inspector | Should -Be @('First', 'First', 'Second')
+        }
+    }
+
+    It 'exposes only the documented issue fields' {
+        Set-Content -LiteralPath (Join-Path $pluginRoot 'Inspectors' '00.First.ps1') -Value @'
+param ([psobject] $Context)
+Add-PSModuleInspectionIssue -Context $Context -Severity Warning -Code 'PARSE_X' -Inspector 'First' -Path 'a.ps1' -Message 'm'
+'@
+
+        InModuleScope SubZeroDev.PSGenerator -Parameters @{ PluginRoot = $pluginRoot } {
+            param ($PluginRoot)
+            $context = [pscustomobject]@{
+                PluginExecutions = [System.Collections.Generic.List[object]]::new()
+                InspectionIssues = [System.Collections.Generic.List[object]]::new()
+            }
+
+            Invoke-PSModulePluginPipeline -Context $context -Path $PluginRoot | Out-Null
+            $issue = Get-PSModuleInspectionIssue -Context $context | Select-Object -First 1
+
+            $issue.PSObject.TypeNames | Should -Contain 'SubZeroDev.PSGenerator.InspectionIssue'
+            $issue.PSObject.Properties.Name | Should -Be @(
+                'Severity', 'Code', 'Inspector', 'Path', 'Message', 'ExceptionType', 'Details'
+            )
+            $issue.PSObject.Properties.Name | Should -Not -Contain 'InspectorExecutionOrder'
+            $issue.PSObject.Properties.Name | Should -Not -Contain 'AppendIndex'
+        }
+    }
+
+    It 'attaches issues recorded before a wrapped authoritative failure to the thrown exception' {
+        Set-Content -LiteralPath (Join-Path $pluginRoot 'Inspectors' '00.Fail.ps1') -Value @'
+param ([psobject] $Context)
+Add-PSModuleInspectionIssue -Context $Context -Severity Error -Code 'PARSE_FATAL' -Inspector 'Fail' -Path 'bad.ps1' -Message 'boom'
+throw 'inspection failed'
+'@
+
+        InModuleScope SubZeroDev.PSGenerator -Parameters @{ PluginRoot = $pluginRoot } {
+            param ($PluginRoot)
+            $context = [pscustomobject]@{
+                PluginExecutions = [System.Collections.Generic.List[object]]::new()
+                InspectionIssues = [System.Collections.Generic.List[object]]::new()
+            }
+
+            $caught = $null
+            try {
+                Invoke-PSModulePluginPipeline -Context $context -Path $PluginRoot | Out-Null
+            }
+            catch {
+                $caught = $_
+            }
+
+            $caught | Should -Not -BeNullOrEmpty
+            $caught.Exception | Should -BeOfType ([System.InvalidOperationException])
+            $issues = @($caught.Exception.Data['PSModule.InspectionIssues'])
+            $issues.Count | Should -Be 1
+            $issues[0].Code | Should -Be 'PARSE_FATAL'
+            $issues[0].PSObject.TypeNames | Should -Contain 'SubZeroDev.PSGenerator.InspectionIssue'
+        }
+    }
+
+    It 'attaches issues recorded before a preserved-type authoritative failure to the thrown exception' {
+        Set-Content -LiteralPath (Join-Path $pluginRoot 'Inspectors' '00.Fail.ps1') -Value @'
+param ([psobject] $Context)
+Add-PSModuleInspectionIssue -Context $Context -Severity Error -Code 'REFERENCE_MISSING' -Inspector 'Fail' -Path 'spec.psd1' -Message 'missing reference'
+$exception = [System.IO.InvalidDataException]::new('authoritative failure')
+$exception.Data['PSModule.PreserveType'] = $true
+throw $exception
+'@
+
+        InModuleScope SubZeroDev.PSGenerator -Parameters @{ PluginRoot = $pluginRoot } {
+            param ($PluginRoot)
+            $context = [pscustomobject]@{
+                PluginExecutions = [System.Collections.Generic.List[object]]::new()
+                InspectionIssues = [System.Collections.Generic.List[object]]::new()
+            }
+
+            $caught = $null
+            try {
+                Invoke-PSModulePluginPipeline -Context $context -Path $PluginRoot | Out-Null
+            }
+            catch {
+                $caught = $_
+            }
+
+            $caught | Should -Not -BeNullOrEmpty
+            $caught.Exception | Should -BeOfType ([System.IO.InvalidDataException])
+            $issues = @($caught.Exception.Data['PSModule.InspectionIssues'])
+            $issues.Count | Should -Be 1
+            $issues[0].Code | Should -Be 'REFERENCE_MISSING'
+        }
+    }
+
+    It 'keeps the default Get-PSModuleDiagnostic output unchanged and adds typed issue records with -IncludeIssues' {
+        $inspection = [pscustomobject] @{
+            PSTypeName       = 'SubZeroDev.PSGenerator.InspectionResult'
+            PluginExecutions = @(
+                [pscustomobject] @{
+                    Stage          = 'Inspectors'
+                    ExecutionOrder = 0
+                    Plugin         = 'Fake'
+                    Path           = 'fake-plugin.ps1'
+                    StartedAt      = [DateTimeOffset]::UtcNow
+                    Duration       = [TimeSpan]::Zero
+                    Succeeded      = $true
+                    Error          = $null
+                }
+            )
+            Issues           = @(
+                [pscustomobject] @{
+                    PSTypeName    = 'SubZeroDev.PSGenerator.InspectionIssue'
+                    Severity      = 'Warning'
+                    Code          = 'PARSE_X'
+                    Inspector     = 'Fake'
+                    Path          = 'a.ps1'
+                    Message       = 'm'
+                    ExceptionType = $null
+                    Details       = $null
+                }
+            )
+        }
+
+        $default = @($inspection | Get-PSModuleDiagnostic)
+        $default.Count | Should -Be 1
+        ($default | ForEach-Object { $_.PSObject.TypeNames }) | Should -Not -Contain 'SubZeroDev.PSGenerator.InspectionIssueDiagnostic'
+
+        $withIssues = @($inspection | Get-PSModuleDiagnostic -IncludeIssues)
+        $withIssues.Count | Should -Be 2
+        $withIssues[0].PSObject.TypeNames | Should -Contain 'SubZeroDev.PSGenerator.Diagnostic'
+        $withIssues[1].PSObject.TypeNames | Should -Contain 'SubZeroDev.PSGenerator.InspectionIssueDiagnostic'
+        $withIssues[1].Code | Should -Be 'PARSE_X'
     }
 }
 

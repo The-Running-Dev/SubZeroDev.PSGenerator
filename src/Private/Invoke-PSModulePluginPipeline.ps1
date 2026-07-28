@@ -63,12 +63,19 @@ function Invoke-PSModulePluginPipeline {
         catch {
             $execution.Error = $_.Exception.Message
             if ($_.Exception.Data['PSModule.PreserveType']) {
+                $_.Exception.Data['PSModule.InspectionIssues'] = @(
+                    Get-PSModuleInspectionIssue -Context $Context
+                )
                 throw
             }
-            throw [System.InvalidOperationException]::new(
+            $wrappedException = [System.InvalidOperationException]::new(
                 "Plugin '$($plugin.Name)' in stage '$($plugin.Stage)' failed: $($_.Exception.Message)",
                 $_.Exception
             )
+            $wrappedException.Data['PSModule.InspectionIssues'] = @(
+                Get-PSModuleInspectionIssue -Context $Context
+            )
+            throw $wrappedException
         }
         finally {
             $execution.Duration = [DateTimeOffset]::UtcNow - $startedAt
