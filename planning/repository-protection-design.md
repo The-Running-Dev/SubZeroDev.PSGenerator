@@ -61,6 +61,12 @@ Pull request #62 also shows `Deploy documentation` present as a check context wi
 conclusion `skipped`, which is why it stays out of the required set: a rule should
 not depend on how a skipped conclusion is counted.
 
+Context ten is the fragile one. Its name is composed from two job names in two
+files — `verify` in `docs.yml` and `verify` in `docs-ci.yml` — so renaming either
+changes the reported context and quietly unrequires it, because a required context
+that matches nothing never blocks. Renaming either job means updating the ruleset
+in the same change.
+
 ## Design
 
 ### Stable check availability

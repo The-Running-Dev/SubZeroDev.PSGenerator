@@ -11,7 +11,8 @@ current PowerShell session, while preserving the inferred specification and all
 deterministic generation contracts.
 
 "Resolvable from" is wider than "loaded in": detection deliberately reaches
-installed modules the session has not imported yet. See Module auto-loading.
+installed modules the session has not imported yet. See
+[Module auto-loading](#module-auto-loading).
 
 ## Current Behavior
 
@@ -40,6 +41,12 @@ Get-Command -Name $name -All -ErrorAction SilentlyContinue
 Detection is intentionally session-aware. Installed modules, imported functions,
 aliases, cmdlets, and applications differ by host. That means warnings can vary by
 environment, but the generated specification must not.
+
+`-Name` takes a wildcard pattern, which is safe here only because the value is an
+inferred name. `ConvertTo-PSModuleCommandName` emits either `Verb-Noun` built from
+letters and digits, or `Invoke-` joined to the Pascal-cased `[A-Za-z0-9]+` runs of
+the file name, so `foo[bar].ps1` arrives as `Invoke-FooBar` and no wildcard
+character survives. Passing a raw file base name here would not be safe.
 
 The detector must:
 
