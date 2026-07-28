@@ -37,9 +37,9 @@ The first three gaps are designed and sequenced in
   added in #61 exists specifically to fail before merge rather than after;
   without required checks it only reports.
 
-  Add these ten contexts, exactly as CI reports them. A context that does not
-  match a reported check name never becomes required, and fails silently rather
-  than loudly:
+  Add these ten contexts, exactly as CI reports them. A misspelled or unavailable
+  required context remains expected or pending and blocks merging indefinitely,
+  so exact names matter:
 
   ```text
   Build and publish image
@@ -59,12 +59,11 @@ The first three gaps are designed and sequenced in
 
   Do not require `Deploy documentation`: it is skipped on pull requests by
   design, because its job is gated on `github.event_name == 'push'`.
-- **Head branches are not deleted on merge.** Nine stale branches accumulated
-  before being cleaned up, all of them pointers into already-merged history. The
-  two most recent behaved differently — `#62`'s branch went automatically while
-  `feature/replace-docs-workflow` stayed — so the setting is not on for every
-  merge path. Turn on *Automatically delete head branches* in repository
-  settings and the list stops growing on its own.
+- **Automatic branch deletion is enabled.** Nine stale branches accumulated before
+  being cleaned up, all of them pointers into already-merged history.
+  `delete_branch_on_merge = true` is now confirmed through the repository API.
+  Preserve that owner-controlled setting while adding required checks, and verify
+  it with the same temporary merge used to validate the ruleset.
 - **A generated command can shadow an existing one.** Since the inference naming
   fix, `convertto-json.ps1` produces `ConvertTo-Json`, which shadows the built-in
   once the module is imported. Documented as a note in the script inference
@@ -95,7 +94,7 @@ Not re-planned here, just so it is not forgotten. `TODO.md` still has:
 Dropping Docusaurus versioning is done, so the snapshot no longer has to be
 re-cut on every documentation change.
 
-Of what remains, the two repository settings in section 2 are the highest
-leverage and cost nothing: without required status checks, none of the gates
-block a merge. After that, the `index.md` drift check, since it closes a gap
-that currently depends on someone remembering. Publishing waits for 1.0.
+Of what remains, required status checks are the highest leverage: without them,
+none of the gates block a merge. Automatic branch deletion is already enabled.
+After that, the `index.md` drift check, since it closes a gap that currently
+depends on someone remembering. Publishing waits for 1.0.

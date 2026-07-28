@@ -2,9 +2,10 @@
 
 ## Status
 
-Accepted. Four decisions are settled and listed under Non-goals so they are not
-reopened: detection keeps module auto-loading, the helper is not side-effect-free,
-commands from the scaffolded module are excluded, and `-WhatIf` stays silent.
+Accepted. Detection must not auto-load or execute installed modules. It combines
+commands already available in the session with statically declared exports from
+available module metadata. A prior generated module is excluded only when its
+generator provenance and specification identity match. `-WhatIf` stays silent.
 
 ## Objective
 
@@ -12,9 +13,9 @@ Warn when an inferred command will shadow a command already resolvable from the
 current PowerShell session, while preserving the inferred specification and all
 deterministic generation contracts.
 
-"Resolvable from" is wider than "loaded in": detection deliberately reaches
-installed modules the session has not imported yet. See
-[Module auto-loading](#module-auto-loading).
+"Resolvable from" is wider than "loaded in": detection includes explicit exports
+declared by installed modules the session has not imported. It deliberately does
+not execute a module to discover dynamic exports.
 
 ## Current Behavior
 
@@ -33,16 +34,29 @@ an unqualified invocation resolves.
 ### Detection boundary
 
 After `Get-PSModuleSpecificationCandidate` returns and before the specification is
-written, `Initialize-PSModuleSpecification` will inspect every candidate command
-name with:
+written, `Initialize-PSModuleSpecification` inspects every final candidate name
+through two non-executing sources:
 
 ```powershell
+# Source 1: commands already available without module auto-loading.
+$PSModuleAutoLoadingPreference = 'None'
 Get-Command -Name $name -All -ErrorAction SilentlyContinue
+
+# Source 2: statically discoverable exports from available module metadata.
+Get-Module -ListAvailable
 ```
 
-Detection is intentionally session-aware. Installed modules, imported functions,
-aliases, cmdlets, and applications differ by host. That means warnings can vary by
-environment, but the generated specification must not.
+The implementation must save and restore `PSModuleAutoLoadingPreference` in a
+`finally` block. It inventories available modules once per initialization, not
+once per candidate, and reads their `ExportedCommands` metadata without importing
+them. Loaded functions, aliases, cmdlets, applications, and installed module
+metadata differ by host. Warnings can therefore vary by environment, but the
+generated specification must not.
+
+PowerShell modules can compute exports dynamically. Those commands are not
+discoverable without executing module code and are intentionally omitted. This
+warning is advisory and best-effort; preserving the scaffolding command's
+non-executing boundary is more important than complete prediction.
 
 `-Name` takes a wildcard pattern, which is safe here only because the value is an
 inferred name. `ConvertTo-PSModuleCommandName` emits either `Verb-Noun` built from
@@ -56,43 +70,46 @@ The detector must:
 - report the candidate `SourcePath`;
 - sort and de-duplicate existing command identities for stable warning text;
 - issue one warning per colliding inferred command;
-- ignore existing commands whose module is the module being scaffolded; and
-- avoid importing or executing directory-provided code.
+- ignore only a proven earlier generated build of the same specification; and
+- avoid importing or executing directory-provided and installed module code.
 
-### Module auto-loading
+### Module discovery without auto-loading
 
-`Get-Command` resolves a name against `PSModulePath`, so it can import an
-installed module that the session had not loaded. Detection keeps that behavior
-rather than suppressing it.
+`Get-Command` can auto-load a matching installed module even when
+`-ListImported` is used. Import-time code would then execute merely to produce an
+advisory warning. Detection prevents that by setting
+`PSModuleAutoLoadingPreference` to `None` only around the session lookup and
+restoring its previous value in `finally`.
 
-Setting `$PSModuleAutoLoadingPreference = 'None'` around the lookup would make the
-helper inert, but it also reduces detection to whatever is already loaded. In a
-`pwsh -NoProfile -Command` session that starts with no modules loaded, the lookup
-then returns nothing at all for `ConvertTo-Json`, which is the collision this
-feature exists to report. Suppression trades a real diagnostic for a smaller
-side effect.
+Available-module metadata supplies the second source. For example,
+`Microsoft.PowerShell.Utility` declares `ConvertTo-Json`, so the common collision
+remains discoverable without importing that module. A module that uses wildcard
+or computed exports may be absent or incomplete in this source; detection does
+not fall back to importing it.
 
-Complete detection is the right trade because the risk being reported is a
-resolution change in the *consumer's* session, where the competing module will
-auto-load on the same terms. The cost is explicit: initialization may import
-installed modules, and on a cold session with a large `PSModulePath` the lookup
-adds noticeable latency. The helper is not side-effect-free, and nothing in the
-plan should describe it that way.
-
-The directory being inspected is never placed on `PSModulePath`, so this does not
-import or execute directory-provided code.
+The directory being inspected is never placed on `PSModulePath`. Neither source
+imports or executes it.
 
 ### Commands from the scaffolded module
 
 `Initialize-PSModuleDirectory` refreshes a generated specification by calling
-`Initialize-PSModuleSpecification -Force`. If an earlier build of the same module
-is installed or imported, every inferred command would otherwise collide with its
-own previous build and warn on a routine refresh.
+`Initialize-PSModuleSpecification -Force`. If an earlier generated build of the
+same specification is installed or imported, every inferred command would
+otherwise collide with its own previous build and warn on a routine refresh.
 
-The detector therefore discards existing commands whose `ModuleName` equals the
-candidate module name, which `Get-PSModuleSpecificationCandidate` already returns
-as `ModuleName`. The helper needs that name as an input alongside the candidate
-list.
+Module name alone does not prove identity: an unrelated installed module can have
+the same name and is exactly the kind of collision this feature should report.
+Generated manifests therefore gain private provenance containing:
+
+- `GeneratedBy = 'SubZeroDev.PSGenerator'`; and
+- the specification `Id`.
+
+The detector excludes an existing command only when its module name, generator
+marker, and specification ID all match the candidate. An unmarked module, a
+different specification ID, or a legacy generated manifest without provenance
+still warns. A legacy generated module can warn once during its first refresh;
+the newly generated manifest then carries the marker required for quiet future
+refreshes.
 
 ### Behavior
 
@@ -131,9 +148,9 @@ formatting. Keep `Initialize-PSModuleSpecification` responsible for emitting
 warnings. This separates host discovery from specification inference and makes
 the behavior directly testable.
 
-The helper takes the candidate commands and the candidate `ModuleName`, so it can
-apply the self-collision exclusion above without reaching back into the
-specification.
+The helper takes the candidate commands, candidate `ModuleName`, and candidate
+specification `Id`, so it can apply the proven-self exclusion above without
+reaching back into the specification.
 
 The helper returns data; it does not call `Write-Warning`. Suggested fields:
 
@@ -167,10 +184,11 @@ Add cross-platform Pester coverage that:
 6. proves `-WhatIf` does not write a specification or perform post-approval
    collision reporting;
 7. proves repeated initialization produces byte-identical specification content;
-   and
-8. proves an existing command belonging to the scaffolded module produces no
-   warning, so refreshing a directory whose generated module is already loaded
-   stays quiet.
+8. proves a prior generated module with matching provenance produces no warning;
+9. proves an unmarked or differently identified same-name module still warns; and
+10. places a synthetic module with import-time sentinel code on `PSModulePath`,
+    discovers its explicitly declared command, and proves the module was not
+    imported and the sentinel did not run.
 
 Cover the helper's identity-formatting and no-collision branches directly. The
 Pester job enforces `MINIMUM_PACKAGED_COVERAGE_PERCENT` on both command and line
@@ -178,22 +196,24 @@ coverage of the packaged module, so a new private function reached only through
 one happy-path test can push the gate below its threshold.
 
 Update the script-inference guide and troubleshooting page with the warning,
-advisory semantics, and explicit-authoring escape hatch.
+best-effort semantics, non-executing discovery boundary, and explicit-authoring
+escape hatch. Update generated-output documentation for the private manifest
+provenance.
 
 ## Acceptance Criteria
 
 - Common collisions are visible before module import.
 - Initialization remains successful and deterministic.
-- No directory-provided script or module is imported to detect collisions.
+- No directory-provided or installed module is imported to detect collisions.
 - Refreshing a directory whose own generated module is loaded warns about nothing.
+- An unrelated same-name module still warns.
 - Warning behavior passes on Windows and Linux PowerShell 7.4.
 
 ## Non-goals
 
 - Preventing all PowerShell command precedence changes.
 - Renaming commands automatically.
-- Suppressing module auto-loading during detection, or otherwise making the
-  lookup free of side effects.
+- Executing modules to discover wildcard or dynamically computed exports.
 - Warning during `-WhatIf`.
 - Treating environment-specific warnings as persistent inspection diagnostics.
 - Detecting collisions between authored commands already accepted by specification

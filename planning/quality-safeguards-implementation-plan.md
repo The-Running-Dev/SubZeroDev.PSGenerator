@@ -36,16 +36,16 @@ Exit criteria:
 - Every pull request creates all ten future required contexts.
 - All existing workflows pass on Windows and Linux where applicable.
 
-### Administrative change: Enforce checks and branch cleanup
+### Administrative change: Enforce checks and verify branch cleanup
 
 Depends on PR 1 being merged.
 
 Tasks:
 
-- [ ] Export the complete current `Main` ruleset JSON.
-- [ ] Export the current repository merge settings.
-- [x] Enable `delete_branch_on_merge`. Done ahead of this step, by the repository
-  owner, independently of the ruleset work.
+- [ ] Archive the complete current `Main` ruleset JSON immediately before writing.
+- [x] Read the current repository merge settings through the API.
+- [x] Verify `delete_branch_on_merge = true`. It was enabled by the repository
+  owner independently and must be preserved.
 - [ ] Add the ten GitHub Actions contexts to `required_status_checks`.
 - [ ] Enable strict required-check freshness.
 - [ ] Preserve deletion, non-fast-forward, pull-request, review-thread, merge-method,
@@ -79,16 +79,19 @@ Exit criteria:
 Tasks:
 
 - [ ] Add a private collision discovery helper that returns data and writes no
-  warnings. It is not side-effect-free: `Get-Command` may import installed
-  modules, which the design accepts in exchange for complete detection.
-- [ ] Exclude existing commands belonging to the scaffolded module, so refreshing
-  a directory whose generated module is installed stays quiet.
+  warnings or imports. Inspect current-session commands with module auto-loading
+  disabled, then merge statically declared exports from available module metadata.
+- [ ] Add generated-manifest provenance containing the generator marker and
+  specification ID.
+- [ ] Exclude only an earlier generated module whose name, generator marker, and
+  specification ID match, so unrelated same-name modules still warn.
 - [ ] Invoke it from `Initialize-PSModuleSpecification` after candidate inference,
   leaving `-WhatIf` with no collision reporting.
 - [ ] Emit one stable advisory warning per colliding candidate.
 - [ ] Preserve candidate names and deterministic specification output.
 - [ ] Add Windows/Linux Pester coverage for collision, no-collision, ordering,
-  self-collision, `-WhatIf`, and determinism cases.
+  proven self-collision, unrelated same-name modules, non-importing static
+  discovery, `-WhatIf`, and determinism cases.
 - [ ] Cover the helper's identity-formatting and no-collision branches so the
   packaged coverage gate does not regress.
 - [ ] Update script-inference and troubleshooting documentation.
@@ -98,6 +101,8 @@ Exit criteria:
 - `convertto-json.ps1` warns about the built-in `ConvertTo-Json`.
 - Refreshing a directory whose generated module is already loaded warns about
   nothing.
+- Collision discovery imports or executes no available module.
+- An unrelated same-name module is not mistaken for the generated module.
 - The inferred command remains in the specification.
 - Full local and hosted quality gates pass, including packaged coverage.
 
@@ -134,17 +139,20 @@ rediscovering:
 - The two `.gitignore` patterns, through a temporary excludes file. No tracked
   path becomes ignored.
 - The collision mechanics. `convertto-json.ps1` infers `ConvertTo-Json`, and
-  `Get-Command` returns one cmdlet from `Microsoft.PowerShell.Utility`, which
-  supplies every field the warning text needs.
+  available metadata for `Microsoft.PowerShell.Utility` declares
+  `ConvertTo-Json`, which supplies every field the warning text needs without
+  importing the module.
 - The warning site. `Initialize-PSModuleDirectory` delegates to
   `Initialize-PSModuleSpecification`, so one call site covers both entry points.
 - The documentation base image is publicly readable. An anonymous registry token
   reads its manifest, while the same request for an inaccessible package is
   refused. Fork pull requests are not blocked by it.
 
-Still unverified: the current `Main` ruleset contents and
-`delete_branch_on_merge`. Both need the administrative export above, which is why
-that step exports before it writes.
+The live API readback confirms ruleset `Main` (ID `19771450`) contains deletion,
+non-fast-forward, and pull-request rules with no bypass actors and no required
+checks. It also confirms `delete_branch_on_merge = true`, merge commits disabled,
+and squash and rebase enabled. Archive the ruleset again immediately before
+writing so concurrent changes cannot be lost.
 
 ## Completion Evidence
 

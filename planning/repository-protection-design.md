@@ -8,8 +8,8 @@ rather than open.
 
 ## Objective
 
-Make the existing quality gates enforceable on `main` and remove merged remote
-branches automatically, without creating required checks that some pull requests
+Make the existing quality gates enforceable on `main` and preserve automatic
+merged-branch cleanup, without creating required checks that some pull requests
 can never satisfy.
 
 ## Current State
@@ -25,16 +25,15 @@ The repository-level `Main` ruleset is active for the default branch. It current
 It does not require status checks.
 
 `delete_branch_on_merge` has since been enabled by the repository owner, ahead of
-the administrative step and independently of the ruleset. The ruleset description
-above is still from the settings interface rather than an API export, so treat it
-as the working assumption until the archived export confirms it. That export must
-be read before anything is written.
+the administrative step and independently of the ruleset. A live API readback
+confirms it is `true`. Repository merge settings also confirm merge commits are
+disabled while squash and rebase are enabled.
 
-One inconsistency is worth resolving when the export is read. Before the setting
-was enabled, #62's head branch was deleted automatically while
-`feature/replace-docs-workflow` remained — behavior a plain `false` does not
-explain. If something else was deleting merged branches, the account here is
-incomplete rather than merely unconfirmed.
+The live ruleset is repository ruleset `Main`, ID `19771450`. It targets the
+default branch, has active enforcement and no bypass actors, and contains
+deletion, non-fast-forward, and pull-request rules. It still has no required
+status-check rule. Export the complete document again immediately before any
+write so a concurrent settings change is not overwritten.
 
 Six jobs in `.github/workflows/test.yml` run for every pull request. Two of them
 are matrixed over Windows and Linux, so they report eight check contexts:
@@ -69,9 +68,9 @@ not depend on how a skipped conclusion is counted.
 
 Context ten is the fragile one. Its name is composed from two job names in two
 files — `verify` in `docs.yml` and `verify` in `docs-ci.yml` — so renaming either
-changes the reported context and quietly unrequires it, because a required context
-that matches nothing never blocks. Renaming either job means updating the ruleset
-in the same change.
+changes the reported context. The old required name would then remain expected and
+block merging indefinitely. Renaming either job means updating the ruleset in the
+same change.
 
 ## Design
 
@@ -140,9 +139,10 @@ remove protections.
 
 ### Automatic branch deletion
 
-Set repository `delete_branch_on_merge` to `true`. This is independent of the
-ruleset and affects future merged pull requests only. It must not delete local
-branches or branches that are not merged.
+Preserve repository `delete_branch_on_merge = true`. This is independent of the
+ruleset, was enabled separately by the owner, and must not be changed by either
+the required-check implementation or its rollback. It affects future merged pull
+requests only and does not delete local or unmerged branches.
 
 ## Validation
 
@@ -157,8 +157,8 @@ documentation path filters. Confirm:
 - the remote head branch disappears after merge.
 
 Read the repository and ruleset back through the GitHub API and compare them with
-the archived pre-change document. The only expected setting changes are the new
-required-check rule and `delete_branch_on_merge = true`.
+the archived pre-change document. The only expected setting change is the new
+required-check rule. `delete_branch_on_merge` must remain `true`.
 
 The fork path cannot be exercised this way. A temporary pull request from this
 repository carries `secrets.REGISTRY_TOKEN`, so it proves nothing about a fork.
@@ -168,13 +168,14 @@ package's visibility is ever changed.
 
 ## Rollback
 
-Restore the archived ruleset JSON and set `delete_branch_on_merge` back to
-`false`. Workflow trigger broadening can be reverted independently if check
-enforcement is removed first.
+Restore the archived ruleset JSON while preserving
+`delete_branch_on_merge = true`. Workflow trigger broadening can be reverted
+independently if check enforcement is removed first.
 
 ## Non-goals
 
 - Requiring the skipped `Deploy documentation` job.
 - Changing approval counts or adding bypass actors.
 - Changing package or container publishing cadence.
+- Changing the existing automatic branch-deletion setting.
 - Deleting existing branches as part of enabling automatic future cleanup.
