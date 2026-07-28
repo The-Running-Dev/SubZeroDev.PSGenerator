@@ -7,7 +7,9 @@ documents that specify it.
 ## Scope
 
 Reviewed at commit `ad793ee`, the head of `agent/plan-quality-safeguards`, against
-base `8bb4061`.
+base `8bb4061`. The findings below were written against that commit; the
+resolutions and the coverage section were added as each landed, so this document
+spans the branch rather than a single revision.
 
 - [Repository protection design](repository-protection-design.md)
 - [Build output hygiene design](build-output-hygiene-design.md)

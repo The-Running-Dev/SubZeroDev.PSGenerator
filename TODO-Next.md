@@ -21,9 +21,9 @@ Revisit at 1.0, and note two things that will matter then:
 Also worth deciding then: whether the image should carry `:1.0.0` alongside
 `:latest` and the date tag, so an image can be matched to a package version.
 
-## 2. Quality Safeguards in Draft PR #66
+## 2. Quality Safeguards in PR #66
 
-The first three rename gaps are implemented together in draft PR
+The first three rename gaps are implemented together in PR
 [#66](https://github.com/The-Running-Dev/SubZeroDev.PSGenerator/pull/66).
 Detailed implementation and evidence live in
 [`planning/quality-safeguards-implementation-plan.md`](planning/quality-safeguards-implementation-plan.md).

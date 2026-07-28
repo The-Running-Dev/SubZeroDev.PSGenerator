@@ -16,7 +16,7 @@ Detailed decisions live in:
 
 ## Delivery Strategy
 
-Implement all three workstreams in draft PR
+Implement all three workstreams in PR
 [#66](https://github.com/The-Running-Dev/SubZeroDev.PSGenerator/pull/66) as one
 review unit. Apply repository settings only after the workflow commit proves
 that every required context is available and green.
@@ -141,7 +141,7 @@ availability run to expose and pass all ten contexts.
 | Workstream | Local validation | Hosted validation |
 | --- | --- | --- |
 | Workflow availability | Workflow syntax and path review | All ten checks appear and pass; base image pullable anonymously |
-| Repository settings | API readback and JSON diff | Required-check block/pass exercise |
+| Repository settings | API readback and recorded summary | Required-check block/pass exercise |
 | Build-output hygiene | `git check-ignore`, fixture build, clean status | Existing quality and Pester jobs |
 | Collision warnings | Focused and full Pester suites | Windows and Linux Pester jobs |
 
@@ -174,12 +174,12 @@ before writing, so concurrent changes could not be lost.
 
 ## Completion Evidence
 
-Implementation and validation are recorded in draft PR
+Implementation and validation are recorded in PR
 [#66](https://github.com/The-Running-Dev/SubZeroDev.PSGenerator/pull/66).
 Ruleset `Main` remains ID `19771450`; its before/after API evidence is archived
 under [`planning/evidence`](evidence/). The hosted implementation run exposed
 and passed all ten required contexts on Windows and Linux. Automatic branch
-deletion can only be observed after the draft PR is reviewed and merged.
+deletion can only be observed after the pull request is merged.
 
 The two archived artifacts are not of the same kind.
 `main-ruleset-before-required-checks.json` is the complete API response;
