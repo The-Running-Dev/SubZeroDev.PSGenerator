@@ -71,9 +71,26 @@ function Get-PSModuleCommandCollision {
             )
 
         $moduleRoots = @(
-            $env:PSModulePath -split [IO.Path]::PathSeparator |
-                Where-Object { $_ -and (Test-Path -LiteralPath $_ -PathType Container) } |
-                Sort-Object -Unique
+            foreach ($moduleRoot in (
+                $env:PSModulePath -split [IO.Path]::PathSeparator |
+                    Where-Object { $_ } |
+                    Sort-Object -Unique
+            )) {
+                try {
+                    if (Test-Path `
+                        -LiteralPath $moduleRoot `
+                        -PathType Container `
+                        -ErrorAction Stop) {
+                        $moduleRoot
+                    }
+                }
+                catch [System.UnauthorizedAccessException] {
+                    continue
+                }
+                catch [System.IO.IOException] {
+                    continue
+                }
+            }
         )
         $manifestFiles = @(
             foreach ($moduleRoot in $moduleRoots) {

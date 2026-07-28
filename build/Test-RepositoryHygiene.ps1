@@ -53,3 +53,7 @@ finally {
 Write-Host (
     "Repository hygiene checks passed across $($trackedPaths.Count) tracked path(s)."
 ) -ForegroundColor Green
+
+# git check-ignore returns 1 when no tracked paths are ignored. That result is
+# successful for this check, but it must not leak out as this script's process code.
+$global:LASTEXITCODE = 0
