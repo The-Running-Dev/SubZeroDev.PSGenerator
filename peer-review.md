@@ -199,8 +199,15 @@ close in a design than in the release that inherits them.
 
 ## Note on placement
 
-This document sits at the repository root while the equivalent review of the
-quality-safeguards work sits at `planning/peer-review.md`. Two files with the same
-name in different directories is an avoidable ambiguity; consolidating them under
-`planning/`, or giving each a subject-specific name, would be worth doing before a
-third review is written.
+This document sits at the repository root and is the only peer review in the tree.
+The earlier review of the quality-safeguards work was removed once that work
+merged; its decisions were folded into the designs they affected, so the reasoning
+behind the durable specification identity and the manifest-index fingerprint lives
+in [the collision diagnostics design](planning/command-collision-diagnostics-design.md)
+and [the quality safeguards plan](planning/quality-safeguards-implementation-plan.md)
+rather than only in a review document.
+
+A review is worth keeping while its findings are open and worth folding into the
+designs once they are closed. Applying that to this document means its findings
+should land in the three designs it reviews, after which it becomes a record of the
+pass rather than a list of outstanding work.
