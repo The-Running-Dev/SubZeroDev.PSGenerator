@@ -12,6 +12,7 @@ function ConvertTo-PSModuleManifestSource {
         $entries = $Model.Commands | ForEach-Object { "        '$($_.Name.Replace("'", "''"))'" }
         "@(`n$($entries -join "`n")`n    )"
     }
+    $specificationId = ([string] $Model.Id).Replace("'", "''")
 
     @"
 @{
@@ -22,6 +23,12 @@ function ConvertTo-PSModuleManifestSource {
     CmdletsToExport   = @()
     VariablesToExport = @()
     AliasesToExport   = @()
+    PrivateData       = @{
+        PSGenerator = @{
+            GeneratedBy     = 'SubZeroDev.PSGenerator'
+            SpecificationId = '$specificationId'
+        }
+    }
 }
 "@.Replace("`r`n", "`n")
 }

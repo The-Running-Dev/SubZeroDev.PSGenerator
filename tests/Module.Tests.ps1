@@ -2260,6 +2260,7 @@ Describe 'Container module manifest generation' {
         $outputPath = Join-Path $TestDrive 'manifest-output'
         Set-Content -LiteralPath $specificationPath -Value @'
 @{
+    Id = 'module.manifest-example'
     ModuleName = 'ManifestExample'
     ModuleVersion = '2.3.4'
     Commands = @(
@@ -2276,6 +2277,10 @@ Describe 'Container module manifest generation' {
         try {
             $manifest.Version.ToString() | Should -Be '2.3.4'
             $manifest.PowerShellVersion.ToString() | Should -Be '7.4'
+            $manifest.PrivateData.PSGenerator.GeneratedBy |
+                Should -Be 'SubZeroDev.PSGenerator'
+            $manifest.PrivateData.PSGenerator.SpecificationId |
+                Should -Be 'module.manifest-example'
             $module.ExportedFunctions.Keys | Should -Contain 'Invoke-ManifestExample'
         }
         finally {
@@ -3674,6 +3679,205 @@ Describe 'Inferred command naming' {
 
         $suggested['Test-Documentation'] | Should -Be 'Test-Documentation'
         $suggested['container-tool'] | Should -Be 'Invoke-ContainerTool'
+    }
+}
+
+Describe 'Inferred command collision diagnostics' {
+    It 'warns once per colliding command and preserves deterministic inference' {
+        $directoryPath = Join-Path $TestDrive 'CollisionDirectory'
+        $scriptsPath = New-Item `
+            -Path (Join-Path $directoryPath 'scripts') `
+            -ItemType Directory `
+            -Force
+        Set-Content `
+            -LiteralPath (Join-Path $scriptsPath 'convertto-json.ps1') `
+            -Value 'param([string] $InputObject)'
+        Set-Content `
+            -LiteralPath (Join-Path $scriptsPath 'write-output.ps1') `
+            -Value 'param([string] $InputObject)'
+
+        $firstWarnings = @()
+        $specification = Initialize-PSModuleSpecification `
+            -Directory $directoryPath `
+            -PassThru `
+            -WarningVariable firstWarnings `
+            -WarningAction SilentlyContinue
+        $firstBytes = [IO.File]::ReadAllBytes($specification.FullName)
+        $definition = Import-PowerShellDataFile -LiteralPath $specification.FullName
+
+        $secondWarnings = @()
+        Initialize-PSModuleSpecification `
+            -Directory $directoryPath `
+            -Force `
+            -WarningVariable secondWarnings `
+            -WarningAction SilentlyContinue
+        $secondBytes = [IO.File]::ReadAllBytes($specification.FullName)
+
+        $definition.Commands.Name | Should -Be @('ConvertTo-Json', 'Write-Output')
+        $firstWarnings.Count | Should -Be 2
+        $firstWarnings[0].Message | Should -Match "ConvertTo-Json.*scripts/convertto-json\.ps1"
+        $firstWarnings[1].Message | Should -Match "Write-Output.*scripts/write-output\.ps1"
+        $firstWarnings[0].Message | Should -Match 'Microsoft\.PowerShell\.Utility\\ConvertTo-Json'
+        $secondWarnings.Count | Should -Be 2
+        [Convert]::ToHexString($secondBytes) |
+            Should -Be ([Convert]::ToHexString($firstBytes))
+    }
+
+    It 'does not warn for a unique inferred command or during WhatIf' {
+        $uniqueDirectory = Join-Path $TestDrive 'UniqueCollisionDirectory'
+        $uniqueScripts = New-Item `
+            -Path (Join-Path $uniqueDirectory 'scripts') `
+            -ItemType Directory `
+            -Force
+        Set-Content `
+            -LiteralPath (Join-Path $uniqueScripts 'subzero-collision-fixture-unique.ps1') `
+            -Value 'param()'
+
+        $uniqueWarnings = @()
+        Initialize-PSModuleSpecification `
+            -Directory $uniqueDirectory `
+            -WarningVariable uniqueWarnings `
+            -WarningAction SilentlyContinue
+
+        $previewDirectory = Join-Path $TestDrive 'PreviewCollisionDirectory'
+        $previewScripts = New-Item `
+            -Path (Join-Path $previewDirectory 'scripts') `
+            -ItemType Directory `
+            -Force
+        Set-Content `
+            -LiteralPath (Join-Path $previewScripts 'convertto-json.ps1') `
+            -Value 'param()'
+        $previewWarnings = @()
+        Initialize-PSModuleSpecification `
+            -Directory $previewDirectory `
+            -WhatIf `
+            -WarningVariable previewWarnings `
+            -WarningAction SilentlyContinue
+
+        $uniqueWarnings.Count | Should -Be 0
+        $previewWarnings.Count | Should -Be 0
+        Test-Path -LiteralPath (
+            Join-Path $previewDirectory 'PSModule' 'PSModule.psd1'
+        ) | Should -BeFalse
+    }
+
+    It 'finds a statically exported command without importing its module' {
+        $modulePathRoot = Join-Path $TestDrive 'StaticModules'
+        $moduleVersionPath = New-Item `
+            -Path (Join-Path $modulePathRoot 'StaticCollisionModule' '1.0.0') `
+            -ItemType Directory `
+            -Force
+        Set-Content `
+            -LiteralPath (Join-Path $moduleVersionPath 'StaticCollisionModule.psm1') `
+            -Value @'
+$global:PSGeneratorCollisionSentinel = $true
+function Invoke-StaticCollisionFixture { param() }
+Export-ModuleMember -Function Invoke-StaticCollisionFixture
+'@
+        Set-Content `
+            -LiteralPath (Join-Path $moduleVersionPath 'StaticCollisionModule.psd1') `
+            -Value @'
+@{
+    RootModule = 'StaticCollisionModule.psm1'
+    ModuleVersion = '1.0.0'
+    FunctionsToExport = @('Invoke-StaticCollisionFixture')
+    CmdletsToExport = @()
+    VariablesToExport = @()
+    AliasesToExport = @()
+}
+'@
+
+        $directoryPath = Join-Path $TestDrive 'StaticCollisionDirectory'
+        $scriptsPath = New-Item `
+            -Path (Join-Path $directoryPath 'scripts') `
+            -ItemType Directory `
+            -Force
+        Set-Content `
+            -LiteralPath (Join-Path $scriptsPath 'static-collision-fixture.ps1') `
+            -Value 'param()'
+
+        $originalModulePath = $env:PSModulePath
+        try {
+            $isolatedModulePath = @(
+                $modulePathRoot
+                $originalModulePath
+            ) -join [IO.Path]::PathSeparator
+            $env:PSModulePath = $isolatedModulePath
+            Remove-Variable `
+                -Name PSGeneratorCollisionSentinel `
+                -Scope Global `
+                -ErrorAction SilentlyContinue
+
+            $warnings = @()
+            Initialize-PSModuleSpecification `
+                -Directory $directoryPath `
+                -WarningVariable warnings `
+                -WarningAction SilentlyContinue
+
+            $warnings.Count | Should -Be 1
+            $warnings[0].Message |
+                Should -Match 'StaticCollisionModule\\Invoke-StaticCollisionFixture'
+            $env:PSModulePath | Should -BeExactly $isolatedModulePath
+            Get-Variable `
+                -Name PSGeneratorCollisionSentinel `
+                -Scope Global `
+                -ErrorAction SilentlyContinue |
+                Should -BeNullOrEmpty
+            Get-Module StaticCollisionModule | Should -BeNullOrEmpty
+        }
+        finally {
+            $env:PSModulePath = $originalModulePath
+            Remove-Module StaticCollisionModule -Force -ErrorAction SilentlyContinue
+            Remove-Variable `
+                -Name PSGeneratorCollisionSentinel `
+                -Scope Global `
+                -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'suppresses only a proven prior generated module' {
+        $directoryPath = Join-Path $TestDrive 'ProvenanceCollisionDirectory'
+        $scriptsPath = New-Item `
+            -Path (Join-Path $directoryPath 'scripts') `
+            -ItemType Directory `
+            -Force
+        Set-Content `
+            -LiteralPath (Join-Path $scriptsPath 'provenance-collision.ps1') `
+            -Value 'param()'
+
+        $null = Initialize-PSModuleDirectory -Directory $directoryPath
+        try {
+            $selfWarnings = @()
+            Initialize-PSModuleSpecification `
+                -Directory $directoryPath `
+                -Force `
+                -WarningVariable selfWarnings `
+                -WarningAction SilentlyContinue
+
+            $selfWarnings.Count | Should -Be 0
+
+            Remove-Module ProvenanceCollisionDirectory -Force
+            $unrelatedModulePath = Join-Path $TestDrive 'ProvenanceCollisionDirectory.psm1'
+            Set-Content -LiteralPath $unrelatedModulePath -Value @'
+function Invoke-ProvenanceCollision { param() }
+Export-ModuleMember -Function Invoke-ProvenanceCollision
+'@
+            Import-Module $unrelatedModulePath -Force
+
+            $unrelatedWarnings = @()
+            Initialize-PSModuleSpecification `
+                -Directory $directoryPath `
+                -Force `
+                -WarningVariable unrelatedWarnings `
+                -WarningAction SilentlyContinue
+
+            $unrelatedWarnings.Count | Should -Be 1
+            $unrelatedWarnings[0].Message |
+                Should -Match 'ProvenanceCollisionDirectory\\Invoke-ProvenanceCollision'
+        }
+        finally {
+            Remove-Module ProvenanceCollisionDirectory -Force -ErrorAction SilentlyContinue
+        }
     }
 }
 

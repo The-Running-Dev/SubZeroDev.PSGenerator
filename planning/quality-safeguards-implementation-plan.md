@@ -80,7 +80,8 @@ Tasks:
 
 - [ ] Add a private collision discovery helper that returns data and writes no
   warnings or imports. Inspect current-session commands with module auto-loading
-  disabled, then merge statically declared exports from available module metadata.
+  disabled and `PSModulePath` temporarily removed, then merge literal exports read
+  directly from conventional module manifests.
 - [ ] Add generated-manifest provenance containing the generator marker and
   specification ID.
 - [ ] Exclude only an earlier generated module whose name, generator marker, and
@@ -139,9 +140,9 @@ rediscovering:
 - The two `.gitignore` patterns, through a temporary excludes file. No tracked
   path becomes ignored.
 - The collision mechanics. `convertto-json.ps1` infers `ConvertTo-Json`, and
-  available metadata for `Microsoft.PowerShell.Utility` declares
+  the manifest for `Microsoft.PowerShell.Utility` declares
   `ConvertTo-Json`, which supplies every field the warning text needs without
-  importing the module.
+  analyzing or importing the module.
 - The warning site. `Initialize-PSModuleDirectory` delegates to
   `Initialize-PSModuleSpecification`, so one call site covers both entry points.
 - The documentation base image is publicly readable. An anonymous registry token

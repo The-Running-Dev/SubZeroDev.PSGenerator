@@ -33,9 +33,15 @@ without a `Public` directory.
 - the normalized module version;
 - PowerShell 7.4;
 - generated function exports; and
-- empty cmdlet, variable, and alias exports.
+- empty cmdlet, variable, and alias exports; and
+- private PSGenerator provenance containing the generator name and specification
+  ID.
 
 The manifest is validated before packaging completes.
+
+The private provenance lets specification initialization distinguish an earlier
+generated build from an unrelated installed module with the same name. It does
+not contain a source-directory path or machine-specific value.
 
 ## Module Loader
 

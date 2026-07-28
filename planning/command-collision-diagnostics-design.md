@@ -40,18 +40,23 @@ through two non-executing sources:
 ```powershell
 # Source 1: commands already available without module auto-loading.
 $PSModuleAutoLoadingPreference = 'None'
+$env:PSModulePath = ''
 Get-Command -Name $name -All -ErrorAction SilentlyContinue
 
-# Source 2: statically discoverable exports from available module metadata.
-Get-Module -ListAvailable
+# Source 2: literal exports from conventional manifests beneath PSModulePath.
+Import-PowerShellDataFile -LiteralPath $manifestPath
 ```
 
 The implementation must save and restore `PSModuleAutoLoadingPreference` in a
-`finally` block. It inventories available modules once per initialization, not
-once per candidate, and reads their `ExportedCommands` metadata without importing
-them. Loaded functions, aliases, cmdlets, applications, and installed module
-metadata differ by host. Warnings can therefore vary by environment, but the
-generated specification must not.
+`finally` block. While performing exact current-session lookups it temporarily
+removes `PSModulePath`, preventing PowerShell command discovery from analyzing or
+importing an available module despite the preference. It separately inventories
+conventionally located manifests once per `PSModulePath`, reads them through the
+restricted PowerShell data-file reader, and caches their literal
+`FunctionsToExport`, `CmdletsToExport`, and `AliasesToExport` values. Loaded
+functions, aliases, cmdlets, applications, and installed manifests differ by host.
+Warnings can therefore vary by environment, but the generated specification must
+not.
 
 PowerShell modules can compute exports dynamically. Those commands are not
 discoverable without executing module code and are intentionally omitted. This
@@ -81,11 +86,11 @@ advisory warning. Detection prevents that by setting
 `PSModuleAutoLoadingPreference` to `None` only around the session lookup and
 restoring its previous value in `finally`.
 
-Available-module metadata supplies the second source. For example,
+Literal module-manifest data supplies the second source. For example,
 `Microsoft.PowerShell.Utility` declares `ConvertTo-Json`, so the common collision
-remains discoverable without importing that module. A module that uses wildcard
-or computed exports may be absent or incomplete in this source; detection does
-not fall back to importing it.
+remains discoverable without asking PowerShell to analyze or import that module.
+A manifest that uses wildcard or computed exports is incomplete in this source;
+detection does not fall back to loading its root module.
 
 The directory being inspected is never placed on `PSModulePath`. Neither source
 imports or executes it.

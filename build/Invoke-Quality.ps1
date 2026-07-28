@@ -89,3 +89,5 @@ Write-Host (
     "PowerShell quality checks passed with PSScriptAnalyzer $requiredAnalyzerVersion " +
     "across $($analysisRoots.Count) owned source roots."
 ) -ForegroundColor Green
+
+& (Join-Path $PSScriptRoot 'Test-RepositoryHygiene.ps1')

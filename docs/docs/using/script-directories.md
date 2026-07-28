@@ -62,9 +62,17 @@ command has no verb to preserve.
 
 :::note
 
-Naming a script after an existing command produces a generated command with that
-same name, which will shadow the original once the module is imported. Rename the
-script, or author the command explicitly, if that is not what you want.
+When initialization can prove that an inferred name matches an existing command,
+it emits an advisory warning. The command remains in the deterministic
+specification; rename the script or author the command explicitly if shadowing is
+not intended.
+
+Detection combines commands already present in the session with literal exports
+read from conventional module manifests beneath `PSModulePath`. It disables module
+auto-loading, isolates the current-session lookup from `PSModulePath`, and never
+analyzes or imports an installed root module to produce a warning.
+Dynamically computed module exports cannot be discovered safely, so warnings are
+best-effort and can vary between machines.
 
 :::
 
