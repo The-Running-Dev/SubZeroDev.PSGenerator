@@ -4005,6 +4005,164 @@ Export-ModuleMember -Function Invoke-ProvenanceCollision
             $env:PSModulePath = $originalModulePath
         }
     }
+
+    It 'reflects a modified or removed manifest beneath an unchanged module root' {
+        $modulePathRoot = New-Item `
+            -Path (Join-Path $TestDrive 'CacheChangeModules') `
+            -ItemType Directory `
+            -Force
+        $installedModulePath = New-Item `
+            -Path (Join-Path $modulePathRoot.FullName 'CacheChangeModule') `
+            -ItemType Directory `
+            -Force
+        $manifestPath = Join-Path $installedModulePath 'CacheChangeModule.psd1'
+        $writeManifest = {
+            param ([string] $ExportedName)
+
+            Set-Content -LiteralPath $manifestPath -Value @"
+@{
+    ModuleVersion = '1.0.0'
+    FunctionsToExport = @('$ExportedName')
+    CmdletsToExport = @()
+    VariablesToExport = @()
+    AliasesToExport = @()
+}
+"@
+        }
+
+        # The two names differ in length, so the manifest fingerprint changes even
+        # where the file system reports an unchanged write time.
+        & $writeManifest 'Invoke-CacheChangeBefore'
+
+        $directoryPath = Join-Path $TestDrive 'CacheChangeDirectory'
+        $scriptsPath = New-Item `
+            -Path (Join-Path $directoryPath 'scripts') `
+            -ItemType Directory `
+            -Force
+        Set-Content `
+            -LiteralPath (Join-Path $scriptsPath 'cache-change-after.ps1') `
+            -Value 'param()'
+
+        $originalModulePath = $env:PSModulePath
+        try {
+            $env:PSModulePath = @(
+                $modulePathRoot.FullName
+                $originalModulePath
+            ) -join [IO.Path]::PathSeparator
+
+            $unrelatedWarnings = @()
+            Initialize-PSModuleSpecification `
+                -Directory $directoryPath `
+                -WarningVariable unrelatedWarnings `
+                -WarningAction SilentlyContinue
+
+            & $writeManifest 'Invoke-CacheChangeAfter'
+            $modifiedWarnings = @()
+            Initialize-PSModuleSpecification `
+                -Directory $directoryPath `
+                -Force `
+                -WarningVariable modifiedWarnings `
+                -WarningAction SilentlyContinue
+
+            Remove-Item -LiteralPath $installedModulePath -Recurse -Force
+            $removedWarnings = @()
+            Initialize-PSModuleSpecification `
+                -Directory $directoryPath `
+                -Force `
+                -WarningVariable removedWarnings `
+                -WarningAction SilentlyContinue
+
+            $unrelatedWarnings.Count | Should -Be 0
+            $modifiedWarnings.Count | Should -Be 1
+            $modifiedWarnings[0].Message |
+                Should -Match 'CacheChangeModule\\Invoke-CacheChangeAfter'
+            $removedWarnings.Count | Should -Be 0
+        }
+        finally {
+            $env:PSModulePath = $originalModulePath
+        }
+    }
+
+    It 'preserves an authored specification identity through a refresh' {
+        $directoryPath = Join-Path $TestDrive 'AuthoredIdentityDirectory'
+        $scriptsPath = New-Item `
+            -Path (Join-Path $directoryPath 'scripts') `
+            -ItemType Directory `
+            -Force
+        Set-Content `
+            -LiteralPath (Join-Path $scriptsPath 'authored-identity.ps1') `
+            -Value 'param()'
+
+        $specificationPath = Join-Path $directoryPath 'PSModule' 'PSModule.psd1'
+        $null = New-Item `
+            -Path (Split-Path $specificationPath -Parent) `
+            -ItemType Directory `
+            -Force
+        Set-Content `
+            -LiteralPath $specificationPath `
+            -Value "@{ Id = 'authored.identity'; Commands = @() }"
+
+        Initialize-PSModuleSpecification `
+            -Directory $directoryPath `
+            -Force `
+            -WarningAction SilentlyContinue
+
+        $refreshed = Import-PowerShellDataFile -LiteralPath $specificationPath
+        $refreshed.Id | Should -BeExactly 'authored.identity'
+        $refreshed.Commands.Name | Should -Be 'Invoke-AuthoredIdentity'
+    }
+
+    It 'mints an identity when the existing specification cannot supply one' {
+        $mintedIdentities = foreach ($case in @(
+            @{ Name = 'UnparsableIdentityDirectory'; Content = 'not a PowerShell data file' }
+            @{ Name = 'InvalidIdentityDirectory'; Content = "@{ Id = 'has spaces'; Commands = @() }" }
+        )) {
+            $directoryPath = Join-Path $TestDrive $case.Name
+            $scriptsPath = New-Item `
+                -Path (Join-Path $directoryPath 'scripts') `
+                -ItemType Directory `
+                -Force
+            Set-Content `
+                -LiteralPath (Join-Path $scriptsPath 'minted-identity.ps1') `
+                -Value 'param()'
+
+            $specificationPath = Join-Path $directoryPath 'PSModule' 'PSModule.psd1'
+            $null = New-Item `
+                -Path (Split-Path $specificationPath -Parent) `
+                -ItemType Directory `
+                -Force
+            Set-Content -LiteralPath $specificationPath -Value $case.Content
+
+            Initialize-PSModuleSpecification `
+                -Directory $directoryPath `
+                -Force `
+                -WarningAction SilentlyContinue
+
+            (Import-PowerShellDataFile -LiteralPath $specificationPath).Id
+        }
+
+        $mintedIdentities[0] |
+            Should -Match '^directory\.unparsableidentitydirectory\.[0-9a-f]{32}$'
+        $mintedIdentities[1] |
+            Should -Match '^directory\.invalididentitydirectory\.[0-9a-f]{32}$'
+    }
+}
+
+Describe 'Repository hygiene gate' {
+    It 'passes when the caller enables native command error preference' {
+        $hygieneScript = (Resolve-Path (
+            Join-Path $PSScriptRoot '..' 'build' 'Test-RepositoryHygiene.ps1'
+        )).Path
+
+        # git check-ignore reports "nothing ignored" as exit code 1. With this
+        # preference on and ErrorActionPreference set to Stop, that becomes a
+        # terminating error unless the script opts out for itself.
+        $PSNativeCommandUseErrorActionPreference = $true
+        $ErrorActionPreference = 'Stop'
+
+        $PSNativeCommandUseErrorActionPreference | Should -BeTrue
+        { & $hygieneScript | Out-Null } | Should -Not -Throw
+    }
 }
 
 Describe 'Generated documentation drift' {

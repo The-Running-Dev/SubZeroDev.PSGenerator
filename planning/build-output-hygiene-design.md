@@ -53,6 +53,19 @@ of `tests/fixtures`; source inputs remain reviewable.
 5. Document the rule in the contributor development page only if contributors need
    to distinguish ignored compiler output from generator artifacts.
 
+## Native exit codes
+
+`git check-ignore` reports "nothing ignored" as exit code 1, and that is the
+passing outcome for the tracked-path check. The validation script sets
+`$ErrorActionPreference` to `Stop`, so it also sets
+`$PSNativeCommandUseErrorActionPreference` to `$false` for itself. Without that,
+a caller that had turned the preference on — or a future release that changes its
+default — would turn the passing exit code into a terminating error before the
+script could examine it, failing the gate on the result that means success.
+
+A test invokes the script from a session with the preference enabled, so the
+opt-out is demonstrated rather than assumed.
+
 ## Acceptance Criteria
 
 - `git check-ignore` identifies nested `bin/` and `obj/` paths through the new

@@ -237,8 +237,13 @@ still warned about.
 
 It is now cached against the full path, length, and write time of the manifests it
 was built from. Locating those files is cheap and parsing them is not, so the
-inventory runs every call while only the expensive step is cached. Test item 13
-covers it.
+inventory runs every call while only the expensive step is cached.
+
+That finding was first marked resolved on partial coverage. The automated review
+asked for a manifest added, modified, and removed beneath an unchanged root; only
+the added case shipped with the fix, while the length and write time in the
+fingerprint exist precisely to catch the other two. Test items 13 and 14 now cover
+all three.
 
 Two further observations from the automated review were considered and not acted
 on. Clearing the process-wide `PSModulePath` for the duration of the candidate
@@ -277,3 +282,24 @@ Two errors in this review were found and corrected while resolving the rest: an
 earlier revision cited `TODO.md` as precedent for absolute internal links, when
 that link points at a different repository, and the assessment counted five open
 findings while listing six.
+
+## Coverage Added After the Findings
+
+A sweep for claims made but not demonstrated, run once the findings were closed.
+Three gaps, each an assertion resting on reasoning rather than a test:
+
+- **An authored `Id` survives a refresh.** Stated in `generated-output.md`, in the
+  collision design, and on the pull request, with nothing exercising it. Now test
+  item 15.
+- **The manifest fingerprint catches modification and removal.** Only addition was
+  covered when that finding was marked resolved. Now test item 14.
+- **The hygiene gate opts out of native exit-code failures.** `build/` had no test
+  coverage at all, so finding 3's fix was asserted and never run. A test now
+  invokes the script from a session with
+  `$PSNativeCommandUseErrorActionPreference` enabled, which fails without the
+  opt-out.
+
+Test item 16 additionally covers the two paths where an existing specification
+cannot supply an identity — unreadable, or carrying an `Id` that is not a valid
+identifier — so the new helper's defensive branches are reached rather than
+inferred, which also keeps them inside the packaged coverage gate.

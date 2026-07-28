@@ -228,7 +228,13 @@ Add cross-platform Pester coverage that:
 12. proves two directories inferring the same module name receive different
     identities and warn about each other; and
 13. proves a manifest installed beneath an unchanged module root between two
-    calls is discovered rather than served from a stale index.
+    calls is discovered rather than served from a stale index;
+14. proves the same for a manifest modified in place and for one removed, so all
+    three operations against an unchanged root are covered rather than only the
+    one that first exposed the stale index;
+15. proves an authored `Id` survives a refresh untouched; and
+16. proves an unreadable specification, and one whose `Id` is not a valid
+    identifier, both mint a fresh identity instead of throwing or reusing it.
 
 Cover the helper's identity-formatting and no-collision branches directly. The
 Pester job enforces `MINIMUM_PACKAGED_COVERAGE_PERCENT` on both command and line
