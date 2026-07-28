@@ -44,7 +44,8 @@ Tasks:
 
 - [ ] Export the complete current `Main` ruleset JSON.
 - [ ] Export the current repository merge settings.
-- [ ] Enable `delete_branch_on_merge`.
+- [x] Enable `delete_branch_on_merge`. Done ahead of this step, by the repository
+  owner, independently of the ruleset work.
 - [ ] Add the ten GitHub Actions contexts to `required_status_checks`.
 - [ ] Enable strict required-check freshness.
 - [ ] Preserve deletion, non-fast-forward, pull-request, review-thread, merge-method,

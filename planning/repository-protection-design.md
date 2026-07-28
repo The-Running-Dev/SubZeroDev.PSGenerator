@@ -22,15 +22,19 @@ The repository-level `Main` ruleset is active for the default branch. It current
 - permits squash and rebase merges; and
 - has no bypass actors.
 
-It does not require status checks. Repository setting `delete_branch_on_merge` is
-reported as `false`.
+It does not require status checks.
 
-Both of those are from the settings interface rather than an API export, and the
-observed branch behavior does not entirely agree: after the recent cleanup, #62's
-head branch went automatically while `feature/replace-docs-workflow` remained.
-Treat this section as the working assumption. The archived export in the
-administrative step is what confirms it, and it must be read before anything is
-written.
+`delete_branch_on_merge` has since been enabled by the repository owner, ahead of
+the administrative step and independently of the ruleset. The ruleset description
+above is still from the settings interface rather than an API export, so treat it
+as the working assumption until the archived export confirms it. That export must
+be read before anything is written.
+
+One inconsistency is worth resolving when the export is read. Before the setting
+was enabled, #62's head branch was deleted automatically while
+`feature/replace-docs-workflow` remained — behavior a plain `false` does not
+explain. If something else was deleting merged branches, the account here is
+incomplete rather than merely unconfirmed.
 
 Six jobs in `.github/workflows/test.yml` run for every pull request. Two of them
 are matrixed over Windows and Linux, so they report eight check contexts:
