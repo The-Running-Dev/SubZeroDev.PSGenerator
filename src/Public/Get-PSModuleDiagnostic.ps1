@@ -18,6 +18,12 @@ function Get-PSModuleDiagnostic {
 
     .PARAMETER Detailed
     Includes plugin paths, start times, and error text for troubleshooting.
+
+    .PARAMETER IncludeIssues
+    Also emits structured inspection issues, typed
+    SubZeroDev.PSGenerator.InspectionIssueDiagnostic, after every plugin-execution
+    record in the same stream. The default output is unchanged when this switch is
+    omitted.
     #>
     [CmdletBinding(DefaultParameterSetName = 'Run')]
     param (
@@ -33,7 +39,10 @@ function Get-PSModuleDiagnostic {
         [string[]] $PluginPath,
 
         [Parameter()]
-        [switch] $Detailed
+        [switch] $Detailed,
+
+        [Parameter()]
+        [switch] $IncludeIssues
     )
 
     process {
@@ -66,6 +75,21 @@ function Get-PSModuleDiagnostic {
                 $diagnostic.Error = $execution.Error
             }
             [pscustomobject] $diagnostic
+        }
+
+        if ($IncludeIssues) {
+            foreach ($issue in $inspection.Issues) {
+                [pscustomobject] @{
+                    PSTypeName    = 'SubZeroDev.PSGenerator.InspectionIssueDiagnostic'
+                    Severity      = $issue.Severity
+                    Code          = $issue.Code
+                    Inspector     = $issue.Inspector
+                    Path          = $issue.Path
+                    Message       = $issue.Message
+                    ExceptionType = $issue.ExceptionType
+                    Details       = $issue.Details
+                }
+            }
         }
     }
 }

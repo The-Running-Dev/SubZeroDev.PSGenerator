@@ -5,8 +5,8 @@ function Get-PSModuleInspection {
 
     .DESCRIPTION
     Loads a specification, runs the ordered inspector plugin stage, and
-    returns typed in-memory inspection data and plugin execution records. No build
-    output is created.
+    returns typed in-memory inspection data, plugin execution records, and
+    structured inspection issues. No build output is created.
 
     .PARAMETER Specification
     Path to the directory PowerShell data-file specification.
@@ -38,5 +38,6 @@ function Get-PSModuleInspection {
         SpecificationPath = $context.SpecificationPath
         Data             = $context.Inspection
         PluginExecutions = @($context.PluginExecutions)
+        Issues           = @(Get-PSModuleInspectionIssue -Context $context)
     }
 }
