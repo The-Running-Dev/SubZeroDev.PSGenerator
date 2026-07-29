@@ -36,21 +36,26 @@ function Get-JsonPropertyValue {
     return $Default
 }
 
-$visitedRealPaths = New-PSModuleInspectionVisitedPathSet
-$manifestItems = @(
+$candidateItems = @(
     Get-ChildItem -LiteralPath $Context.DirectoryPath -Recurse -File -FollowSymlink:$false |
-        Where-Object {
-            ($_.Extension -eq '.csproj' -or $_.Name -eq 'package.json') -and
-            (Test-PSModuleInspectionPath -Context $Context -Path $_.FullName -VisitedRealPaths $visitedRealPaths)
-        }
+        Where-Object { $_.Extension -eq '.csproj' -or $_.Name -eq 'package.json' }
 )
 [Array]::Sort(
-    $manifestItems,
+    $candidateItems,
     [System.Collections.Generic.Comparer[object]]::Create({
         param ($left, $right)
         [System.StringComparer]::Ordinal.Compare($left.FullName, $right.FullName)
     })
 )
+
+# Sorting before admission, rather than after, makes alias selection deterministic:
+# when two lexically different paths resolve to the same real file, the visited-path
+# check always sees the ordinally-first one first, regardless of filesystem
+# enumeration order.
+$visitedRealPaths = New-PSModuleInspectionVisitedPathSet
+$manifestItems = @($candidateItems | Where-Object {
+    Test-PSModuleInspectionPath -Context $Context -Path $_.FullName -VisitedRealPaths $visitedRealPaths
+})
 
 $dotNetProjects = [System.Collections.Generic.List[object]]::new()
 $nodeProjects = [System.Collections.Generic.List[object]]::new()

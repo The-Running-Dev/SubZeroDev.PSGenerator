@@ -594,6 +594,40 @@ Describe 'Test-PSModuleInspectionPath hardening' {
         }
     }
 
+    It 'excludes a file whose path resolves outside the repository through a linked ancestor segment' {
+        $outsideDirectory = Join-Path $TestDrive 'AncestorOutside'
+        $nestedOutsideDirectory = Join-Path $outsideDirectory 'nested'
+        New-Item -Path $nestedOutsideDirectory -ItemType Directory -Force | Out-Null
+        $outsideFile = Join-Path $nestedOutsideDirectory 'file.txt'
+        Set-Content -LiteralPath $outsideFile -Value 'secret'
+
+        # 'decoy' points outside the repository, but 'linked' points at a path that is
+        # lexically inside the repository (through 'decoy'). A resolver that only
+        # rechecks the final substituted component - rather than every segment of the
+        # substituted target - would treat "repo/decoy/nested" as already resolved
+        # and never notice that 'decoy' itself escapes, admitting a file that
+        # physically lives outside the repository because its unresolved path merely
+        # looks local.
+        $decoyPath = Join-Path $repoPath 'decoy'
+        $linkedPath = Join-Path $repoPath 'linked'
+        try {
+            New-Item -Path $decoyPath -ItemType SymbolicLink -Target $outsideDirectory -ErrorAction Stop | Out-Null
+            New-Item -Path $linkedPath -ItemType SymbolicLink -Target (Join-Path $decoyPath 'nested') -ErrorAction Stop | Out-Null
+        }
+        catch {
+            Set-ItResult -Skipped -Because 'this host does not permit creating symbolic links'
+            return
+        }
+
+        $pathThroughLink = Join-Path $linkedPath 'file.txt'
+
+        InModuleScope SubZeroDev.PSGenerator -Parameters @{ Context = $context; PathThroughLink = $pathThroughLink } {
+            param ($Context, $PathThroughLink)
+            Test-PSModuleInspectionPath -Context $Context -Path $PathThroughLink -VisitedRealPaths (New-PSModuleInspectionVisitedPathSet) |
+                Should -BeFalse
+        }
+    }
+
     It 'terminates a link chain that cycles back on itself instead of looping' {
         $loopPath = Join-Path $repoPath 'loop.txt'
         try {
@@ -640,6 +674,38 @@ Describe 'Test-PSModuleInspectionPath hardening' {
             $fresh = New-PSModuleInspectionVisitedPathSet
             Test-PSModuleInspectionPath -Context $Context -Path $AliasPath -VisitedRealPaths $fresh | Should -BeTrue
         }
+    }
+
+    It 'selects the same alias deterministically regardless of filesystem enumeration order' {
+        $directoryPath = Join-Path $TestDrive 'AliasDirectory'
+        $specificationDirectory = Join-Path $directoryPath 'PSModule'
+        New-Item -Path $specificationDirectory -ItemType Directory -Force | Out-Null
+        $specificationPath = Join-Path $specificationDirectory 'PSModule.psd1'
+        Set-Content -LiteralPath $specificationPath -Value '@{ Commands = @() }'
+
+        $originalProject = Join-Path $directoryPath 'zzz-original.csproj'
+        Set-Content -LiteralPath $originalProject -Value (
+            '<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net8.0</TargetFramework></PropertyGroup></Project>'
+        )
+        $aliasProject = Join-Path $directoryPath 'aaa-alias.csproj'
+        try {
+            New-Item -Path $aliasProject -ItemType SymbolicLink -Target $originalProject -ErrorAction Stop | Out-Null
+        }
+        catch {
+            Set-ItResult -Skipped -Because 'this host does not permit creating symbolic links'
+            return
+        }
+
+        $inspection = Get-PSModuleInspection -Specification $specificationPath
+
+        # 'aaa-alias.csproj' sorts before 'zzz-original.csproj' ordinally, so it must
+        # be the survivor regardless of which one the filesystem happens to enumerate
+        # first - proving admission runs against sorted candidates rather than raw
+        # enumeration order. 'zzz-original.csproj' is also created first, so an
+        # enumeration order that favors creation order would select it instead if
+        # candidates were not sorted before admission.
+        @($inspection.Data.DotNetProjects).Count | Should -Be 1
+        $inspection.Data.DotNetProjects[0].Path | Should -Be 'aaa-alias.csproj'
     }
 }
 

@@ -1,12 +1,19 @@
 param ([Parameter(Mandatory)] [psobject] $Context)
 
 $names = '^(?i:(?:openapi|swagger).*)\.(?:json|ya?ml)$'
-$visitedRealPaths = New-PSModuleInspectionVisitedPathSet
-$items = @(Get-ChildItem -LiteralPath $Context.DirectoryPath -Recurse -File -FollowSymlink:$false | Where-Object {
-    $_.Name -match $names -and
-    (Test-PSModuleInspectionPath -Context $Context -Path $_.FullName -VisitedRealPaths $visitedRealPaths)
+$candidateItems = @(Get-ChildItem -LiteralPath $Context.DirectoryPath -Recurse -File -FollowSymlink:$false | Where-Object {
+    $_.Name -match $names
 })
-[Array]::Sort($items, [Collections.Generic.Comparer[object]]::Create({ param($a, $b) [StringComparer]::Ordinal.Compare($a.FullName, $b.FullName) }))
+[Array]::Sort($candidateItems, [Collections.Generic.Comparer[object]]::Create({ param($a, $b) [StringComparer]::Ordinal.Compare($a.FullName, $b.FullName) }))
+
+# Sorting before admission, rather than after, makes alias selection deterministic:
+# when two lexically different paths resolve to the same real file, the visited-path
+# check always sees the ordinally-first one first, regardless of filesystem
+# enumeration order.
+$visitedRealPaths = New-PSModuleInspectionVisitedPathSet
+$items = @($candidateItems | Where-Object {
+    Test-PSModuleInspectionPath -Context $Context -Path $_.FullName -VisitedRealPaths $visitedRealPaths
+})
 
 $documents = foreach ($item in $items) {
     $version = $null; $title = $null; $apiVersion = $null; $paths = @()
