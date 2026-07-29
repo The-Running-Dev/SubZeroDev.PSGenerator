@@ -76,11 +76,12 @@ if ($Context.Inspection.Contains('DotNetProjects')) {
     } | ForEach-Object Path)
 }
 [string[]] $buildScripts = @()
-$buildScriptItems = @(Get-ChildItem -LiteralPath $Context.DirectoryPath -Recurse -File -Filter 'build.ps1' |
-    Where-Object { Test-PSModuleInspectionPath -Context $Context -Path $_.FullName })
+$visitedRealPaths = New-PSModuleInspectionVisitedPathSet
+$buildScriptItems = @(Get-ChildItem -LiteralPath $Context.DirectoryPath -Recurse -File -Filter 'build.ps1' -FollowSymlink:$false |
+    Where-Object { Test-PSModuleInspectionPath -Context $Context -Path $_.FullName -VisitedRealPaths $visitedRealPaths })
 if ($buildScriptItems.Count -gt 0) {
     $buildScripts = @($buildScriptItems | ForEach-Object {
-        [IO.Path]::GetRelativePath($Context.DirectoryPath, $_.FullName).Replace('\', '/')
+        ConvertTo-PSModuleInspectionRelativePath -Context $Context -Path $_.FullName
     })
     [Array]::Sort($buildScripts, [StringComparer]::Ordinal)
 }

@@ -1,11 +1,12 @@
 param ([Parameter(Mandatory)] [psobject] $Context)
 
 $scriptsPath = Join-Path $Context.DirectoryPath 'scripts'
+$visitedRealPaths = New-PSModuleInspectionVisitedPathSet
 $items = @(
     if (Test-Path -LiteralPath $scriptsPath -PathType Container) {
-        Get-ChildItem -LiteralPath $scriptsPath -Recurse -File | Where-Object {
+        Get-ChildItem -LiteralPath $scriptsPath -Recurse -File -FollowSymlink:$false | Where-Object {
             $_.Extension -in @('.ps1', '.psm1', '.psd1') -and
-            (Test-PSModuleInspectionPath -Context $Context -Path $_.FullName)
+            (Test-PSModuleInspectionPath -Context $Context -Path $_.FullName -VisitedRealPaths $visitedRealPaths)
         }
     }
 )
@@ -21,7 +22,7 @@ $files = foreach ($item in $items) {
         [ref]$tokens,
         [ref]$errors
     )
-    $relativePath = [IO.Path]::GetRelativePath($Context.DirectoryPath, $item.FullName).Replace('\', '/')
+    $relativePath = ConvertTo-PSModuleInspectionRelativePath -Context $Context -Path $item.FullName
     $isCommandCandidate = $item.Extension -eq '.ps1'
     $suggestedCommandName = $null
     if ($isCommandCandidate) {

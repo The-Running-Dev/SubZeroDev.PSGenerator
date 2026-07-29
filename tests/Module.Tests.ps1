@@ -517,6 +517,132 @@ throw $exception
     }
 }
 
+Describe 'Test-PSModuleInspectionPath hardening' {
+    BeforeEach {
+        $repoPath = Join-Path $TestDrive 'HardeningRepo'
+        New-Item -Path $repoPath -ItemType Directory -Force | Out-Null
+        $context = [pscustomobject] @{
+            DirectoryPath = $repoPath
+            OutputPath    = Join-Path $repoPath 'output'
+        }
+    }
+
+    It 'admits an ordinary file inside the repository' {
+        $filePath = Join-Path $repoPath 'file.txt'
+        Set-Content -LiteralPath $filePath -Value 'content'
+
+        InModuleScope SubZeroDev.PSGenerator -Parameters @{ Context = $context; FilePath = $filePath } {
+            param ($Context, $FilePath)
+            Test-PSModuleInspectionPath -Context $Context -Path $FilePath -VisitedRealPaths (New-PSModuleInspectionVisitedPathSet) |
+                Should -BeTrue
+        }
+    }
+
+    It 'admits a path containing spaces' {
+        $spacedDirectory = Join-Path $repoPath 'has spaces here'
+        New-Item -Path $spacedDirectory -ItemType Directory -Force | Out-Null
+        $spacedFile = Join-Path $spacedDirectory 'file with spaces.txt'
+        Set-Content -LiteralPath $spacedFile -Value 'content'
+
+        InModuleScope SubZeroDev.PSGenerator -Parameters @{ Context = $context; SpacedFile = $spacedFile } {
+            param ($Context, $SpacedFile)
+            Test-PSModuleInspectionPath -Context $Context -Path $SpacedFile -VisitedRealPaths (New-PSModuleInspectionVisitedPathSet) |
+                Should -BeTrue
+        }
+    }
+
+    It 'excludes existing segment exclusions per the platform-aware comparer' {
+        $segmentDirectory = Join-Path $repoPath 'NODE_MODULES'
+        New-Item -Path $segmentDirectory -ItemType Directory -Force | Out-Null
+        $segmentFile = Join-Path $segmentDirectory 'package.json'
+        Set-Content -LiteralPath $segmentFile -Value '{}'
+
+        InModuleScope SubZeroDev.PSGenerator -Parameters @{ Context = $context; SegmentFile = $segmentFile } {
+            param ($Context, $SegmentFile)
+            $admitted = Test-PSModuleInspectionPath -Context $Context -Path $SegmentFile -VisitedRealPaths (New-PSModuleInspectionVisitedPathSet)
+
+            # Linux is case-sensitive, so 'NODE_MODULES' does not match the 'node_modules'
+            # exclusion there. Windows and macOS are case-insensitive, so it does.
+            if ($IsLinux) {
+                $admitted | Should -BeTrue
+            }
+            else {
+                $admitted | Should -BeFalse
+            }
+        }
+    }
+
+    It 'excludes a symlinked file whose real target resolves outside the repository root' {
+        $outsideDirectory = Join-Path $TestDrive 'Outside'
+        New-Item -Path $outsideDirectory -ItemType Directory -Force | Out-Null
+        $outsideFile = Join-Path $outsideDirectory 'secret.txt'
+        Set-Content -LiteralPath $outsideFile -Value 'secret'
+
+        $linkPath = Join-Path $repoPath 'link.txt'
+        try {
+            New-Item -Path $linkPath -ItemType SymbolicLink -Target $outsideFile -ErrorAction Stop | Out-Null
+        }
+        catch {
+            Set-ItResult -Skipped -Because 'this host does not permit creating symbolic links'
+            return
+        }
+
+        InModuleScope SubZeroDev.PSGenerator -Parameters @{ Context = $context; LinkPath = $linkPath } {
+            param ($Context, $LinkPath)
+            Test-PSModuleInspectionPath -Context $Context -Path $LinkPath -VisitedRealPaths (New-PSModuleInspectionVisitedPathSet) |
+                Should -BeFalse
+        }
+    }
+
+    It 'terminates a link chain that cycles back on itself instead of looping' {
+        $loopPath = Join-Path $repoPath 'loop.txt'
+        try {
+            New-Item -Path $loopPath -ItemType SymbolicLink -Target $loopPath -ErrorAction Stop | Out-Null
+        }
+        catch {
+            Set-ItResult -Skipped -Because 'this host does not permit creating symbolic links'
+            return
+        }
+
+        InModuleScope SubZeroDev.PSGenerator -Parameters @{ Context = $context; LoopPath = $loopPath } {
+            param ($Context, $LoopPath)
+            $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+            $result = Test-PSModuleInspectionPath -Context $Context -Path $LoopPath -VisitedRealPaths (New-PSModuleInspectionVisitedPathSet)
+            $stopwatch.Stop()
+
+            $result | Should -BeFalse
+            $stopwatch.Elapsed.TotalSeconds | Should -BeLessThan 5
+        }
+    }
+
+    It 'deduplicates the same real file reached through two different admitted paths, scoped per caller' {
+        $originalPath = Join-Path $repoPath 'original.txt'
+        Set-Content -LiteralPath $originalPath -Value 'content'
+        $aliasPath = Join-Path $repoPath 'alias.txt'
+        try {
+            New-Item -Path $aliasPath -ItemType SymbolicLink -Target $originalPath -ErrorAction Stop | Out-Null
+        }
+        catch {
+            Set-ItResult -Skipped -Because 'this host does not permit creating symbolic links'
+            return
+        }
+
+        InModuleScope SubZeroDev.PSGenerator -Parameters @{
+            Context      = $context
+            OriginalPath = $originalPath
+            AliasPath    = $aliasPath
+        } {
+            param ($Context, $OriginalPath, $AliasPath)
+            $shared = New-PSModuleInspectionVisitedPathSet
+            Test-PSModuleInspectionPath -Context $Context -Path $OriginalPath -VisitedRealPaths $shared | Should -BeTrue
+            Test-PSModuleInspectionPath -Context $Context -Path $AliasPath -VisitedRealPaths $shared | Should -BeFalse
+
+            $fresh = New-PSModuleInspectionVisitedPathSet
+            Test-PSModuleInspectionPath -Context $Context -Path $AliasPath -VisitedRealPaths $fresh | Should -BeTrue
+        }
+    }
+}
+
 Describe 'Test-PSModuleSpecification' {
     It 'returns true for a valid specification' {
         $specificationPath = Join-Path $TestDrive 'Valid.psd1'

@@ -32,6 +32,19 @@ Recursive inspectors skip paths containing these segments:
 They also skip nested directories containing their own `.git` marker and the current
 generation output directory. Root-only inspectors do not recurse.
 
+Every check compares the candidate's *real* location, not its lexical one: a symlink
+or junction is resolved before any exclusion or containment check runs, so a linked
+file cannot present content from outside the repository root by way of a path that
+merely looks like it belongs inside. A resolution that cycles back on itself is
+rejected rather than followed indefinitely. Path comparisons are case-insensitive on
+Windows and macOS and case-sensitive on Linux, matching each platform's filesystem.
+
+Within one inspector's own traversal, the same real file reached through two
+different admitted paths — for example two links pointing at the same target — is
+only inspected once. This deduplication is scoped to a single inspector's own scan;
+it does not suppress a different inspector, or a later independent check within the
+same inspector, from reading the same file for an unrelated purpose.
+
 ## Dockerfiles
 
 **Inputs:** root `Dockerfile`, `Dockerfile.*`, and `*.Dockerfile`.

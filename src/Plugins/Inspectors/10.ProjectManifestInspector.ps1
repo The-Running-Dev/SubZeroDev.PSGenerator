@@ -36,11 +36,12 @@ function Get-JsonPropertyValue {
     return $Default
 }
 
+$visitedRealPaths = New-PSModuleInspectionVisitedPathSet
 $manifestItems = @(
-    Get-ChildItem -LiteralPath $Context.DirectoryPath -Recurse -File |
+    Get-ChildItem -LiteralPath $Context.DirectoryPath -Recurse -File -FollowSymlink:$false |
         Where-Object {
             ($_.Extension -eq '.csproj' -or $_.Name -eq 'package.json') -and
-            (Test-PSModuleInspectionPath -Context $Context -Path $_.FullName)
+            (Test-PSModuleInspectionPath -Context $Context -Path $_.FullName -VisitedRealPaths $visitedRealPaths)
         }
 )
 [Array]::Sort(
@@ -59,7 +60,7 @@ $directoryPrefix = $Context.DirectoryPath.TrimEnd(
 ) + [IO.Path]::DirectorySeparatorChar
 
 foreach ($manifestItem in $manifestItems) {
-    $relativePath = [System.IO.Path]::GetRelativePath($Context.DirectoryPath, $manifestItem.FullName).Replace('\', '/')
+    $relativePath = ConvertTo-PSModuleInspectionRelativePath -Context $Context -Path $manifestItem.FullName
 
     if ($manifestItem.Extension -eq '.csproj') {
         [xml] $document = Get-Content -LiteralPath $manifestItem.FullName -Raw
@@ -101,11 +102,15 @@ foreach ($manifestItem in $manifestItems) {
                 )) {
                     continue
                 }
-                if (-not (Test-PSModuleInspectionPath -Context $Context -Path $resolvedPath)) {
+                # A fresh set, not $visitedRealPaths: this checks one reference target's
+                # admissibility in isolation, not traversal deduplication. Two different
+                # projects can legitimately reference the same dependency, and each
+                # referencing project's own ProjectReferences list must still include it.
+                if (-not (Test-PSModuleInspectionPath -Context $Context -Path $resolvedPath -VisitedRealPaths (New-PSModuleInspectionVisitedPathSet))) {
                     continue
                 }
                 [ordered]@{
-                    Path    = [IO.Path]::GetRelativePath($Context.DirectoryPath, $resolvedPath).Replace('\', '/')
+                    Path    = ConvertTo-PSModuleInspectionRelativePath -Context $Context -Path $resolvedPath
                     Aliases = if ($reference.GetAttribute('Aliases')) {
                         @($reference.GetAttribute('Aliases') -split '[,;]' |
                             ForEach-Object { $_.Trim() } | Where-Object { $_ })

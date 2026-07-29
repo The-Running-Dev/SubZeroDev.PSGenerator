@@ -1,9 +1,10 @@
 param ([Parameter(Mandatory)] [psobject] $Context)
 
 $names = '^(?i:(?:openapi|swagger).*)\.(?:json|ya?ml)$'
-$items = @(Get-ChildItem -LiteralPath $Context.DirectoryPath -Recurse -File | Where-Object {
+$visitedRealPaths = New-PSModuleInspectionVisitedPathSet
+$items = @(Get-ChildItem -LiteralPath $Context.DirectoryPath -Recurse -File -FollowSymlink:$false | Where-Object {
     $_.Name -match $names -and
-    (Test-PSModuleInspectionPath -Context $Context -Path $_.FullName)
+    (Test-PSModuleInspectionPath -Context $Context -Path $_.FullName -VisitedRealPaths $visitedRealPaths)
 })
 [Array]::Sort($items, [Collections.Generic.Comparer[object]]::Create({ param($a, $b) [StringComparer]::Ordinal.Compare($a.FullName, $b.FullName) }))
 
@@ -31,6 +32,6 @@ $documents = foreach ($item in $items) {
         }
     }
     [Array]::Sort($paths, [StringComparer]::Ordinal)
-    [ordered]@{ Path = [IO.Path]::GetRelativePath($Context.DirectoryPath, $item.FullName).Replace('\', '/'); SpecificationVersion = $version; Title = $title; ApiVersion = $apiVersion; Paths = $paths }
+    [ordered]@{ Path = (ConvertTo-PSModuleInspectionRelativePath -Context $Context -Path $item.FullName); SpecificationVersion = $version; Title = $title; ApiVersion = $apiVersion; Paths = $paths }
 }
 $Context.Inspection['OpenApiDocuments'] = @($documents)
