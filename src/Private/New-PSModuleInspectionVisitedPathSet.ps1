@@ -11,5 +11,8 @@ function New-PSModuleInspectionVisitedPathSet {
         [StringComparer]::OrdinalIgnoreCase
     }
 
-    [System.Collections.Generic.HashSet[string]]::new($comparer)
+    # The unary comma prevents the pipeline from enumerating the HashSet: without it,
+    # a freshly constructed (always empty) set emits zero output objects, so every
+    # caller would capture $null instead of the set itself.
+    ,[System.Collections.Generic.HashSet[string]]::new($comparer)
 }
