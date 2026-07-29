@@ -3,7 +3,7 @@ function Test-PSModuleInspectionPath {
     param (
         [Parameter(Mandatory)] [psobject] $Context,
         [Parameter(Mandatory)] [string] $Path,
-        [Parameter(Mandatory)] [System.Collections.Generic.HashSet[string]] $VisitedRealPaths
+        [Parameter(Mandatory)] [AllowEmptyCollection()] [System.Collections.Generic.HashSet[string]] $VisitedRealPaths
     )
 
     # Windows and macOS filesystems are case-insensitive by default; Linux is not.
