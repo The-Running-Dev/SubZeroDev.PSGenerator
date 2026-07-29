@@ -13,9 +13,15 @@ function Test-PSModuleInspectionPath {
     else {
         [StringComparison]::OrdinalIgnoreCase
     }
+    $segmentComparer = if ($IsLinux) {
+        [StringComparer]::Ordinal
+    }
+    else {
+        [StringComparer]::OrdinalIgnoreCase
+    }
     $excludedSegments = [System.Collections.Generic.HashSet[string]]::new(
         [string[]] @('.git', 'node_modules', 'artifacts', 'bin', 'obj'),
-        (if ($IsLinux) { [StringComparer]::Ordinal } else { [StringComparer]::OrdinalIgnoreCase })
+        $segmentComparer
     )
 
     # Resolve real (symlink/junction-resolved) locations rather than trusting the
