@@ -1,9 +1,16 @@
 param ([Parameter(Mandatory)] [psobject] $Context)
 
-$items = @(Get-ChildItem -LiteralPath $Context.DirectoryPath -Recurse -File -Filter '*.json' | Where-Object {
-    Test-PSModuleInspectionPath -Context $Context -Path $_.FullName
+$candidateItems = @(Get-ChildItem -LiteralPath $Context.DirectoryPath -Recurse -File -Filter '*.json' -FollowSymlink:$false)
+[Array]::Sort($candidateItems, [Collections.Generic.Comparer[object]]::Create({ param($a, $b) [StringComparer]::Ordinal.Compare($a.FullName, $b.FullName) }))
+
+# Sorting before admission, rather than after, makes alias selection deterministic:
+# when two lexically different paths resolve to the same real file, the visited-path
+# check always sees the ordinally-first one first, regardless of filesystem
+# enumeration order.
+$visitedRealPaths = New-PSModuleInspectionVisitedPathSet
+$items = @($candidateItems | Where-Object {
+    Test-PSModuleInspectionPath -Context $Context -Path $_.FullName -VisitedRealPaths $visitedRealPaths
 })
-[Array]::Sort($items, [Collections.Generic.Comparer[object]]::Create({ param($a, $b) [StringComparer]::Ordinal.Compare($a.FullName, $b.FullName) }))
 
 $schemas = foreach ($item in $items) {
     try {
@@ -32,7 +39,7 @@ $schemas = foreach ($item in $items) {
     )
     [Array]::Sort($required, [StringComparer]::Ordinal)
     [ordered]@{
-        Path = [IO.Path]::GetRelativePath($Context.DirectoryPath, $item.FullName).Replace('\', '/')
+        Path = ConvertTo-PSModuleInspectionRelativePath -Context $Context -Path $item.FullName
         Schema = if ($data.PSObject.Properties['$schema']) { $data.'$schema' } else { $null }
         Id = if ($data.PSObject.Properties['$id']) { $data.'$id' } else { $null }
         Title = if ($data.PSObject.Properties['title']) { $data.title } else { $null }
