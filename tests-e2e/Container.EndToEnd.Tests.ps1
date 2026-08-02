@@ -57,6 +57,11 @@ Describe 'Container module end-to-end workflow' {
     It 'embeds and installs the generated module from /PSModule' {
         Test-Path -LiteralPath (Join-Path $installedModulePath 'ExampleContainer.psd1') -PathType Leaf |
             Should -BeTrue
+        $generatedMarker = Join-Path $generatedModulePath 'Metadata' 'output.json'
+        $installedMarker = Join-Path $installedModulePath 'Metadata' 'output.json'
+        Test-Path -LiteralPath $installedMarker -PathType Leaf | Should -BeTrue
+        [Convert]::ToHexString([IO.File]::ReadAllBytes($installedMarker)) |
+            Should -Be ([Convert]::ToHexString([IO.File]::ReadAllBytes($generatedMarker)))
         Get-Command Invoke-Example -Module ExampleContainer | Should -Not -BeNullOrEmpty
     }
 
