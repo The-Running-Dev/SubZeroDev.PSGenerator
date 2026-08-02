@@ -569,14 +569,19 @@ Describe 'Resolve-PSModuleInspectionRealPath path splitting' {
             return
         }
 
-        InModuleScope SubZeroDev.PSGenerator -Parameters @{
-            LinkPath   = $linkPath
-            VolumeRoot = $volumeRoot
-        } {
-            param ($LinkPath, $VolumeRoot)
+        try {
+            InModuleScope SubZeroDev.PSGenerator -Parameters @{
+                LinkPath   = $linkPath
+                VolumeRoot = $volumeRoot
+            } {
+                param ($LinkPath, $VolumeRoot)
 
-            Resolve-PSModuleInspectionRealPath -Path $LinkPath |
-                Should -BeExactly ([IO.Path]::GetFullPath($VolumeRoot))
+                Resolve-PSModuleInspectionRealPath -Path $LinkPath |
+                    Should -BeExactly ([IO.Path]::GetFullPath($VolumeRoot))
+            }
+        }
+        finally {
+            Remove-Item -LiteralPath $linkPath -Force -ErrorAction SilentlyContinue
         }
     }
 

@@ -417,12 +417,17 @@ Describe 'Generated output hard denials' {
             Set-ItResult -Skipped -Because 'this host does not permit creating symbolic links'
             return
         }
-        $context = New-OutputContext -Fixture $fixture -OutputPath $linkPath
+        try {
+            $context = New-OutputContext -Fixture $fixture -OutputPath $linkPath
 
-        InModuleScope SubZeroDev.PSGenerator -Parameters @{ Context = $context } {
-            param ($Context)
-            { Assert-PSModuleOutputPath -Context $Context } |
-                Should -Throw -ExceptionType ([ArgumentException]) -ExpectedMessage '*filesystem root*'
+            InModuleScope SubZeroDev.PSGenerator -Parameters @{ Context = $context } {
+                param ($Context)
+                { Assert-PSModuleOutputPath -Context $Context } |
+                    Should -Throw -ExceptionType ([ArgumentException]) -ExpectedMessage '*filesystem root*'
+            }
+        }
+        finally {
+            Remove-Item -LiteralPath $linkPath -Force -ErrorAction SilentlyContinue
         }
     }
 
@@ -505,14 +510,19 @@ Describe 'Generated output hard denials' {
             Set-ItResult -Skipped -Because 'this host does not permit creating junctions'
             return
         }
-        $context = New-OutputContext -Fixture $fixture -OutputPath $junctionPath
+        try {
+            $context = New-OutputContext -Fixture $fixture -OutputPath $junctionPath
 
-        InModuleScope SubZeroDev.PSGenerator -Parameters @{ Context = $context } {
-            param ($Context)
-            { Assert-PSModuleOutputPath -Context $Context } |
-                Should -Throw -ExceptionType ([ArgumentException])
+            InModuleScope SubZeroDev.PSGenerator -Parameters @{ Context = $context } {
+                param ($Context)
+                { Assert-PSModuleOutputPath -Context $Context } |
+                    Should -Throw -ExceptionType ([ArgumentException])
+            }
+            Get-Content -LiteralPath $targetSentinel | Should -Be 'keep'
         }
-        Get-Content -LiteralPath $targetSentinel | Should -Be 'keep'
+        finally {
+            Remove-Item -LiteralPath $junctionPath -Force -ErrorAction SilentlyContinue
+        }
     }
 
     It 'HD-11 rejects a linked ancestor that disguises a source relationship' {
