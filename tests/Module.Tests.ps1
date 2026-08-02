@@ -2889,6 +2889,7 @@ param([string] $Name)
         $firstPaths | Should -Contain 'DeterministicPackage.psd1'
         $firstPaths | Should -Contain 'DeterministicPackage.psm1'
         $firstPaths | Should -Contain 'Metadata/model.json'
+        $firstPaths | Should -Contain 'Metadata/output.json'
         $firstPaths | Should -Contain 'Public/Invoke-ContainerExample.ps1'
         $firstPaths | Should -Contain 'Public/Invoke-Local.ps1'
         $firstPaths | Should -Contain 'Documentation/Invoke-ContainerExample.md'

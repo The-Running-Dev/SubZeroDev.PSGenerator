@@ -830,6 +830,60 @@ throw 'renderer failure'
             Should -Not -BeNullOrEmpty
     }
 
+    It 'BL-07 and BL-08 rejects missing or malformed marker during package completion' -ForEach @(
+        @{ Mode = 'Missing' }
+        @{ Mode = 'Malformed' }
+    ) {
+        $fixture = New-OutputSafetyFixture -Root (Join-Path $TestDrive "completion-$Mode")
+        $metadata = Build-PSModule `
+            -Specification $fixture.SpecificationPath `
+            -Output $fixture.OutputPath
+        $model = Get-PSModuleModel -Specification $fixture.SpecificationPath
+        $markerPath = Join-Path $fixture.OutputPath 'Metadata' 'output.json'
+        if ($Mode -eq 'Missing') {
+            Remove-Item -LiteralPath $markerPath -Force
+        }
+        else {
+            Set-Content -LiteralPath $markerPath -Value '{bad'
+        }
+        $context = [pscustomobject] @{
+            OutputPath = $fixture.OutputPath
+            Model      = $model
+            Artifacts  = [ordered] @{
+                Manifest = Get-Item -LiteralPath (
+                    Join-Path $fixture.OutputPath "$($fixture.ModuleName).psd1"
+                )
+                Metadata = $metadata
+            }
+        }
+
+        InModuleScope SubZeroDev.PSGenerator -Parameters @{ Context = $context } {
+            param ($Context)
+            { Complete-PSModulePackage -Context $Context } |
+                Should -Throw -ExceptionType ([IO.InvalidDataException])
+        }
+    }
+
+    It 'does not mistake a marker-owned partial directory for a complete package' {
+        $fixture = New-OutputSafetyFixture -Root (Join-Path $TestDrive 'partial-completion')
+        New-Item -Path $fixture.OutputPath -ItemType Directory -Force | Out-Null
+        InModuleScope SubZeroDev.PSGenerator -Parameters @{ OutputPath = $fixture.OutputPath } {
+            param ($OutputPath)
+            $null = Write-PSModuleOutputMarker -OutputPath $OutputPath
+        }
+        $context = [pscustomobject] @{
+            OutputPath = $fixture.OutputPath
+            Model      = [pscustomobject] @{ ModuleName = $fixture.ModuleName; Commands = @() }
+            Artifacts  = [ordered] @{}
+        }
+
+        InModuleScope SubZeroDev.PSGenerator -Parameters @{ Context = $context } {
+            param ($Context)
+            { Complete-PSModulePackage -Context $Context } |
+                Should -Throw -ExceptionType ([IO.InvalidDataException])
+        }
+    }
+
     It 'BL-10 and BL-12 copy scripts exactly once within an explicit timeout' {
         $fixture = New-OutputSafetyFixture `
             -Root (Join-Path $TestDrive 'bounded-normal-copy') `
