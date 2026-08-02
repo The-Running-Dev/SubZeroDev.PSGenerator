@@ -36,11 +36,11 @@ work queue.
 - [x] Verify generated Markdown documentation in the packaged module end-to-end.
 - [x] Reconcile `Specifications.md`, `README.md`, command help, examples, and generated
   documentation with the final Version 1 behavior.
-- [ ] Stop `Build-PSModule` from recursively clearing an unsafe `-Output` path. Reject
+- [x] Stop `Build-PSModule` from recursively clearing an unsafe `-Output` path. Reject
   filesystem roots, source roots, source ancestors, existing files, linked output
   leaves, and any path overlapping the packaged `scripts` tree outright, and require an
   explicit `-Force` before replacing a non-empty directory that is not recognizably
-  generator-owned. The scripts overlap is the sharpest case: it currently deletes the
+  generator-owned. The scripts overlap was the sharpest case: it deleted the
   source scripts and then copies the output into itself without bound. See
   [`planning/output-path-safety-design.md`](planning/output-path-safety-design.md) and
   its [implementation plan](planning/output-path-safety-implementation-plan.md).
@@ -179,7 +179,7 @@ Complete these in order so every inspector follows the same policy:
   artifacts, but fail for explicitly authoritative malformed inputs.
 - [ ] Confirm recursive inspectors never traverse generated output, dependency,
   cache, or source-control directories.
-- [ ] Fix the discarded `RemoveEmptyEntries` argument in the path splits used by
+- [x] Fix the discarded `RemoveEmptyEntries` argument in the path splits used by
   `Resolve-PSModuleInspectionRealPath` and `Test-PSModuleInspectionPath`. PowerShell
   binds `Split(char[])` and treats the option as a third separator, so empty segments
   survive and reach `Join-Path`.
