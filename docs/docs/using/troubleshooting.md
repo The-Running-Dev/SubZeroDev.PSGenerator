@@ -56,6 +56,40 @@ Common causes:
 - a mapping property does not match its parameter type; or
 - invalid help or example strings.
 
+## Generated Output Path Is Rejected
+
+PSGenerator checks the selected output immediately before any reset. Use the message
+to distinguish these cases:
+
+| Symptom or cause | Recovery |
+| --- | --- |
+| Output is a filesystem root | Choose a dedicated generated-output subdirectory. Force cannot permit a root. |
+| Output is the source directory, the specification directory, or an ancestor | Choose output outside that relationship, normally `artifacts/PSModule`. Force cannot permit it. |
+| Output is an existing file | Select a directory path, or move/rename the file first. |
+| Output is a symbolic link or junction | Select the real dedicated directory directly. Linked output leaves are never reset. |
+| Non-empty output is not recognized as generated | Inspect and move valuable data, choose another directory, or deliberately rebuild with `-Force`. |
+| `Metadata/output.json` is malformed or has unexpected values | Treat the directory as unowned. Prefer another directory or preserve its contents; use `-Force` only after review. |
+| Output overlaps the source `scripts` tree | Choose output outside `scripts`. Force cannot permit a recursive packaging relationship. |
+| Output changed while reset was being validated | Stop concurrent writers and retry with a stable, dedicated directory. |
+
+If a previously generated package is rejected only because
+`Metadata/output.json` was deleted, inspect the package and perform one deliberate
+rebuild to restore ownership metadata:
+
+```powershell
+Build-PSModule -Output ./artifacts/PSModule -Force
+```
+
+If marker creation fails after reset, check directory permissions, free space, and
+filesystem health for `Metadata/output.json`, then retry. The prior output has already
+been reset at that point; there is no transactional rollback.
+
+`Initialize-PSModuleDirectory` uses `-ForceOutput` for the same output-only adoption:
+
+```powershell
+Initialize-PSModuleDirectory -Directory . -Generate -ForceOutput
+```
+
 ## No Inferred Commands Appear
 
 Inference reads only `scripts/**/*.ps1` and explicitly exported functions in
