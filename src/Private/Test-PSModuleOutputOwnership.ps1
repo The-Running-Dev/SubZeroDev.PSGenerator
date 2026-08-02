@@ -115,7 +115,8 @@ function Test-PSModuleOutputOwnership {
                 )
                 if ($legacyPathsValid) {
                     foreach ($legacyFilePath in @($legacyManifestPath, $legacyLoaderPath)) {
-                        $legacyFile = Get-Item -LiteralPath $legacyFilePath -Force
+                        $legacyFile = Get-Item -LiteralPath $legacyFilePath -Force `
+                            -ErrorAction Stop
                         if (& $hasActualLinkTarget $legacyFile) {
                             $legacyPathsValid = $false
                             break
@@ -132,7 +133,8 @@ function Test-PSModuleOutputOwnership {
                             $legacyPathsValid = $false
                             break
                         }
-                        $legacyDirectory = Get-Item -LiteralPath $legacyDirectoryPath -Force
+                        $legacyDirectory = Get-Item -LiteralPath $legacyDirectoryPath -Force `
+                            -ErrorAction Stop
                         if (& $hasActualLinkTarget $legacyDirectory) {
                             $legacyPathsValid = $false
                             break

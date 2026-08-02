@@ -394,6 +394,39 @@ Describe 'Generated output ownership classification' {
         }
     }
 
+    It 'fails closed when legacy entry inspection errors for <Entry>' -ForEach @(
+        @{ Entry = 'root artifact'; RelativePath = 'LegacyInspectionError.psd1' }
+        @{ Entry = 'optional directory'; RelativePath = 'Public' }
+    ) {
+        $outputPath = Join-Path $TestDrive "legacy-inspection-error-$($Entry.Replace(' ', '-'))"
+        New-LegacyOutput `
+            -OutputPath $outputPath `
+            -ModuleName 'LegacyInspectionError' `
+            -WithOptionalDirectories
+        $failurePath = Join-Path $outputPath $RelativePath
+
+        InModuleScope SubZeroDev.PSGenerator -Parameters @{
+            OutputPath  = $outputPath
+            FailurePath = $failurePath
+        } {
+            param ($OutputPath, $FailurePath)
+
+            Mock Get-Item {
+                throw [IO.IOException]::new('Simulated legacy entry inspection failure.')
+            } -ParameterFilter { $LiteralPath -eq $FailurePath }
+
+            $output = @(Test-PSModuleOutputOwnership -OutputPath $OutputPath 2>&1)
+
+            $output.Count | Should -Be 1
+            $output[0].State | Should -Be 'Unowned'
+            @($output | Where-Object { $_ -is [Management.Automation.ErrorRecord] }).Count |
+                Should -Be 0
+            Should -Invoke Get-Item -Times 1 -Exactly -ParameterFilter {
+                $LiteralPath -eq $FailurePath -and $ErrorAction -eq 'Stop'
+            }
+        }
+    }
+
     It 'OW-11 through OW-14 fails closed on incomplete legacy shapes' -ForEach @(
         @{ Id = 'OW-11'; Mutation = 'MalformedMetadata' }
         @{ Id = 'OW-12'; Mutation = 'UnsafeName' }
