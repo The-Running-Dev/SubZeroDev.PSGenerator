@@ -600,14 +600,13 @@ Describe 'Resolve-PSModuleInspectionRealPath path splitting' {
         }
     }
 
-    It 'RP-06 preserves ordinary inspection-path admission after the split fix' {
-        $repoPath = Join-Path $TestDrive 'RootAdmissionRepo'
-        New-Item -Path $repoPath -ItemType Directory -Force | Out-Null
-        $filePath = Join-Path $repoPath 'file.txt'
+    It 'RP-06 preserves inspection-path admission at a volume-root boundary' {
+        $directoryPath = [IO.Path]::GetPathRoot($TestDrive)
+        $filePath = Join-Path $TestDrive 'root-admission-file.txt'
         Set-Content -LiteralPath $filePath -Value 'content'
         $context = [pscustomobject] @{
-            DirectoryPath = $repoPath
-            OutputPath    = Join-Path $repoPath 'output'
+            DirectoryPath = $directoryPath
+            OutputPath    = Join-Path $TestDrive 'root-admission-output'
         }
 
         InModuleScope SubZeroDev.PSGenerator -Parameters @{

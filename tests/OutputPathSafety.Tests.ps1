@@ -124,6 +124,9 @@ Describe 'Generated output public contract and context shape' {
 
         $buildCommand.Parameters.Force.ParameterType | Should -Be ([switch])
         $initializeCommand.Parameters.ForceOutput.ParameterType | Should -Be ([switch])
+        (Get-Help Build-PSModule).Parameters.Parameter.Name | Should -Contain 'Force'
+        (Get-Help Initialize-PSModuleDirectory).Parameters.Parameter.Name |
+            Should -Contain 'ForceOutput'
         @(Get-Command -Module SubZeroDev.PSGenerator).Count | Should -Be 9
     }
 
@@ -301,6 +304,20 @@ Describe 'Generated output ownership classification' {
         }
     }
 
+    It 'requires exact case-sensitive marker property names' {
+        $outputPath = Join-Path $TestDrive 'marker-property-case'
+        Write-TestOutputMarker -OutputPath $outputPath -Content (
+            '{"schemaversion":1,"generator":"SubZeroDev.PSGenerator",' +
+            '"artifacttype":"GeneratedPowerShellModule"}'
+        )
+
+        InModuleScope SubZeroDev.PSGenerator -Parameters @{ OutputPath = $outputPath } {
+            param ($OutputPath)
+            (Test-PSModuleOutputOwnership -OutputPath $OutputPath).State |
+                Should -Be 'InvalidMarker'
+        }
+    }
+
     It 'OW-05 through OW-08 rejects malformed or mismatched marker content' -ForEach @(
         @{ Id = 'OW-05'; Content = '{not-json' }
         @{ Id = 'OW-06'; Content = '{"SchemaVersion":2,"Generator":"SubZeroDev.PSGenerator","ArtifactType":"GeneratedPowerShellModule"}' }
@@ -342,6 +359,38 @@ Describe 'Generated output ownership classification' {
         InModuleScope SubZeroDev.PSGenerator -Parameters @{ OutputPath = $outputPath } {
             param ($OutputPath)
             (Test-PSModuleOutputOwnership -OutputPath $OutputPath).State | Should -Be 'Legacy'
+        }
+    }
+
+    It 'rejects linked legacy root artifacts' -ForEach @(
+        @{ Artifact = 'Manifest'; Extension = 'psd1' }
+        @{ Artifact = 'Loader'; Extension = 'psm1' }
+    ) {
+        $outputPath = Join-Path $TestDrive "legacy-linked-$Artifact"
+        $moduleName = "Linked$Artifact"
+        New-LegacyOutput -OutputPath $outputPath -ModuleName $moduleName
+        $artifactPath = Join-Path $outputPath "$moduleName.$Extension"
+        $targetPath = Join-Path $TestDrive "external-$Artifact.$Extension"
+        Set-Content -LiteralPath $targetPath -Value $(if ($Extension -eq 'psd1') { '@{}' } else { '' })
+        Remove-Item -LiteralPath $artifactPath -Force
+        try {
+            New-Item -Path $artifactPath -ItemType SymbolicLink -Target $targetPath `
+                -ErrorAction Stop | Out-Null
+        }
+        catch {
+            Set-ItResult -Skipped -Because 'this host does not permit creating symbolic links'
+            return
+        }
+
+        try {
+            InModuleScope SubZeroDev.PSGenerator -Parameters @{ OutputPath = $outputPath } {
+                param ($OutputPath)
+                (Test-PSModuleOutputOwnership -OutputPath $OutputPath).State |
+                    Should -Be 'Unowned'
+            }
+        }
+        finally {
+            Remove-Item -LiteralPath $artifactPath -Force -ErrorAction SilentlyContinue
         }
     }
 

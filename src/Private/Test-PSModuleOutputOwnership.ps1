@@ -63,7 +63,7 @@ function Test-PSModuleOutputOwnership {
         $propertyNames = @($marker.PSObject.Properties.Name)
         $expectedNames = @('SchemaVersion', 'Generator', 'ArtifactType')
         if ($propertyNames.Count -ne $expectedNames.Count -or
-            @($propertyNames | Where-Object { $_ -notin $expectedNames }).Count -gt 0 -or
+            @($propertyNames | Where-Object { $_ -cnotin $expectedNames }).Count -gt 0 -or
             -not $marker.PSObject.Properties['SchemaVersion'] -or
             $marker.SchemaVersion -isnot [long] -or
             $marker.SchemaVersion -ne 1 -or
@@ -102,19 +102,26 @@ function Test-PSModuleOutputOwnership {
                 else {
                     $null
                 }
+                $legacyManifestPath = Join-Path $resolvedOutputPath "$moduleName.psd1"
+                $legacyLoaderPath = Join-Path $resolvedOutputPath "$moduleName.psm1"
                 $legacyPathsValid = (
                     $model.PSObject.Properties['SchemaVersion'] -and
                     $model.SchemaVersion -is [long] -and
                     $model.SchemaVersion -eq 1 -and
                     $moduleName -is [string] -and
                     $moduleName -match '^[A-Za-z][A-Za-z0-9_.-]*$' -and
-                    (Test-Path -LiteralPath (
-                        Join-Path $resolvedOutputPath "$moduleName.psd1"
-                    ) -PathType Leaf) -and
-                    (Test-Path -LiteralPath (
-                        Join-Path $resolvedOutputPath "$moduleName.psm1"
-                    ) -PathType Leaf)
+                    (Test-Path -LiteralPath $legacyManifestPath -PathType Leaf) -and
+                    (Test-Path -LiteralPath $legacyLoaderPath -PathType Leaf)
                 )
+                if ($legacyPathsValid) {
+                    foreach ($legacyFilePath in @($legacyManifestPath, $legacyLoaderPath)) {
+                        $legacyFile = Get-Item -LiteralPath $legacyFilePath -Force
+                        if (& $hasActualLinkTarget $legacyFile) {
+                            $legacyPathsValid = $false
+                            break
+                        }
+                    }
+                }
                 if ($legacyPathsValid) {
                     foreach ($directoryName in @('Public', 'Documentation', 'Scripts')) {
                         $legacyDirectoryPath = Join-Path $resolvedOutputPath $directoryName
