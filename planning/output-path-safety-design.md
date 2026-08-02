@@ -5,6 +5,18 @@
 Proposed. This document is implementation-ready but does not itself change runtime
 behavior.
 
+Revised after validation against the implementation. The review confirmed the problem
+statement and the overall shape of the policy, and corrected six items: a prerequisite
+defect in the shared real-path resolver, a missing path normalization contract, the
+`GetFullPath` hazard on bare drive designators, the strict-mode behavior of the optional
+context-property fallback, a contradiction with the implementation plan over
+`-ForceOutput` forwarding, and an overstated claim about what the hard denials cover.
+
+A later run against a real repository added a seventh: an output overlapping the
+packaged `scripts` tree causes an unbounded recursive copy that the ownership layer
+cannot close, because `-Force` admits it and the resulting marker makes it permanent.
+That is now a hard denial with a matching guard in the packager.
+
 ## Decision summary
 
 `Build-PSModule` will continue to replace generated output, but it will no longer
@@ -63,7 +75,8 @@ ability to rebuild an intentional output directory.
 
 ## Goals
 
-1. Make accidental broad or source-destructive output deletion fail before mutation.
+1. Make accidental deletion of a filesystem root, the inspected source root, or any
+   directory containing the source fail before mutation, with or without force.
 2. Preserve deterministic full-output replacement for recognized generator output.
 3. Keep the default `artifacts/PSModule` workflow unchanged after the first safe build.
 4. Give callers an explicit way to adopt or clear an existing non-empty output
@@ -75,6 +88,21 @@ ability to rebuild an intentional output directory.
 9. Produce errors that identify the rejected path, classification, and safe recovery.
 10. Add no machine-specific paths, timestamps, secrets, or nondeterministic values to
     generated packages.
+
+### What each layer actually covers
+
+The two layers protect different things, and the distinction matters when reviewing the
+denial table below.
+
+Hard denials cover only targets that contain the source or the volume. They do **not**
+protect a sibling directory inside the inspected tree: `-Output ./src` passes every hard
+denial, because `src` neither contains the specification nor is an ancestor of the
+inspected root.
+
+Everything else is the ownership layer's job. A non-empty unowned `src` is rejected for
+lacking a marker, not for being source, and `-Force` will therefore delete it. That is
+deliberate, and it is why the force help text must direct callers to inspect the
+resolved path first.
 
 ## Non-goals
 
@@ -130,6 +158,55 @@ output. The refined contract is:
 The shared context is internal and version-coupled. Adding a Boolean
 `ForceOutputReset` property is therefore acceptable, but it must default to false so
 direct internal construction remains safe.
+
+### Prerequisite defect in the shared real-path resolver
+
+This design layers exact path comparisons on top of
+`Resolve-PSModuleInspectionRealPath`. That resolver currently splits path segments with:
+
+```powershell
+$full.Substring($root.Length).Split(
+    [IO.Path]::DirectorySeparatorChar,
+    [IO.Path]::AltDirectorySeparatorChar,
+    [StringSplitOptions]::RemoveEmptyEntries
+)
+```
+
+`String` has no `Split(char, char, StringSplitOptions)` overload. PowerShell binds
+`Split(char[])` and coerces the enum to `(char) 1`, so `RemoveEmptyEntries` is silently
+discarded. Observed consequences:
+
+- `''.Split(...)` yields one empty entry rather than none;
+- `'D:\a\\b'.Split(...)` yields `D:`, `a`, `''`, `b`; and
+- an empty segment reaching `Join-Path` appends a separator, so `Join-Path 'D:\a' ''`
+  returns `D:\a\`.
+
+A resolved path carrying a trailing separator defeats every equality comparison in this
+design. The resolver happens to return `C:\` for a drive root today only because the
+spurious empty segment restores the separator that `TrimEnd` removed.
+
+The same pattern appears in `Test-PSModuleInspectionPath`.
+
+Fixing both call sites to pass an explicit `[char[]]` array with the options argument is
+a prerequisite for this feature, not an optional cleanup. The fix ships with focused
+resolver tests for roots, doubled separators, and a link whose target is a root.
+
+### Path normalization contract
+
+Because the denial rules compare paths for exact equality, one canonical form is
+required. Every path entering a comparison is normalized as follows:
+
+1. Resolve to an absolute path with `GetFullPath` **before** any trimming.
+2. Never pass an already-trimmed value back through `GetFullPath`. On Windows a bare
+   drive designator is process-relative: `[IO.Path]::GetFullPath('D:')` returns the
+   process's current directory on `D:`, not `D:\`.
+3. For comparison, trim trailing directory separators from both operands.
+4. Re-append a single separator only when the result is a bare volume root, so a root
+   remains distinguishable from a relative drive reference.
+
+Root detection compares the normalized target against its own normalized
+`GetPathRoot`, so it does not depend on whether the resolver preserved a trailing
+separator.
 
 ### Cross-platform behavior
 
@@ -200,7 +277,18 @@ Add:
 [switch] $ForceOutput
 ```
 
-When generation occurs, forward it as `Build-PSModule -Force:$ForceOutput`.
+When generation occurs, forward it by adding `Force = $true` to the build parameters
+only when `ForceOutput` is bound:
+
+```powershell
+$buildParameters = @{ Specification = $Specification; Output = $Output }
+if ($ForceOutput) { $buildParameters['Force'] = $true }
+$artifact = Build-PSModule @buildParameters
+```
+
+Do not forward an incidental `-Force:$false`. Always binding the parameter changes
+`PSBoundParameters` for every ordinary initialization, which makes "did not force"
+indistinguishable from "forced false" in mocks and plugin-visible state.
 
 `-ForceOutput` does not:
 
@@ -248,10 +336,57 @@ The following targets are rejected with `ArgumentException`, regardless of `-For
 | Existing output is a non-directory item | Avoid deleting a file selected through a typo. |
 | Existing output leaf resolves as a symlink or junction | Avoid platform-dependent recursive link deletion. |
 | Real-path resolution exceeds its cycle/depth bound | Fail closed on an ambiguous target. |
+| Output equals or is inside `<DirectoryPath>/scripts` | Script packaging copies that tree into the output; an overlap recurses without bound. |
 
 Both lexical and real relationships are checked. Lexical checks make error behavior
 clear for ordinary paths. Real checks prevent a linked ancestor from hiding a source
 or root relationship.
+
+Root comparisons follow the path normalization contract above; they must not assume the
+real-path resolver returns a trailing separator for a volume root.
+
+The two `Context.DirectoryPath` rows are retained for message quality, not for
+additional coverage. `DirectoryPath` is always the specification's parent or
+grandparent, so any target equal to or containing it is already caught by the
+specification-ancestor rule. Evaluating the directory rows first means a caller who
+passes the inspected root is told that, rather than being told about the specification
+file they did not name. Do not remove them as redundant.
+
+#### Why the script-packaging overlap must be a hard denial
+
+This row is not symmetric with the others: it protects against a runaway, not against a
+deletion. `Write-PSModuleCommandSource` packages discovered scripts with:
+
+```powershell
+$directoryScriptsPath = Join-Path $Context.DirectoryPath 'scripts'
+if (Test-Path -LiteralPath $directoryScriptsPath -PathType Container) {
+    Copy-Item -LiteralPath $directoryScriptsPath `
+        -Destination (Join-Path $Context.OutputPath 'Scripts') -Recurse -Force
+}
+```
+
+When the output is at or inside that tree, the destination lies inside the source and
+`Copy-Item -Recurse` walks into its own output. Reset removes the directory, the
+renderers recreate it as the output, `Test-Path` then succeeds, and the copy expands
+without bound. This was reproduced against a real repository: the source scripts were
+destroyed and the tree grew past 1400 nested files before the process was killed.
+
+The ownership layer alone is not sufficient here, which is why the rule belongs among
+the hard denials:
+
+- by default the directory is non-empty and unowned, so ownership does reject it;
+- but `-Force` admits it, and the recursion still occurs; and
+- that forced run leaves a valid marker in the scripts tree, so the directory becomes
+  `Owned` and every later build recurses again **without** force.
+
+An ownership-only rule therefore converts a one-time forced mistake into a permanent
+one. The hard denial is evaluated before ownership and cannot be forced, which is the
+only placement that closes all three paths.
+
+`Write-PSModuleCommandSource` additionally guards its own copy by refusing to run when
+the resolved destination is inside the resolved source. That guard is independent of
+output policy, so the runaway stays closed even if this denial is ever relaxed or a
+future caller reaches the packager by another route.
 
 The source-ancestor rules still allow normal destinations inside the inspected tree,
 including `artifacts/PSModule` and `dist`, because those descendants do not contain the
@@ -372,6 +507,23 @@ ForceOutputReset = false
 callers that omit the property remain safe because `Reset-PSModuleOutput` treats a
 missing property as false for compatibility with manually constructed test contexts.
 
+That fallback cannot be written as a plain property read. The module sets
+`Set-StrictMode -Version 3.0`, under which `$Context.ForceOutputReset` on an object
+lacking the property throws `PropertyNotFoundException` rather than returning `$null`.
+Existing tests construct partial contexts as bare `[pscustomobject]` literals, so this
+path is reachable. Every optional context read in this feature must be presence-checked:
+
+```powershell
+$force = [bool] ($Context.PSObject.Properties['ForceOutputReset'] -and
+                 $Context.ForceOutputReset)
+```
+
+The same rule applies to `Assert-PSModuleOutputPath`, which reads
+`Context.SpecificationPath` and `Context.DirectoryPath`. When either is absent or null,
+fail closed with `ArgumentException` rather than skipping the corresponding denials. A
+context that cannot describe its own source boundary is not a context this function can
+clear output for.
+
 ### Private helpers
 
 Add focused helpers rather than expanding the reset function into a large policy
@@ -442,6 +594,14 @@ Assert target
 
 The function should return the marker item for tests but callers may discard it.
 
+Reset now creates the output and `Metadata` directories, which previously happened
+lazily in `Write-PSModuleMetadata`. That renderer still runs
+`New-Item -Path <Metadata> -ItemType Directory -Force` over a directory that now already
+contains `output.json`. On an existing directory this returns the item without touching
+its contents, so the marker survives. Record that dependency: `New-Item -Force` against
+a *file* truncates it, so if that call is ever retargeted at a file path it would
+silently destroy the marker.
+
 ### Package completion
 
 `Complete-PSModulePackage` adds `Metadata/output.json` to its required paths and
@@ -500,6 +660,9 @@ contents.
 - A symlink or junction used as the output leaf is rejected.
 - Source roots and ancestors are rejected even with `-Force`.
 - Successful packages include `Metadata/output.json`.
+- Removing `Metadata/output.json` from a completed package makes that directory unowned,
+  so the next rebuild into it requires one deliberate `-Force` to re-establish the
+  marker. Troubleshooting must state this directly.
 
 The project has not published its first package, so this is the appropriate time to
 tighten the Version 1 contract. Legacy recognition still minimizes disruption for
@@ -513,8 +676,8 @@ Update:
 - `Initialize-PSModuleDirectory` help with `-ForceOutput`;
 - `Specifications.md` generated-output contract and package tree;
 - `docs/docs/using/generated-output.md` with ownership states and marker details;
-- `docs/docs/using/troubleshooting.md` with unowned, invalid-marker, linked-path, and
-  hard-denial recovery;
+- `docs/docs/using/troubleshooting.md` with unowned, invalid-marker, deleted-marker,
+  linked-path, and hard-denial recovery;
 - `docs/docs/developing/overview.md` to name the validation/reset/marker boundary;
 - `docs/docs/developing/security.md` to explain that `-Force` is deliberate deletion,
   not a hard-denial bypass; and
@@ -584,6 +747,20 @@ Reset and lifecycle cases:
 - default initialization does not force an unowned output;
 - module manifest still exports exactly the existing public commands.
 
+Real-path resolver cases (prerequisite fix):
+
+- a drive root and a POSIX root round-trip to a canonical form;
+- a doubled separator produces no empty segment and no trailing separator;
+- a link whose target is a volume root resolves to that root, not to root-plus-separator;
+- a path deeper than the previous implicit segment limit resolves completely; and
+- existing inspection-path behavior is unchanged.
+
+Context-shape cases:
+
+- a context missing `ForceOutputReset` is treated as not forced rather than throwing;
+- a context missing or with a null `SpecificationPath` fails closed; and
+- a context missing or with a null `DirectoryPath` fails closed.
+
 ### Link tests
 
 Link creation may require privileges on Windows. Tests should:
@@ -619,13 +796,19 @@ Link creation may require privileges on Windows. Tests should:
 | New metadata breaks consumers expecting exact files | Document the additive file and exercise container/NuGet packaging. |
 | Safety logic drifts across callers | Keep deletion and its assertion together in `Reset-PSModuleOutput`. |
 | TOCTOU replacement after validation | Re-check the leaf immediately before removal and fail on identity change. |
+| Trailing separators defeat path equality | Fix the resolver's discarded `RemoveEmptyEntries` first and normalize both operands through one contract. |
+| Strict mode turns the optional-property fallback into a terminating error | Presence-check every optional context read; cover partial `[pscustomobject]` contexts in tests. |
+| Marker deleted from a good package makes it unowned | Document the one-time `-Force` recovery in troubleshooting. |
+| Output overlapping the packaged scripts tree recurses without bound | Deny the overlap before ownership, and guard the copy in `Write-PSModuleCommandSource`. |
+| A forced overlap becomes self-perpetuating once marked | Hard denial precedes ownership, so a marker inside the scripts tree can never admit it. |
 
 ## Acceptance criteria
 
 The design is implemented when all of the following are true:
 
-1. No filesystem root, inspected source root, source ancestor, or specification
-   ancestor can reach `Remove-Item`, with or without force.
+1. No filesystem root, inspected source root, source ancestor, specification ancestor,
+   or path overlapping the packaged scripts tree can reach `Remove-Item`, with or
+   without force.
 2. Existing files and linked output directories are rejected before mutation.
 3. Missing and empty safe outputs build without force.
 4. Marker-owned and valid legacy outputs rebuild without force.
@@ -638,7 +821,13 @@ The design is implemented when all of the following are true:
 11. `Initialize-PSModuleDirectory -ForceOutput` forwards the intended policy without
     changing specification ownership behavior.
 12. User and developer documentation accurately describes the policy and recovery.
-13. The complete Windows/Linux quality, unit, packaging, documentation, and container
+13. The real-path resolver honors `RemoveEmptyEntries`, returns a canonical form for
+    roots and doubled separators, and is covered by tests at both call sites.
+14. A context missing `ForceOutputReset` is treated as not forced, and a context missing
+    its source boundary fails closed, both under `Set-StrictMode -Version 3.0`.
+15. Script packaging cannot copy a tree into itself, whether blocked by the output
+    denial or by its own destination-inside-source guard.
+16. The complete Windows/Linux quality, unit, packaging, documentation, and container
     gates pass.
 
 ## Follow-up opportunities

@@ -2,7 +2,9 @@
 
 ## Purpose
 
-Implement the contract in [design.md](design.md) as one focused, reviewable feature.
+Implement the contract in
+[output-path-safety-design.md](output-path-safety-design.md) as one focused,
+reviewable feature.
 The feature prevents accidental recursive deletion through `Build-PSModule -Output`
 while preserving deterministic replacement of intentional generated output.
 
@@ -34,10 +36,13 @@ Before implementation:
    - ordinary directories;
    - missing leaves;
    - symbolic links;
-   - Windows junctions; and
+   - Windows junctions;
+   - volume roots and doubled separators; and
    - the repository's Dropbox-backed path.
 7. Do not use real user directories, roots, or paths outside Pester `TestDrive` for
    mutation experiments.
+8. Land Phase 0 before anything else. The resolver defect it fixes is a prerequisite,
+   not a cleanup, and every later comparison depends on it.
 
 ## File impact map
 
@@ -62,6 +67,9 @@ needed for these helpers.
 | `src/Private/New-PSModuleBuildContext.ps1` | Add `ForceOutputReset = $false`. |
 | `src/Private/Reset-PSModuleOutput.ps1` | Assert, classify, re-check, reset, and mark. |
 | `src/Private/Complete-PSModulePackage.ps1` | Require and validate `Metadata/output.json`. |
+| `src/Private/Resolve-PSModuleInspectionRealPath.ps1` | Fix the discarded `RemoveEmptyEntries` split (Phase 0). |
+| `src/Private/Test-PSModuleInspectionPath.ps1` | Fix the same split pattern (Phase 0). |
+| `src/Private/Write-PSModuleCommandSource.ps1` | Refuse to copy the scripts tree into a destination inside itself. |
 
 ### Tests
 
@@ -91,6 +99,48 @@ Update `README.md` only if its first-build example needs a user-visible note. Av
 expanding the homepage with internal details.
 
 ## Implementation sequence
+
+### Phase 0: Fix the shared path-splitting defect
+
+Both `Resolve-PSModuleInspectionRealPath` and `Test-PSModuleInspectionPath` call:
+
+```powershell
+.Split(
+    [IO.Path]::DirectorySeparatorChar,
+    [IO.Path]::AltDirectorySeparatorChar,
+    [StringSplitOptions]::RemoveEmptyEntries
+)
+```
+
+`String` exposes no `Split(char, char, StringSplitOptions)` overload. PowerShell binds
+`Split(char[])`, coercing `RemoveEmptyEntries` to `(char) 1` and treating it as a third
+separator, so the option is silently discarded.
+
+Replace both with an explicit array so the options argument selects
+`Split(char[], StringSplitOptions)`:
+
+```powershell
+.Split(
+    [char[]] @([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar),
+    [StringSplitOptions]::RemoveEmptyEntries
+)
+```
+
+Add resolver tests, using IDs from the `RP` table below, before touching output safety.
+Expect at least one behavior change to fall out: with empty segments removed, a volume
+root no longer regains its trailing separator through `Join-Path`, so the resolver's
+root handling must be made explicitly canonical rather than accidentally correct.
+
+Re-run the existing inspection suites. `Test-PSModuleInspectionPath` builds prefixes by
+trimming and re-appending a separator, so it should be unaffected, but that must be
+demonstrated rather than assumed.
+
+Exit criteria:
+
+- both call sites pass an explicit `[char[]]`;
+- doubled separators and roots produce no empty segments;
+- the resolver returns one canonical form per input; and
+- all pre-existing inspection tests still pass unchanged.
 
 ### Phase 1: Lock the current contract with focused tests
 
@@ -155,28 +205,40 @@ Exit criteria:
 Implementation rules:
 
 1. Require non-empty absolute path inputs.
-2. Normalize with `GetFullPath`.
-3. Trim both directory separator variants.
+2. Normalize with `GetFullPath` once, before any trimming.
+3. Trim both directory separator variants, for comparison only.
 4. Add one platform directory separator to the candidate ancestor.
 5. Compare with the supplied or platform-selected `StringComparison`.
 6. Return false for equality; callers test equality separately.
 7. Do not touch the filesystem.
+
+Never feed a trimmed value back through `GetFullPath`. On Windows a bare drive
+designator is process-relative, not a root: with the process on `D:\Dropbox\Projects`,
+`[IO.Path]::GetFullPath('D:')` returns `D:\Dropbox\Projects`, not `D:\`. Trimming
+`D:\` to `D:` and re-normalizing therefore silently retargets the comparison at the
+current directory. Normalize first, trim last, and keep the trimmed form inside the
+comparison only.
 
 Tests:
 
 - direct parent and multiple-level ancestor;
 - sibling-prefix collision such as `repo` versus `repository`;
 - equal paths;
-- root behavior;
+- root behavior, including a bare drive designator that must not be re-normalized;
 - trailing separators;
 - alternate separators where supported;
 - Windows/macOS case folding and Linux ordinal behavior.
 
 #### 2.2 Reuse real-path resolution
 
-Do not create a second link resolver. Call
-`Resolve-PSModuleInspectionRealPath` and add focused tests only where output safety
-exposes a missing behavior.
+Do not create a second link resolver. Call `Resolve-PSModuleInspectionRealPath`, now
+carrying the Phase 0 fix, and add focused tests only where output safety exposes a
+missing behavior.
+
+Root detection must not assume the resolver preserves a trailing separator. Compare the
+normalized target against its own normalized `GetPathRoot` through the same
+trim-for-comparison helper used everywhere else, so `C:\`, `\\server\share`, and `/`
+each classify as a root regardless of which side carries the separator.
 
 If the resolver cannot distinguish an actual link from a cloud-provider reparse point,
 use `Directory.ResolveLinkTarget` on the existing output leaf. A null target is not by
@@ -263,6 +325,28 @@ to pre-normalize them:
 
 Select the comparison mode once and use it consistently.
 
+`Set-StrictMode -Version 3.0` is active module-wide, so reading a property that a
+partially constructed context does not carry throws `PropertyNotFoundException` instead
+of returning `$null`. Existing tests build contexts as bare `[pscustomobject]` literals
+holding only `DirectoryPath` and `OutputPath`, so this is a reachable path, not a
+hypothetical one.
+
+Presence-check before reading, and fail closed on a missing source boundary:
+
+```powershell
+foreach ($name in @('OutputPath', 'SpecificationPath', 'DirectoryPath')) {
+    if (-not $Context.PSObject.Properties[$name] -or -not $Context.$name) {
+        throw [ArgumentException]::new(
+            "The build context does not define $name, so output cannot be reset safely."
+        )
+    }
+}
+```
+
+Do not silently skip the specification or directory denials when those properties are
+absent. A context that cannot describe its own source boundary must not reach
+`Remove-Item`.
+
 #### 4.2 Apply denials before ownership
 
 Evaluate, in order:
@@ -273,12 +357,20 @@ Evaluate, in order:
 4. ancestry of real or lexical source directory;
 5. equality with real or lexical specification;
 6. ancestry of real or lexical specification;
-7. existing non-directory output;
-8. actual linked output leaf; and
-9. unresolved/cyclic real path.
+7. equality with or containment inside `<DirectoryPath>/scripts`;
+8. existing non-directory output;
+9. actual linked output leaf; and
+10. unresolved/cyclic real path.
+
+Apply rule 7 to both the lexical and the real path, using the same boundary-aware
+ancestry helper as the source rules, so a link into the scripts tree cannot slip past
+it.
 
 Checking denials before ownership ensures a forged marker and `-Force` cannot admit a
-source-destructive path.
+source-destructive path. Rule 7 depends on that ordering more than any other: an
+ownership-only check rejects the overlap the first time, but `-Force` admits it, the
+recursion runs, and the marker it leaves behind makes the directory `Owned` so every
+later build recurses without force.
 
 #### 4.3 Enforce ownership
 
@@ -314,16 +406,36 @@ $context.ForceOutputReset = [bool] $Force
 Keep plugin-root and stage ordering unchanged.
 
 In `Initialize-PSModuleDirectory`, construct build parameters and add `Force = $true`
-only when `ForceOutput` is bound. Do not pass an incidental false value if parameter
-binding behavior is tested by plugins or mocks.
+only when `ForceOutput` is bound:
+
+```powershell
+$buildParameters = @{ Specification = $Specification; Output = $Output }
+if ($ForceOutput) { $buildParameters['Force'] = $true }
+$artifact = Build-PSModule @buildParameters
+```
+
+Do not pass an incidental `-Force:$false`. This is the binding the design specifies and
+the behavior FO-07 asserts; always binding the parameter would make "did not force"
+indistinguishable from "forced false" in `PSBoundParameters`.
 
 #### 5.2 Pre-delete assertion
 
 At the beginning of `Reset-PSModuleOutput`:
 
-- derive force from `Context.ForceOutputReset`, defaulting to false if absent;
+- derive force from `Context.ForceOutputReset`, defaulting to false when the property is
+  absent;
 - call `Assert-PSModuleOutputPath`;
 - retain the returned identity for re-check.
+
+Under `Set-StrictMode -Version 3.0` the default cannot be a plain property read. Use:
+
+```powershell
+$force = [bool] ($Context.PSObject.Properties['ForceOutputReset'] -and
+                 $Context.ForceOutputReset)
+```
+
+A direct `$Context.ForceOutputReset` throws for every hand-built test context and would
+break the compatibility the design promises.
 
 #### 5.3 Immediate identity re-check
 
@@ -349,7 +461,45 @@ After admission:
 Use `-LiteralPath` for every existing-path operation. Use explicit paths rather than
 globs. Do not swallow filesystem exceptions.
 
-#### 5.5 Marker writer
+Creating the output directory here is new; it previously happened lazily inside
+`Write-PSModuleMetadata`. That renderer still runs
+`New-Item -Path <Metadata> -ItemType Directory -Force` after reset has already created
+`Metadata` and written `output.json`. Against an existing *directory* this returns the
+item and leaves contents intact, so the marker survives — verify it with a test rather
+than relying on the reading. Note in the code that `New-Item -Force` against a *file*
+truncates, so retargeting that call at a file path would destroy the marker silently.
+
+`tests/Module.Tests.ps1` already asserts that context construction creates no output
+directory. That test targets `New-PSModuleBuildContext`, not reset, and stays valid.
+
+#### 5.5 Guard the script-packaging copy
+
+`Write-PSModuleCommandSource` currently runs an unguarded recursive copy:
+
+```powershell
+$directoryScriptsPath = Join-Path $Context.DirectoryPath 'scripts'
+if (Test-Path -LiteralPath $directoryScriptsPath -PathType Container) {
+    Copy-Item -LiteralPath $directoryScriptsPath `
+        -Destination (Join-Path $Context.OutputPath 'Scripts') -Recurse -Force
+}
+```
+
+Resolve both sides and refuse when the destination is the source or lies inside it:
+
+- resolve the scripts source and the `Scripts` destination to real paths;
+- reject with `InvalidOperationException` on equality or containment; and
+- name both resolved paths in the message.
+
+This is deliberately redundant with the Phase 4 denial. The denial is the user-facing
+policy; this guard is the last line and stays correct even if a future caller reaches
+the packager through a path the denial does not cover. Do not implement one and skip
+the other.
+
+Note the ordering that makes the bug reachable: reset removes the scripts directory,
+the renderers recreate it as the output, and only then does `Test-Path` succeed. A test
+that checks `Test-Path` before reset will not reproduce it.
+
+#### 5.6 Marker writer
 
 Build the marker as an ordered dictionary, serialize at a fixed depth, normalize line
 endings, and write through:
@@ -448,11 +598,15 @@ Add symptom/cause/recovery entries for:
 - linked output leaf;
 - unowned non-empty directory;
 - invalid marker;
+- marker deleted from a previously complete package;
 - marker write failure; and
 - output changed during reset validation.
 
 Every recovery should prefer choosing a dedicated output or moving data before
-suggesting force.
+suggesting force. The deleted-marker entry is the one exception: a package that was
+generated here and then had `Metadata/output.json` removed is genuinely unowned, and the
+correct advice is one deliberate `-Force` rebuild to re-establish the marker. Say that
+plainly rather than sending the user to pick a different directory.
 
 #### 7.4 Architecture and security
 
@@ -509,6 +663,12 @@ Run:
 Inspect `/PSModule/Metadata/output.json` in the built image without exposing unrelated
 container environment state.
 
+This subsection requires a working Docker daemon. When one is unavailable locally, run
+the rest of the phase, record the container steps as deferred, and treat the hosted
+container end-to-end and image smoke jobs in §8.6 as their authoritative result. Do not
+report container verification as passing on the strength of a local run that did not
+happen.
+
 #### 8.5 Documentation build
 
 Run documentation link/terminology validation and the production Docusaurus build.
@@ -553,6 +713,35 @@ Use the following IDs in test names or review notes to make coverage auditable.
 | HD-11 | Link ancestor disguises source relationship | Reject by real path. |
 | HD-12 | Real-path cycle/depth overflow | `IOException`; no removal. |
 | HD-13 | Every prior case with force | Same rejection; force is not a bypass. |
+| HD-14 | Output equals `<DirectoryPath>/scripts` | Reject; scripts tree intact, no recursion. |
+| HD-15 | Output inside `<DirectoryPath>/scripts` | Reject; scripts tree intact. |
+| HD-16 | HD-14/HD-15 with force | Same rejection; force is not a bypass. |
+| HD-17 | Link inside the output resolving into the scripts tree | Reject by real path. |
+| HD-18 | Marker planted in the scripts tree, then build | Reject; ownership never reached. |
+
+HD-12 must build its link chain against the resolver's own bound rather than inventing
+one. That bound is the `$hops -gt 32` guard in `Resolve-PSModuleInspectionRealPath`;
+reference it so the test tracks the implementation if the constant ever moves.
+
+### Real-path resolver (Phase 0)
+
+| ID | Scenario | Expected result |
+| --- | --- | --- |
+| RP-01 | Volume root (`C:\`, `/`) | One canonical form; no trailing-separator drift. |
+| RP-02 | UNC root (`\\server\share`) | Canonical form; classified as a root. |
+| RP-03 | Doubled separator in the input | No empty segment; no trailing separator. |
+| RP-04 | Link whose target is a volume root | Resolves to the root, not root-plus-separator. |
+| RP-05 | Path deeper than the previous implicit segment limit | Fully resolved. |
+| RP-06 | Existing inspection-path behavior | Unchanged by the split fix. |
+
+### Context shape
+
+| ID | Scenario | Expected result |
+| --- | --- | --- |
+| CX-01 | Context without `ForceOutputReset` | Treated as not forced; no exception. |
+| CX-02 | Context without `SpecificationPath` | `ArgumentException`; no removal. |
+| CX-03 | Context without `DirectoryPath` | `ArgumentException`; no removal. |
+| CX-04 | Context with a null source-boundary value | `ArgumentException`; no removal. |
 
 ### Ownership classification
 
@@ -601,6 +790,13 @@ Use the following IDs in test names or review notes to make coverage auditable.
 | BL-08 | Marker malformed before completion | Packaging fails as invalid. |
 | BL-09 | Empty module | Complete marked package. |
 | BL-10 | Script-packaging module | Marker and scripts both packaged. |
+| BL-11 | Packager invoked with destination inside the scripts source | `InvalidOperationException`; no copy, no nesting. |
+| BL-12 | Script-packaging build to a normal output | Scripts copied exactly once; no `Scripts/Scripts` nesting. |
+
+BL-11 and BL-12 must assert bounded output, not merely a successful build. Check that no
+`Scripts/Scripts` path exists and that the packaged file count matches the source count,
+so an unbounded copy fails the test instead of hanging it. Give these cases an explicit
+Pester timeout: the pre-fix behavior does not throw, it expands until the disk fills.
 
 ### Marker bytes
 
@@ -625,6 +821,13 @@ Use the following IDs in test names or review notes to make coverage auditable.
 - [ ] The output leaf is re-checked immediately before deletion.
 - [ ] Rejected tests verify sentinels and specification bytes remain unchanged.
 - [ ] No destructive test targets a real user directory or filesystem root.
+- [ ] Both `Split` call sites pass an explicit `[char[]]` so `RemoveEmptyEntries` applies.
+- [ ] No comparison operand is re-normalized through `GetFullPath` after trimming.
+- [ ] Optional context properties are presence-checked, not read directly under strict mode.
+- [ ] A context missing its source boundary fails closed rather than skipping denials.
+- [ ] Output overlapping `<DirectoryPath>/scripts` is denied before ownership, not by it.
+- [ ] `Write-PSModuleCommandSource` refuses a destination inside its own source.
+- [ ] Recursion tests assert bounded output and carry a timeout.
 
 ### Compatibility
 
@@ -659,20 +862,25 @@ Use the following IDs in test names or review notes to make coverage auditable.
 Keep commits independently understandable and avoid mixing generated documentation with
 unrelated source work.
 
-1. `Test unsafe generated output path contracts`
-   - Add the path, ownership, force, marker, and forwarding tests.
-2. `Classify generated output ownership`
+1. `Honor empty-entry removal when splitting inspection paths`
+   - Fix both `Split` call sites and add the `RP` resolver tests. This commit stands
+     alone and is independently revertable.
+2. `Test unsafe generated output path contracts`
+   - Add the path, ownership, force, marker, forwarding, and `CX` context-shape tests.
+3. `Classify generated output ownership`
    - Add ancestry, ownership, marker parsing, and assertion helpers.
-3. `Guard generated output replacement`
+4. `Guard generated output replacement`
    - Add context/public switches and integrate guarded reset plus marker writing.
-4. `Require ownership metadata in generated packages`
+5. `Require ownership metadata in generated packages`
    - Extend package completion and lifecycle assertions.
-5. `Document generated output safety`
+6. `Document generated output safety`
    - Update command help, specifications, using, troubleshooting, architecture, and
      security documentation.
 
 If tests and implementation must land together to keep every commit green, combine
-commits 1 through 3 while retaining the same logical review order in the diff.
+commits 2 through 4 while retaining the same logical review order in the diff. Keep
+commit 1 separate regardless; it fixes a pre-existing defect in shared inspection code
+and should be reviewable and revertable without the output-safety feature.
 
 ## Pull request structure
 
@@ -687,6 +895,10 @@ root, source-boundary, ownership, or link check.
 
 Summarize:
 
+- the prerequisite `RemoveEmptyEntries` fix in shared path splitting, and why the new
+  comparisons could not be trusted without it;
+- the script-packaging overlap denial and copier guard, noting that the pre-fix
+  behavior was an unbounded copy rather than a single bad deletion;
 - hard denials;
 - ownership classification;
 - explicit force behavior;
@@ -731,9 +943,11 @@ adoption of the ownership requirement.
 
 The feature is done only when:
 
-- implementation matches every accepted decision in `design.md`;
-- all HD, OW, FO, BL, and MK test cases are implemented or have a documented,
+- implementation matches every accepted decision in
+  `output-path-safety-design.md`;
+- all RP, CX, HD, OW, FO, BL, and MK test cases are implemented or have a documented,
   reviewed reason for exclusion;
+- no build configuration can copy the packaged scripts tree into itself;
 - no rejected target is mutated in tests;
 - all supported first-build, repeat-build, initialization, package, and container
   workflows pass;
