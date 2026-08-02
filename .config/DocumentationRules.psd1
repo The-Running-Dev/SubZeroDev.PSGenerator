@@ -46,11 +46,9 @@
         }
     )
 
-    # Individual files excluded from scanning, relative to the repository root.
-    # docs/docs/index.md is generated from README.md by docs.ps1 before every
-    # image build, so it is validated at its source instead.
+    # Individual authored files or fixture trees excluded from scanning, relative
+    # to the repository root. GeneratedFiles paths are excluded automatically.
     ExcludedFiles = @(
-        'docs/docs/index.md'
         'tests/fixtures'
     )
 }
