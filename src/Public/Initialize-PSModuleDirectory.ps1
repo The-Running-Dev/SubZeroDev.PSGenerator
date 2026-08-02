@@ -68,7 +68,10 @@ function Initialize-PSModuleDirectory {
         [switch] $ListCommands,
 
         [Parameter()]
-        [switch] $NoInitialize
+        [switch] $NoInitialize,
+
+        [Parameter()]
+        [switch] $ForceOutput
     )
 
     if (-not (Test-Path -LiteralPath $Directory -PathType Container)) {
@@ -135,7 +138,14 @@ function Initialize-PSModuleDirectory {
         }
 
         if ($Generate -or $ListCommands -or $specificationInitialized) {
-            $artifact = Build-PSModule -Specification $Specification -Output $Output
+            $buildParameters = @{
+                Specification = $Specification
+                Output        = $Output
+            }
+            if ($ForceOutput) {
+                $buildParameters['Force'] = $true
+            }
+            $artifact = Build-PSModule @buildParameters
             $model = Get-PSModuleModel -Specification $Specification
             $outputPath = if ([IO.Path]::IsPathRooted($Output)) {
                 $Output

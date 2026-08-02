@@ -2905,7 +2905,7 @@ param([string] $Name)
         Set-Content -LiteralPath (Join-Path $outputPath 'stale.txt') -Value 'old build'
         Set-Content -LiteralPath $specificationPath -Value '@{ Commands = @() }'
 
-        Build-PSModule -Specification $specificationPath -Output $outputPath | Out-Null
+        Build-PSModule -Specification $specificationPath -Output $outputPath -Force | Out-Null
 
         Test-Path -LiteralPath (Join-Path $outputPath 'stale.txt') | Should -BeFalse
         Test-Path -LiteralPath (Join-Path $outputPath 'PSModule.psd1') | Should -BeTrue

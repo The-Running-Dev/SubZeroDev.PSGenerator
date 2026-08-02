@@ -35,10 +35,14 @@ function Build-PSModule {
 
         [Parameter()]
         [ValidateNotNullOrEmpty()]
-        [string[]] $PluginPath
+        [string[]] $PluginPath,
+
+        [Parameter()]
+        [switch] $Force
     )
 
     $context = New-PSModuleBuildContext -SpecificationPath $Specification -OutputPath $Output
+    $context.ForceOutputReset = [bool] $Force
     [string[]] $pluginRoots = @((Join-Path $PSScriptRoot '..' 'Plugins'))
     if ($PSBoundParameters.ContainsKey('PluginPath')) {
         $pluginRoots += @($PluginPath)
