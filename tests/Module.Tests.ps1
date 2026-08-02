@@ -517,6 +517,109 @@ throw $exception
     }
 }
 
+Describe 'Resolve-PSModuleInspectionRealPath path splitting' {
+    It 'RP-01 returns a volume root in one canonical form' {
+        $volumeRoot = [IO.Path]::GetPathRoot($TestDrive)
+
+        InModuleScope SubZeroDev.PSGenerator -Parameters @{ VolumeRoot = $volumeRoot } {
+            param ($VolumeRoot)
+
+            $resolved = Resolve-PSModuleInspectionRealPath -Path $VolumeRoot
+
+            $resolved | Should -BeExactly ([IO.Path]::GetFullPath($VolumeRoot))
+        }
+    }
+
+    It 'RP-02 returns a UNC root in canonical form on Windows' -Skip:(-not $IsWindows) {
+        $uncRoot = '\\server\share\'
+
+        InModuleScope SubZeroDev.PSGenerator -Parameters @{ UncRoot = $uncRoot } {
+            param ($UncRoot)
+
+            $resolved = Resolve-PSModuleInspectionRealPath -Path $UncRoot
+
+            $resolved.TrimEnd('\') | Should -BeExactly '\\server\share'
+        }
+    }
+
+    It 'RP-03 removes empty segments and trailing separators from an ordinary path' {
+        $first = Join-Path $TestDrive 'first'
+        $second = Join-Path $first 'second'
+        New-Item -Path $second -ItemType Directory -Force | Out-Null
+        $separator = [IO.Path]::DirectorySeparatorChar
+        $path = $first + $separator + $separator + 'second' + $separator
+
+        InModuleScope SubZeroDev.PSGenerator -Parameters @{ Path = $path; Expected = $second } {
+            param ($Path, $Expected)
+
+            Resolve-PSModuleInspectionRealPath -Path $Path |
+                Should -BeExactly ([IO.Path]::GetFullPath($Expected))
+        }
+    }
+
+    It 'RP-04 resolves a link whose target is a volume root without separator drift' {
+        $volumeRoot = [IO.Path]::GetPathRoot($TestDrive)
+        $linkPath = Join-Path $TestDrive 'volume-root-link'
+        try {
+            New-Item -Path $linkPath -ItemType SymbolicLink -Target $volumeRoot -ErrorAction Stop |
+                Out-Null
+        }
+        catch {
+            Set-ItResult -Skipped -Because 'this host does not permit creating symbolic links'
+            return
+        }
+
+        InModuleScope SubZeroDev.PSGenerator -Parameters @{
+            LinkPath   = $linkPath
+            VolumeRoot = $volumeRoot
+        } {
+            param ($LinkPath, $VolumeRoot)
+
+            Resolve-PSModuleInspectionRealPath -Path $LinkPath |
+                Should -BeExactly ([IO.Path]::GetFullPath($VolumeRoot))
+        }
+    }
+
+    It 'RP-05 resolves a path deeper than the link-resolution hop bound' {
+        $deepPath = $TestDrive
+        foreach ($index in 1..40) {
+            $deepPath = Join-Path $deepPath ('segment-{0:D2}' -f $index)
+        }
+        New-Item -Path $deepPath -ItemType Directory -Force | Out-Null
+
+        InModuleScope SubZeroDev.PSGenerator -Parameters @{ DeepPath = $deepPath } {
+            param ($DeepPath)
+
+            Resolve-PSModuleInspectionRealPath -Path $DeepPath |
+                Should -BeExactly ([IO.Path]::GetFullPath($DeepPath))
+        }
+    }
+
+    It 'RP-06 preserves ordinary inspection-path admission after the split fix' {
+        $repoPath = Join-Path $TestDrive 'RootAdmissionRepo'
+        New-Item -Path $repoPath -ItemType Directory -Force | Out-Null
+        $filePath = Join-Path $repoPath 'file.txt'
+        Set-Content -LiteralPath $filePath -Value 'content'
+        $context = [pscustomobject] @{
+            DirectoryPath = $repoPath
+            OutputPath    = Join-Path $repoPath 'output'
+        }
+
+        InModuleScope SubZeroDev.PSGenerator -Parameters @{
+            Context  = $context
+            FilePath = $filePath
+        } {
+            param ($Context, $FilePath)
+
+            Test-PSModuleInspectionPath `
+                -Context $Context `
+                -Path $FilePath `
+                -VisitedRealPaths (New-PSModuleInspectionVisitedPathSet) |
+                Should -BeTrue
+        }
+    }
+}
+
 Describe 'Test-PSModuleInspectionPath hardening' {
     BeforeEach {
         $repoPath = Join-Path $TestDrive 'HardeningRepo'
