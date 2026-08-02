@@ -15,6 +15,10 @@ function Initialize-PSModuleDirectory {
     mappings is refreshed. Once mappings are added, the specification is treated
     as authored and preserved.
 
+    Generated output follows the same guarded replacement policy as Build-PSModule.
+    ForceOutput affects generation output only; it never authorizes replacing an
+    authored specification or bypasses unsafe-path denials.
+
     This is the entry point for pointing the generator at a directory you have
     mounted or checked out, rather than running from inside it.
 
@@ -41,11 +45,24 @@ function Initialize-PSModuleDirectory {
     Fails when Specification is missing instead of scaffolding one, and
     prevents refreshing an empty scaffold.
 
+    .PARAMETER ForceOutput
+    Deliberately replaces a selected non-empty generation output that is not
+    recognized as PSGenerator-owned. This switch is forwarded only when generation
+    runs and cannot bypass filesystem-root, source-ancestor, file, link, or
+    scripts-overlap denials.
+
     .EXAMPLE
     Initialize-PSModuleDirectory -Directory /workspace -ListCommands
 
     Scaffolds, generates, imports, and lists the commands for a mounted
     directory.
+
+    .EXAMPLE
+    Initialize-PSModuleDirectory -Directory /workspace -Generate `
+        -Output ./selected-output -ForceOutput
+
+    Generates into a deliberately selected existing directory after its contents
+    have been reviewed. ForceOutput applies only to generated output.
     #>
     [CmdletBinding()]
     param (
@@ -68,7 +85,10 @@ function Initialize-PSModuleDirectory {
         [switch] $ListCommands,
 
         [Parameter()]
-        [switch] $NoInitialize
+        [switch] $NoInitialize,
+
+        [Parameter()]
+        [switch] $ForceOutput
     )
 
     if (-not (Test-Path -LiteralPath $Directory -PathType Container)) {
@@ -135,7 +155,14 @@ function Initialize-PSModuleDirectory {
         }
 
         if ($Generate -or $ListCommands -or $specificationInitialized) {
-            $artifact = Build-PSModule -Specification $Specification -Output $Output
+            $buildParameters = @{
+                Specification = $Specification
+                Output        = $Output
+            }
+            if ($ForceOutput) {
+                $buildParameters['Force'] = $true
+            }
+            $artifact = Build-PSModule @buildParameters
             $model = Get-PSModuleModel -Specification $Specification
             $outputPath = if ([IO.Path]::IsPathRooted($Output)) {
                 $Output

@@ -9,6 +9,12 @@ function Build-PSModule {
     includes metadata, an importable manifest and loader, generated public commands,
     and one Markdown reference page per command.
 
+    Before replacing output, the generator rejects filesystem roots, source
+    directories and their ancestors, existing files, linked output directories,
+    and output that overlaps the source scripts tree. Missing, empty,
+    generator-owned, and recognized pre-marker output directories are accepted.
+    Other non-empty directories require Force.
+
     Built-in plugins always run. Trusted local plugins are discovered from a
     sibling Plugins directory unless explicit roots are supplied. The command returns
     the generated Metadata/model.json file; the complete package is written to Output.
@@ -18,12 +24,19 @@ function Build-PSModule {
 
     .PARAMETER Output
     Directory where the complete generated module package will be written. Existing
-    output is replaced only after specification and model validation succeed.
+    admitted output is replaced only after specification and model validation
+    succeed.
 
     .PARAMETER PluginPath
     One or more trusted plugin roots used in addition to the built-in plugins. When
     omitted, the Plugins directory beside the resolved specification is used when it
     exists. Local plugins execute as unsandboxed PowerShell code.
+
+    .PARAMETER Force
+    Deliberately adopts and replaces a non-empty output directory that is not
+    recognized as PSGenerator-owned. Force bypasses only the ownership check. It
+    cannot permit a filesystem root, a source directory or ancestor, an existing
+    file, a linked output directory, or output overlapping the source scripts tree.
     #>
     [CmdletBinding()]
     param (
@@ -35,10 +48,14 @@ function Build-PSModule {
 
         [Parameter()]
         [ValidateNotNullOrEmpty()]
-        [string[]] $PluginPath
+        [string[]] $PluginPath,
+
+        [Parameter()]
+        [switch] $Force
     )
 
     $context = New-PSModuleBuildContext -SpecificationPath $Specification -OutputPath $Output
+    $context.ForceOutputReset = [bool] $Force
     [string[]] $pluginRoots = @((Join-Path $PSScriptRoot '..' 'Plugins'))
     if ($PSBoundParameters.ContainsKey('PluginPath')) {
         $pluginRoots += @($PluginPath)

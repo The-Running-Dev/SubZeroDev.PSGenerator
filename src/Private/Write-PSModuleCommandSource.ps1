@@ -9,9 +9,6 @@ function Write-PSModuleCommandSource {
         return
     }
 
-    $publicDirectory = Join-Path $Context.OutputPath 'Public'
-    $null = New-Item -Path $publicDirectory -ItemType Directory -Force
-
     $sourceCommands = @($Context.Model.Commands | Where-Object {
         $_.Definition.ContainsKey('SourceKind') -and
         $_.Definition['SourceKind'] -in @('Script', 'ModuleFunction')
@@ -19,13 +16,36 @@ function Write-PSModuleCommandSource {
     if ($sourceCommands.Count -gt 0) {
         $directoryScriptsPath = Join-Path $Context.DirectoryPath 'scripts'
         if (Test-Path -LiteralPath $directoryScriptsPath -PathType Container) {
+            $scriptsDestinationPath = Join-Path $Context.OutputPath 'Scripts'
+            $realScriptsPath = Resolve-PSModuleInspectionRealPath -Path $directoryScriptsPath
+            $realDestinationPath = Resolve-PSModuleInspectionRealPath -Path $scriptsDestinationPath
+            $comparison = if ($IsLinux) {
+                [StringComparison]::Ordinal
+            }
+            else {
+                [StringComparison]::OrdinalIgnoreCase
+            }
+            if ([string]::Equals($realScriptsPath, $realDestinationPath, $comparison) -or
+                (Test-PSModulePathAncestor `
+                    -CandidateAncestor $realScriptsPath `
+                    -Path $realDestinationPath `
+                    -Comparison $comparison)) {
+                throw [InvalidOperationException]::new(
+                    "Cannot package scripts from '$realScriptsPath' into '$realDestinationPath' " +
+                    'because the destination is inside the source tree.'
+                )
+            }
+
             Copy-Item `
                 -LiteralPath $directoryScriptsPath `
-                -Destination (Join-Path $Context.OutputPath 'Scripts') `
+                -Destination $scriptsDestinationPath `
                 -Recurse `
                 -Force
         }
     }
+
+    $publicDirectory = Join-Path $Context.OutputPath 'Public'
+    $null = New-Item -Path $publicDirectory -ItemType Directory -Force
 
     foreach ($command in $Context.Model.Commands) {
         $sourcePath = Join-Path $publicDirectory "$($command.Name).ps1"

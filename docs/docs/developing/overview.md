@@ -53,6 +53,9 @@ Every stage receives one mutable context:
 | `RenderRequests` | Source payloads awaiting rendering |
 | `PluginExecutions` | Ordered timing and failure records |
 
+`ForceOutputReset` records an explicit request to adopt unowned output. It affects
+only ownership classification at the reset boundary.
+
 When the specification is directly beneath `PSModule`, the inspected directory is its
 parent. For an alternate specification location, that file's directory is the
 inspection root.
@@ -81,8 +84,16 @@ commands and preserves packaged local execution for inferred PowerShell sources.
 
 ### Code Generators
 
-Reset the validated output destination and generate in-memory source and metadata
-requests. Output reset happens only after validation and model creation.
+Assert and reset the validated output destination, then generate in-memory source and
+metadata requests. The assertion runs inside the destructive reset helper, after
+validation and model creation and immediately before deletion. It rejects roots,
+source relationships, files, linked leaves, and scripts-tree overlap; force bypasses
+only the unowned-directory decision. The helper rechecks the output leaf and resolved
+identity immediately before deletion.
+
+After creating clean output, reset writes `Metadata/output.json` before later build
+stages can fail. A pre-reset validation failure does not mutate existing output; a
+post-reset failure leaves marker-owned partial output that can be retried.
 
 ### Template Renderers
 
@@ -92,7 +103,8 @@ orchestrator requires the metadata artifact before packaging begins.
 ### Packaging Providers
 
 Verify required files, command pages, command source, artifact paths, and manifest
-validity, then publish the completed package artifact.
+validity, require a valid output ownership marker, then publish the completed package
+artifact.
 
 ## Deterministic Boundaries
 

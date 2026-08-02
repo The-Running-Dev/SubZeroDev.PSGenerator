@@ -26,6 +26,25 @@ PowerShell data files can contain data-language expressions supported by
 
 Only generate or import modules from directories and plugin roots you trust.
 
+## Generated Output Safeguard
+
+The generator protects its destructive reset boundary. It rejects filesystem roots,
+the inspected source and its ancestors, existing files, linked output directories,
+and output overlapping the source `scripts` tree. It resolves intermediate links and
+rechecks the output identity immediately before deletion. A non-empty directory
+without valid ownership evidence also requires an explicit `-Force`.
+
+Force bypasses only that ownership check. It never permits the hard-denied path
+relationships. `Metadata/output.json` is written immediately after reset and required
+for package completion, but it is not authenticated and must not be treated as proof
+of trusted provenance.
+
+This safeguard is scoped to generator-managed output replacement. Specifications and
+plugins are trusted code running with the generator process's permissions; they can
+read, write, delete, or execute outside this boundary. Review them before use. The
+reset recheck reduces concurrent path-substitution risk but does not provide a
+transactional swap or rollback.
+
 ## Plugin Permissions
 
 A plugin runs with the generator process's:
