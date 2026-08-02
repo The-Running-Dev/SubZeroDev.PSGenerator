@@ -23,6 +23,39 @@ This plan covers:
 It does not implement transactional output swaps, `Build-PSModule -WhatIf`, or the
 Docker-BuildAgent roadmap work. Those remain independent follow-ups.
 
+## Evidence status
+
+This plan mixes empirically verified claims with reasoned ones. The distinction matters
+when a step does not behave as written, so it is recorded here rather than left implicit.
+
+Verified by execution against real repository content:
+
+| Claim | How |
+| --- | --- |
+| `Reset-PSModuleOutput` clears an arbitrary `-Output` with no safety check | Reproduced; a real `scripts/` tree was destroyed. |
+| An output overlapping the packaged scripts tree recurses without bound | Reproduced; the tree passed 1400 nested files before the process was killed. |
+| `RemoveEmptyEntries` is discarded by the current split | Measured: `''` yields one empty entry; `'D:\a\\b'` yields four. |
+| The split fix leaves ordinary paths unchanged | Differential over a twelve-path corpus: 7 identical, 5 changed, all roots or trailing separators. |
+| `Test-PSModuleInspectionPath` is unaffected by the fix | Its `TrimEnd + separator` prefix is identical for `C:\` and `C:`. |
+| Real pre-marker output classifies as `Legacy` | Prototyped the rules; a full package and an empty-module package both passed. |
+| Strict mode makes the optional-property fallback throw | `PropertyNotFoundException` on a partial `[pscustomobject]` context. |
+| `GetFullPath` on a bare drive designator is process-relative | `GetFullPath('D:')` returned the process directory on `D:`, not `D:\`. |
+| No existing test asserts an exact output file set | The determinism test uses per-path `Should -Contain`. |
+
+Reasoned but **not** executed, because the policy does not exist yet:
+
+- that `-Force` on a scripts overlap leaves a marker which makes the directory `Owned`,
+  so later builds recurse without force. The current bug was reproduced; this specific
+  progression is inference about the corrected design and should be turned into test
+  HD-18 rather than trusted.
+- every claim about the behavior of the new denials, ownership states, and marker.
+
+Not yet established at all:
+
+- whether packaged coverage holds at or above 85% with the new private helpers; and
+- whether the marker disturbs container or NuGet packaging beyond the single
+  `Install-PSModule` manifest-count check that was inspected.
+
 ## Preconditions
 
 Before implementation:
@@ -132,8 +165,31 @@ root no longer regains its trailing separator through `Join-Path`, so the resolv
 root handling must be made explicitly canonical rather than accidentally correct.
 
 Re-run the existing inspection suites. `Test-PSModuleInspectionPath` builds prefixes by
-trimming and re-appending a separator, so it should be unaffected, but that must be
-demonstrated rather than assumed.
+trimming and re-appending a separator, so it should be unaffected.
+
+This was demonstrated rather than assumed. A differential over a twelve-path corpus
+(real repository paths, doubled separators, alternate separators, trailing separators,
+volume roots, UNC roots) gave:
+
+- **7 of 12 identical**, including every ordinary path, the doubled separator, and the
+  alternate-separator form;
+- **5 of 12 changed**, and all five are roots or trailing-separator cases:
+  `C:\` and `D:\` resolve to `C:` / `D:` instead of `C:\` / `D:\`; a path written with a
+  trailing separator loses it; and `\\server\share` loses a spurious appended separator.
+
+Two conclusions follow. First, the current code already returns non-canonical paths with
+trailing separators for ordinary directory inputs written as `...\src\`, which is
+precisely what would have broken this design's equality comparisons — the fix removes
+that class of failure rather than introducing one. Second, `Test-PSModuleInspectionPath`
+is genuinely immune: it computes `TrimEnd(separators) + separator`, so both `C:\` and
+`C:` yield the prefix `C:\`.
+
+One edge case the differential exposed and the tests must cover: that function also does
+`$realPath.Substring($realDirectoryPath.Length)`, using the un-normalized length. When
+`DirectoryPath` is itself a volume root, that offset shifts by one character after the
+fix. With `RemoveEmptyEntries` now working the resulting leading empty segment is
+dropped, so behavior holds — but add an explicit case for an inspected directory at a
+drive root rather than relying on that interaction.
 
 Exit criteria:
 
@@ -304,12 +360,26 @@ Return a `SubZeroDev.PSGenerator.OutputOwnership` object with only:
 
 Do not expose enumerated directory contents.
 
+These rules were prototyped and run against real pre-marker output before being
+accepted, because a failure here would force every existing user through a `-Force`
+rebuild and defeat the migration story. Both specimens classified as `Legacy`:
+
+- a full generated package (15 commands, with `Public`, `Documentation`, `Scripts`, and
+  `Metadata/model.json`); and
+- a minimal generated package for a specification with no commands, which has no
+  `Public` or `Documentation` directory at all.
+
+The second case is the one to keep in the suite. It confirms that rule 5's "when
+present" wording is load-bearing: an empty module is still recognizably generated, and
+treating the absent directories as disqualifying would silently strand it.
+
 Exit criteria:
 
 - every ownership state in the design has a direct test;
 - malformed data fails closed;
-- legacy recognition executes no generated code; and
-- hidden entries prevent empty classification.
+- legacy recognition executes no generated code;
+- hidden entries prevent empty classification; and
+- a real pre-marker package and an empty-module package both classify as `Legacy`.
 
 ### Phase 4: Implement hard-denial assertion
 
@@ -495,6 +565,14 @@ policy; this guard is the last line and stays correct even if a future caller re
 the packager through a path the denial does not cover. Do not implement one and skip
 the other.
 
+The redundancy exists for a specific reason worth recording in a code comment on both
+sides. The denial is keyed to the literal `'scripts'`, and it is correct only because
+this function hardcodes the same literal. If the packager ever copies a second
+directory, or that name becomes configurable, the denial goes stale silently — no test
+fails and the runaway returns. The destination-inside-source guard is derived from the
+actual paths in use, so it does not decay the same way. Whenever the packaged source set
+changes, the denial must be revisited alongside it.
+
 Note the ordering that makes the bug reachable: reset removes the scripts directory,
 the renderers recreate it as the output, and only then does `Test-Path` succeed. A test
 that checks `Test-Path` before reset will not reproduce it.
@@ -535,6 +613,14 @@ Avoid creating a circular meaning where classifying an output as owned requires 
 complete package but completing a package requires ownership. Marker validity is
 sufficient for current ownership; legacy recognition remains the separate migration
 path.
+
+The existing suite was checked for assertions that would break when a new file appears
+in the package. There are none: the determinism test enumerates the output but asserts
+with `Should -Contain` per expected path rather than comparing an exact set, and it
+compares the two snapshots against each other rather than against a fixed list. Adding
+`Metadata/output.json` therefore does not require editing existing expectations — but
+that test should gain the marker as one more `-Contain` assertion so its presence is
+positively asserted somewhere.
 
 Tests:
 

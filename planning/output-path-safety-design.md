@@ -17,6 +17,12 @@ packaged `scripts` tree causes an unbounded recursive copy that the ownership la
 cannot close, because `-Force` admits it and the resulting marker makes it permanent.
 That is now a hard denial with a matching guard in the packager.
 
+The riskiest remaining assumption — that existing generated packages are recognized and
+do not force every current user through a one-time `-Force` — was then checked by
+prototyping the legacy rules and running them against real pre-marker output. Both a
+full package and an empty-module package classified as `Legacy`. The implementation plan
+records which claims in this design are verified and which remain reasoned.
+
 ## Decision summary
 
 `Build-PSModule` will continue to replace generated output, but it will no longer
