@@ -89,6 +89,26 @@ function Test-ExcludedDocumentationPath {
         }
     }
 
+    if ($Settings.Contains('GeneratedFiles')) {
+        foreach ($generated in @($Settings.GeneratedFiles)) {
+            if ($generated -isnot [Collections.IDictionary] -or
+                -not $generated.Contains('Path') -or
+                $generated.Path -isnot [string] -or
+                [string]::IsNullOrWhiteSpace($generated.Path) -or
+                [IO.Path]::IsPathRooted($generated.Path)) {
+                continue
+            }
+
+            $generatedRelativePath = $generated.Path.Replace('\', '/')
+            if ($generatedRelativePath.StartsWith('./')) {
+                $generatedRelativePath = $generatedRelativePath.Substring(2)
+            }
+            if ($RelativePath -eq $generatedRelativePath) {
+                return $true
+            }
+        }
+    }
+
     return $false
 }
 
@@ -456,6 +476,39 @@ function Test-GeneratedDocumentationFile {
         [Parameter(Mandatory)]
         [string] $Root
     )
+
+    $requiredProperties = @('Path', 'Source', 'Generator', 'SourceParameter')
+    $invalidProperties = @(
+        foreach ($propertyName in $requiredProperties) {
+            if (-not $Definition.Contains($propertyName) -or
+                $Definition[$propertyName] -isnot [string] -or
+                [string]::IsNullOrWhiteSpace($Definition[$propertyName])) {
+                $propertyName
+            }
+        }
+    )
+    if ($invalidProperties.Count -gt 0) {
+        $findingPath = if ($Definition.Contains('Path') -and
+            $Definition.Path -is [string] -and
+            -not [string]::IsNullOrWhiteSpace($Definition.Path)) {
+            $Definition.Path
+        }
+        else {
+            '.config/DocumentationRules.psd1'
+        }
+
+        New-DocumentationFinding `
+            -RelativePath $findingPath `
+            -Line 1 `
+            -Column 1 `
+            -Severity 'Error' `
+            -Rule 'GeneratedFile' `
+            -Message (
+                'Invalid GeneratedFiles entry: required field(s) must be non-empty strings: ' +
+                ($invalidProperties -join ', ') + '.'
+            )
+        return
+    }
 
     # Repository configuration uses paths relative to the root; an absolute path
     # is honored as-is so a fixture can point somewhere else entirely.

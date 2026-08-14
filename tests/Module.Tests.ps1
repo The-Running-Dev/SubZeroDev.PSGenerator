@@ -4818,6 +4818,105 @@ Describe 'Generated documentation drift' {
         $result.Output | Should -Match 'does not exist'
     }
 
+    It 'reports an invalid generated-file definition for <Case>' -ForEach @(
+        @{ Case = 'missing Path'; Field = 'Path'; InvalidValue = $null }
+        @{ Case = 'missing Source'; Field = 'Source'; InvalidValue = $null }
+        @{ Case = 'missing Generator'; Field = 'Generator'; InvalidValue = $null }
+        @{ Case = 'missing SourceParameter'; Field = 'SourceParameter'; InvalidValue = $null }
+        @{ Case = 'empty SourceParameter'; Field = 'SourceParameter'; InvalidValue = "''" }
+        @{ Case = 'non-string Path'; Field = 'Path'; InvalidValue = '42' }
+    ) {
+        $readme = "# PSGenerator`n`nBody.`n"
+        $fixture = New-DriftFixture `
+            -Name "InvalidGeneratedDefinition-$($Case.Replace(' ', '-'))" `
+            -Readme $readme `
+            -Generated (Get-ExpectedHomepage -Readme $readme)
+
+        $definition = [ordered] @{
+            Path = "'$((Join-Path $fixture.Root 'index.md') -replace '\\', '\\')'"
+            Source = "'$((Join-Path $fixture.Root 'README.md') -replace '\\', '\\')'"
+            Generator = "'$($homepageScript -replace '\\', '\\')'"
+            SourceParameter = "'ReadmePath'"
+        }
+        if ($null -eq $InvalidValue) {
+            $definition.Remove($Field)
+        }
+        else {
+            $definition[$Field] = $InvalidValue
+        }
+        $definitionLines = @(
+            $definition.GetEnumerator() |
+                ForEach-Object { "            $($_.Key) = $($_.Value)" }
+        )
+        $settings = @"
+@{
+    Terminology = @()
+    ExcludedSegments = @()
+    ExcludedFiles = @()
+    GeneratedFiles = @(
+        @{
+$($definitionLines -join "`n")
+        }
+    )
+}
+"@
+        [IO.File]::WriteAllText(
+            $fixture.Settings,
+            $settings,
+            [Text.UTF8Encoding]::new($false)
+        )
+
+        $result = Invoke-DriftGate -Fixture $fixture
+
+        $result.Failed | Should -BeTrue
+        $result.Output | Should -Match 'Invalid GeneratedFiles entry'
+        $result.Output | Should -Match $Field
+    }
+
+    It 'excludes a relative generated path from authored Markdown scanning' {
+        $root = Join-Path $TestDrive 'GeneratedFileScanExclusion'
+        New-Item -Path $root -ItemType Directory -Force | Out-Null
+        $repositoryReadme = (Resolve-Path (Join-Path $PSScriptRoot '..' 'README.md')).Path
+        $sourcePath = Join-Path $root 'source.txt'
+        [IO.File]::WriteAllText(
+            $sourcePath,
+            [IO.File]::ReadAllText($repositoryReadme),
+            [Text.UTF8Encoding]::new($false)
+        )
+        $generatorPath = Join-Path $root 'generator.ps1'
+        Set-Content -LiteralPath $generatorPath -Value @'
+param([string] $SourcePath)
+([IO.File]::ReadAllText($SourcePath)) -replace "`r`n?", "`n"
+'@
+        $settingsPath = Join-Path $root 'rules.psd1'
+        Set-Content -LiteralPath $settingsPath -Value @"
+@{
+    Terminology = @(
+        @{ Required = 'Canonical'; Variants = @('PSGenerator') }
+    )
+    ExcludedSegments = @()
+    ExcludedFiles = @()
+    GeneratedFiles = @(
+        @{
+            Path = 'README.md'
+            Source = '$sourcePath'
+            Generator = '$generatorPath'
+            SourceParameter = 'SourcePath'
+        }
+    )
+}
+"@
+        $fixture = [pscustomobject] @{
+            Root = $repositoryReadme
+            Settings = $settingsPath
+        }
+
+        $result = Invoke-DriftGate -Fixture $fixture
+
+        $result.Failed | Should -BeFalse
+        $result.Output | Should -Match '0 Markdown file\(s\)'
+    }
+
     It 'rewrites the production origin to a root-relative path' {
         $expected = Get-ExpectedHomepage `
             -Readme "# PSGenerator`n`n[a](https://psgenerator.subzerodev.com/using/installation)`n"
