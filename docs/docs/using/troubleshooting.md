@@ -87,6 +87,27 @@ Initialize-PSModuleSpecification `
 
 Review or save the existing PSD1 first.
 
+## Inferred Command Collides with an Existing Command
+
+**Symptom:** initialization warns that a script-derived command may shadow an
+existing command after import.
+
+The warning is advisory. The inferred command remains in the generated
+specification, and repeated generation remains byte-identical. Resolve intentional
+shadowing by doing either of the following:
+
+- rename the source script; or
+- author the specification explicitly with a different command name.
+
+Collision discovery inspects the current session and literal exports read from
+conventional manifests beneath `PSModulePath`. It does not analyze or import
+available root modules. Commands exported dynamically by module code may therefore
+be absent from the warning.
+
+An earlier PSGenerator-generated module is ignored only when its module name,
+generator provenance, and specification ID all match. An unrelated module with the
+same name still produces a warning.
+
 ## Generated Command Calls Docker Unexpectedly
 
 Only commands with `SourceKind = 'Script'` or `ModuleFunction` use packaged local

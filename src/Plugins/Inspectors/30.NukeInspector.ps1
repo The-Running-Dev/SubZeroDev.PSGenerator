@@ -76,13 +76,21 @@ if ($Context.Inspection.Contains('DotNetProjects')) {
     } | ForEach-Object Path)
 }
 [string[]] $buildScripts = @()
-$buildScriptItems = @(Get-ChildItem -LiteralPath $Context.DirectoryPath -Recurse -File -Filter 'build.ps1' |
-    Where-Object { Test-PSModuleInspectionPath -Context $Context -Path $_.FullName })
+$buildScriptCandidates = @(Get-ChildItem -LiteralPath $Context.DirectoryPath -Recurse -File -Filter 'build.ps1' -FollowSymlink:$false)
+[Array]::Sort($buildScriptCandidates, [Collections.Generic.Comparer[object]]::Create({ param($a, $b) [StringComparer]::Ordinal.Compare($a.FullName, $b.FullName) }))
+
+# Sorting before admission, rather than after, makes alias selection deterministic:
+# when two lexically different paths resolve to the same real file, the visited-path
+# check always sees the ordinally-first one first, regardless of filesystem
+# enumeration order.
+$visitedRealPaths = New-PSModuleInspectionVisitedPathSet
+$buildScriptItems = @($buildScriptCandidates | Where-Object {
+    Test-PSModuleInspectionPath -Context $Context -Path $_.FullName -VisitedRealPaths $visitedRealPaths
+})
 if ($buildScriptItems.Count -gt 0) {
     $buildScripts = @($buildScriptItems | ForEach-Object {
-        [IO.Path]::GetRelativePath($Context.DirectoryPath, $_.FullName).Replace('\', '/')
+        ConvertTo-PSModuleInspectionRelativePath -Context $Context -Path $_.FullName
     })
-    [Array]::Sort($buildScripts, [StringComparer]::Ordinal)
 }
 $Context.Inspection['Nuke'] = [ordered]@{
     IsConfigured             = (Test-Path -LiteralPath $nukeDirectory -PathType Container) -or $projectPaths.Count -gt 0

@@ -83,7 +83,9 @@ default.
 
 The gate pins PSScriptAnalyzer 1.25.0 and analyzes repository-owned PowerShell under
 `src`, `build`, `examples`, `tests`, and `tests-e2e` using
-`.config/PSScriptAnalyzerSettings.psd1`.
+`.config/PSScriptAnalyzerSettings.psd1`. It also runs the repository-hygiene gate,
+which confirms nested `.NET` `bin` and `obj` output is ignored without hiding any
+tracked source path.
 
 After the dependency is installed:
 
@@ -111,7 +113,9 @@ It reports three rule kinds:
 - `GeneratedFile` — a generated file whose committed copy no longer matches its
   source. `docs/docs/index.md` is generated from `README.md`, so editing the
   README without regenerating leaves the published homepage stale. The finding
-  names the first line that differs.
+  names the first line that differs. Generated-file definitions require non-empty
+  `Path`, `Source`, `Generator`, and `SourceParameter` strings, and valid relative
+  generated paths are drift-checked instead of scanned as authored Markdown.
 
   Both `docs.ps1` and this check call
   `build/ConvertTo-DocumentationHomepage.ps1` to produce the expected content,

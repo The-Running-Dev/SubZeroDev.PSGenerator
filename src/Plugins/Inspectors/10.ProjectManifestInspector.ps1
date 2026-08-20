@@ -36,20 +36,26 @@ function Get-JsonPropertyValue {
     return $Default
 }
 
-$manifestItems = @(
-    Get-ChildItem -LiteralPath $Context.DirectoryPath -Recurse -File |
-        Where-Object {
-            ($_.Extension -eq '.csproj' -or $_.Name -eq 'package.json') -and
-            (Test-PSModuleInspectionPath -Context $Context -Path $_.FullName)
-        }
+$candidateItems = @(
+    Get-ChildItem -LiteralPath $Context.DirectoryPath -Recurse -File -FollowSymlink:$false |
+        Where-Object { $_.Extension -eq '.csproj' -or $_.Name -eq 'package.json' }
 )
 [Array]::Sort(
-    $manifestItems,
+    $candidateItems,
     [System.Collections.Generic.Comparer[object]]::Create({
         param ($left, $right)
         [System.StringComparer]::Ordinal.Compare($left.FullName, $right.FullName)
     })
 )
+
+# Sorting before admission, rather than after, makes alias selection deterministic:
+# when two lexically different paths resolve to the same real file, the visited-path
+# check always sees the ordinally-first one first, regardless of filesystem
+# enumeration order.
+$visitedRealPaths = New-PSModuleInspectionVisitedPathSet
+$manifestItems = @($candidateItems | Where-Object {
+    Test-PSModuleInspectionPath -Context $Context -Path $_.FullName -VisitedRealPaths $visitedRealPaths
+})
 
 $dotNetProjects = [System.Collections.Generic.List[object]]::new()
 $nodeProjects = [System.Collections.Generic.List[object]]::new()
@@ -59,7 +65,7 @@ $directoryPrefix = $Context.DirectoryPath.TrimEnd(
 ) + [IO.Path]::DirectorySeparatorChar
 
 foreach ($manifestItem in $manifestItems) {
-    $relativePath = [System.IO.Path]::GetRelativePath($Context.DirectoryPath, $manifestItem.FullName).Replace('\', '/')
+    $relativePath = ConvertTo-PSModuleInspectionRelativePath -Context $Context -Path $manifestItem.FullName
 
     if ($manifestItem.Extension -eq '.csproj') {
         [xml] $document = Get-Content -LiteralPath $manifestItem.FullName -Raw
@@ -101,11 +107,15 @@ foreach ($manifestItem in $manifestItems) {
                 )) {
                     continue
                 }
-                if (-not (Test-PSModuleInspectionPath -Context $Context -Path $resolvedPath)) {
+                # A fresh set, not $visitedRealPaths: this checks one reference target's
+                # admissibility in isolation, not traversal deduplication. Two different
+                # projects can legitimately reference the same dependency, and each
+                # referencing project's own ProjectReferences list must still include it.
+                if (-not (Test-PSModuleInspectionPath -Context $Context -Path $resolvedPath -VisitedRealPaths (New-PSModuleInspectionVisitedPathSet))) {
                     continue
                 }
                 [ordered]@{
-                    Path    = [IO.Path]::GetRelativePath($Context.DirectoryPath, $resolvedPath).Replace('\', '/')
+                    Path    = ConvertTo-PSModuleInspectionRelativePath -Context $Context -Path $resolvedPath
                     Aliases = if ($reference.GetAttribute('Aliases')) {
                         @($reference.GetAttribute('Aliases') -split '[,;]' |
                             ForEach-Object { $_.Trim() } | Where-Object { $_ })

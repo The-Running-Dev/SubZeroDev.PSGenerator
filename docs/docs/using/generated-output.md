@@ -32,10 +32,23 @@ without a `Public` directory.
 - the generated loader as `RootModule`;
 - the normalized module version;
 - PowerShell 7.4;
-- generated function exports; and
-- empty cmdlet, variable, and alias exports.
+- generated function exports;
+- empty cmdlet, variable, and alias exports; and
+- private PSGenerator provenance containing the generator name and specification
+  ID.
 
 The manifest is validated before packaging completes.
+
+The private provenance lets specification initialization distinguish an earlier
+generated build from an unrelated installed module with the same name. It does
+not contain a source-directory path or machine-specific value.
+
+An inferred specification identity is the module name followed by a random
+suffix minted once, when the specification is first written. Initialization
+reuses the identity already recorded in a specification, so refreshing a
+directory keeps producing byte-identical output while two directories that infer
+the same module name stay distinguishable. Authoring `Id` explicitly overrides
+the inferred value and is preserved the same way.
 
 ## Module Loader
 

@@ -134,6 +134,7 @@ Describe 'Container module inspection diagnostics' {
         $result.DirectoryPath | Should -Be $directoryPath
         $result.Data.Dockerfiles[0].Stages[0].Image | Should -Be 'alpine:3.20'
         $result.PluginExecutions.Count | Should -BeGreaterThan 0
+        @($result.Issues).Count | Should -Be 0
         Test-Path -LiteralPath (Join-Path $specificationDirectory '.container-module-inspection') |
             Should -BeFalse
     }
@@ -309,6 +310,402 @@ throw 'inspection failed'
             $context.PluginExecutions[0].Succeeded | Should -BeFalse
             $context.PluginExecutions[0].Error | Should -Be 'inspection failed'
         }
+    }
+}
+
+Describe 'Structured inspection issues' {
+    BeforeEach {
+        $pluginRoot = Join-Path $TestDrive 'IssuePlugins'
+        if (Test-Path -LiteralPath $pluginRoot) {
+            Remove-Item -LiteralPath $pluginRoot -Recurse -Force
+        }
+        New-Item -Path (Join-Path $pluginRoot 'Inspectors') -ItemType Directory -Force | Out-Null
+    }
+
+    It 'rejects an invalid severity or code from the issue helper' {
+        InModuleScope SubZeroDev.PSGenerator {
+            $context = [pscustomobject]@{
+                InspectionIssues = [System.Collections.Generic.List[object]]::new()
+            }
+
+            { Add-PSModuleInspectionIssue -Context $context -Severity 'Fatal' -Code 'PARSE_X' -Inspector 'Fake' -Message 'm' } |
+                Should -Throw
+
+            { Add-PSModuleInspectionIssue -Context $context -Severity 'Warning' -Code 'lowercase' -Inspector 'Fake' -Message 'm' } |
+                Should -Throw
+        }
+    }
+
+    It 'orders issues by inspector execution order, then path, then code' {
+        Set-Content -LiteralPath (Join-Path $pluginRoot 'Inspectors' '00.First.ps1') -Value @'
+param ([psobject] $Context)
+Add-PSModuleInspectionIssue -Context $Context -Severity Warning -Code 'PARSE_ZEBRA' -Inspector 'First' -Path 'z.ps1' -Message 'z issue'
+Add-PSModuleInspectionIssue -Context $Context -Severity Warning -Code 'PARSE_ALPHA' -Inspector 'First' -Path 'a.ps1' -Message 'a issue'
+'@
+        Set-Content -LiteralPath (Join-Path $pluginRoot 'Inspectors' '10.Second.ps1') -Value @'
+param ([psobject] $Context)
+Add-PSModuleInspectionIssue -Context $Context -Severity Error -Code 'PARSE_AAA' -Inspector 'Second' -Path 'a.ps1' -Message 'second issue'
+'@
+
+        InModuleScope SubZeroDev.PSGenerator -Parameters @{ PluginRoot = $pluginRoot } {
+            param ($PluginRoot)
+            $context = [pscustomobject]@{
+                PluginExecutions = [System.Collections.Generic.List[object]]::new()
+                InspectionIssues = [System.Collections.Generic.List[object]]::new()
+            }
+
+            Invoke-PSModulePluginPipeline -Context $context -Path $PluginRoot | Out-Null
+            $issues = @(Get-PSModuleInspectionIssue -Context $context)
+
+            $issues.Count | Should -Be 3
+            $issues.Code | Should -Be @('PARSE_ALPHA', 'PARSE_ZEBRA', 'PARSE_AAA')
+            $issues.Path | Should -Be @('a.ps1', 'z.ps1', 'a.ps1')
+            $issues.Inspector | Should -Be @('First', 'First', 'Second')
+        }
+    }
+
+    It 'orders paths ordinally rather than by culture-sensitive comparison' {
+        Set-Content -LiteralPath (Join-Path $pluginRoot 'Inspectors' '00.First.ps1') -Value @'
+param ([psobject] $Context)
+Add-PSModuleInspectionIssue -Context $Context -Severity Warning -Code 'PARSE_A' -Inspector 'First' -Path 'apple.ps1' -Message 'lowercase leading path'
+Add-PSModuleInspectionIssue -Context $Context -Severity Warning -Code 'PARSE_B' -Inspector 'First' -Path 'Zebra.ps1' -Message 'uppercase leading path'
+'@
+
+        InModuleScope SubZeroDev.PSGenerator -Parameters @{ PluginRoot = $pluginRoot } {
+            param ($PluginRoot)
+            $context = [pscustomobject]@{
+                PluginExecutions = [System.Collections.Generic.List[object]]::new()
+                InspectionIssues = [System.Collections.Generic.List[object]]::new()
+            }
+
+            Invoke-PSModulePluginPipeline -Context $context -Path $PluginRoot | Out-Null
+            $issues = @(Get-PSModuleInspectionIssue -Context $context)
+
+            # Ordinal comparison sorts 'Zebra.ps1' before 'apple.ps1' because uppercase
+            # code points precede lowercase ones. A culture-sensitive, case-insensitive
+            # comparison would put 'apple.ps1' first instead.
+            $issues.Path | Should -Be @('Zebra.ps1', 'apple.ps1')
+        }
+    }
+
+    It 'exposes only the documented issue fields' {
+        Set-Content -LiteralPath (Join-Path $pluginRoot 'Inspectors' '00.First.ps1') -Value @'
+param ([psobject] $Context)
+Add-PSModuleInspectionIssue -Context $Context -Severity Warning -Code 'PARSE_X' -Inspector 'First' -Path 'a.ps1' -Message 'm'
+'@
+
+        InModuleScope SubZeroDev.PSGenerator -Parameters @{ PluginRoot = $pluginRoot } {
+            param ($PluginRoot)
+            $context = [pscustomobject]@{
+                PluginExecutions = [System.Collections.Generic.List[object]]::new()
+                InspectionIssues = [System.Collections.Generic.List[object]]::new()
+            }
+
+            Invoke-PSModulePluginPipeline -Context $context -Path $PluginRoot | Out-Null
+            $issue = Get-PSModuleInspectionIssue -Context $context | Select-Object -First 1
+
+            $issue.PSObject.TypeNames | Should -Contain 'SubZeroDev.PSGenerator.InspectionIssue'
+            $issue.PSObject.Properties.Name | Should -Be @(
+                'Severity', 'Code', 'Inspector', 'Path', 'Message', 'ExceptionType', 'Details'
+            )
+            $issue.PSObject.Properties.Name | Should -Not -Contain 'InspectorExecutionOrder'
+            $issue.PSObject.Properties.Name | Should -Not -Contain 'AppendIndex'
+        }
+    }
+
+    It 'attaches issues recorded before a wrapped authoritative failure to the thrown exception' {
+        Set-Content -LiteralPath (Join-Path $pluginRoot 'Inspectors' '00.Fail.ps1') -Value @'
+param ([psobject] $Context)
+Add-PSModuleInspectionIssue -Context $Context -Severity Error -Code 'PARSE_FATAL' -Inspector 'Fail' -Path 'bad.ps1' -Message 'boom'
+throw 'inspection failed'
+'@
+
+        InModuleScope SubZeroDev.PSGenerator -Parameters @{ PluginRoot = $pluginRoot } {
+            param ($PluginRoot)
+            $context = [pscustomobject]@{
+                PluginExecutions = [System.Collections.Generic.List[object]]::new()
+                InspectionIssues = [System.Collections.Generic.List[object]]::new()
+            }
+
+            $caught = $null
+            try {
+                Invoke-PSModulePluginPipeline -Context $context -Path $PluginRoot | Out-Null
+            }
+            catch {
+                $caught = $_
+            }
+
+            $caught | Should -Not -BeNullOrEmpty
+            $caught.Exception | Should -BeOfType ([System.InvalidOperationException])
+            $issues = @($caught.Exception.Data['PSModule.InspectionIssues'])
+            $issues.Count | Should -Be 1
+            $issues[0].Code | Should -Be 'PARSE_FATAL'
+            $issues[0].PSObject.TypeNames | Should -Contain 'SubZeroDev.PSGenerator.InspectionIssue'
+        }
+    }
+
+    It 'attaches issues recorded before a preserved-type authoritative failure to the thrown exception' {
+        Set-Content -LiteralPath (Join-Path $pluginRoot 'Inspectors' '00.Fail.ps1') -Value @'
+param ([psobject] $Context)
+Add-PSModuleInspectionIssue -Context $Context -Severity Error -Code 'REFERENCE_MISSING' -Inspector 'Fail' -Path 'spec.psd1' -Message 'missing reference'
+$exception = [System.IO.InvalidDataException]::new('authoritative failure')
+$exception.Data['PSModule.PreserveType'] = $true
+throw $exception
+'@
+
+        InModuleScope SubZeroDev.PSGenerator -Parameters @{ PluginRoot = $pluginRoot } {
+            param ($PluginRoot)
+            $context = [pscustomobject]@{
+                PluginExecutions = [System.Collections.Generic.List[object]]::new()
+                InspectionIssues = [System.Collections.Generic.List[object]]::new()
+            }
+
+            $caught = $null
+            try {
+                Invoke-PSModulePluginPipeline -Context $context -Path $PluginRoot | Out-Null
+            }
+            catch {
+                $caught = $_
+            }
+
+            $caught | Should -Not -BeNullOrEmpty
+            $caught.Exception | Should -BeOfType ([System.IO.InvalidDataException])
+            $issues = @($caught.Exception.Data['PSModule.InspectionIssues'])
+            $issues.Count | Should -Be 1
+            $issues[0].Code | Should -Be 'REFERENCE_MISSING'
+        }
+    }
+
+    It 'keeps the default Get-PSModuleDiagnostic output unchanged and adds typed issue records with -IncludeIssues' {
+        $inspection = [pscustomobject] @{
+            PSTypeName       = 'SubZeroDev.PSGenerator.InspectionResult'
+            PluginExecutions = @(
+                [pscustomobject] @{
+                    Stage          = 'Inspectors'
+                    ExecutionOrder = 0
+                    Plugin         = 'Fake'
+                    Path           = 'fake-plugin.ps1'
+                    StartedAt      = [DateTimeOffset]::UtcNow
+                    Duration       = [TimeSpan]::Zero
+                    Succeeded      = $true
+                    Error          = $null
+                }
+            )
+            Issues           = @(
+                [pscustomobject] @{
+                    PSTypeName    = 'SubZeroDev.PSGenerator.InspectionIssue'
+                    Severity      = 'Warning'
+                    Code          = 'PARSE_X'
+                    Inspector     = 'Fake'
+                    Path          = 'a.ps1'
+                    Message       = 'm'
+                    ExceptionType = $null
+                    Details       = $null
+                }
+            )
+        }
+
+        $default = @($inspection | Get-PSModuleDiagnostic)
+        $default.Count | Should -Be 1
+        ($default | ForEach-Object { $_.PSObject.TypeNames }) | Should -Not -Contain 'SubZeroDev.PSGenerator.InspectionIssueDiagnostic'
+
+        $withIssues = @($inspection | Get-PSModuleDiagnostic -IncludeIssues)
+        $withIssues.Count | Should -Be 2
+        $withIssues[0].PSObject.TypeNames | Should -Contain 'SubZeroDev.PSGenerator.Diagnostic'
+        $withIssues[1].PSObject.TypeNames | Should -Contain 'SubZeroDev.PSGenerator.InspectionIssueDiagnostic'
+        $withIssues[1].Code | Should -Be 'PARSE_X'
+    }
+}
+
+Describe 'Test-PSModuleInspectionPath hardening' {
+    BeforeEach {
+        $repoPath = Join-Path $TestDrive 'HardeningRepo'
+        New-Item -Path $repoPath -ItemType Directory -Force | Out-Null
+        $context = [pscustomobject] @{
+            DirectoryPath = $repoPath
+            OutputPath    = Join-Path $repoPath 'output'
+        }
+    }
+
+    It 'admits an ordinary file inside the repository' {
+        $filePath = Join-Path $repoPath 'file.txt'
+        Set-Content -LiteralPath $filePath -Value 'content'
+
+        InModuleScope SubZeroDev.PSGenerator -Parameters @{ Context = $context; FilePath = $filePath } {
+            param ($Context, $FilePath)
+            Test-PSModuleInspectionPath -Context $Context -Path $FilePath -VisitedRealPaths (New-PSModuleInspectionVisitedPathSet) |
+                Should -BeTrue
+        }
+    }
+
+    It 'admits a path containing spaces' {
+        $spacedDirectory = Join-Path $repoPath 'has spaces here'
+        New-Item -Path $spacedDirectory -ItemType Directory -Force | Out-Null
+        $spacedFile = Join-Path $spacedDirectory 'file with spaces.txt'
+        Set-Content -LiteralPath $spacedFile -Value 'content'
+
+        InModuleScope SubZeroDev.PSGenerator -Parameters @{ Context = $context; SpacedFile = $spacedFile } {
+            param ($Context, $SpacedFile)
+            Test-PSModuleInspectionPath -Context $Context -Path $SpacedFile -VisitedRealPaths (New-PSModuleInspectionVisitedPathSet) |
+                Should -BeTrue
+        }
+    }
+
+    It 'excludes existing segment exclusions per the platform-aware comparer' {
+        $segmentDirectory = Join-Path $repoPath 'NODE_MODULES'
+        New-Item -Path $segmentDirectory -ItemType Directory -Force | Out-Null
+        $segmentFile = Join-Path $segmentDirectory 'package.json'
+        Set-Content -LiteralPath $segmentFile -Value '{}'
+
+        InModuleScope SubZeroDev.PSGenerator -Parameters @{ Context = $context; SegmentFile = $segmentFile } {
+            param ($Context, $SegmentFile)
+            $admitted = Test-PSModuleInspectionPath -Context $Context -Path $SegmentFile -VisitedRealPaths (New-PSModuleInspectionVisitedPathSet)
+
+            # Linux is case-sensitive, so 'NODE_MODULES' does not match the 'node_modules'
+            # exclusion there. Windows and macOS are case-insensitive, so it does.
+            if ($IsLinux) {
+                $admitted | Should -BeTrue
+            }
+            else {
+                $admitted | Should -BeFalse
+            }
+        }
+    }
+
+    It 'excludes a symlinked file whose real target resolves outside the repository root' {
+        $outsideDirectory = Join-Path $TestDrive 'Outside'
+        New-Item -Path $outsideDirectory -ItemType Directory -Force | Out-Null
+        $outsideFile = Join-Path $outsideDirectory 'secret.txt'
+        Set-Content -LiteralPath $outsideFile -Value 'secret'
+
+        $linkPath = Join-Path $repoPath 'link.txt'
+        try {
+            New-Item -Path $linkPath -ItemType SymbolicLink -Target $outsideFile -ErrorAction Stop | Out-Null
+        }
+        catch {
+            Set-ItResult -Skipped -Because 'this host does not permit creating symbolic links'
+            return
+        }
+
+        InModuleScope SubZeroDev.PSGenerator -Parameters @{ Context = $context; LinkPath = $linkPath } {
+            param ($Context, $LinkPath)
+            Test-PSModuleInspectionPath -Context $Context -Path $LinkPath -VisitedRealPaths (New-PSModuleInspectionVisitedPathSet) |
+                Should -BeFalse
+        }
+    }
+
+    It 'excludes a file whose path resolves outside the repository through a linked ancestor segment' {
+        $outsideDirectory = Join-Path $TestDrive 'AncestorOutside'
+        $nestedOutsideDirectory = Join-Path $outsideDirectory 'nested'
+        New-Item -Path $nestedOutsideDirectory -ItemType Directory -Force | Out-Null
+        $outsideFile = Join-Path $nestedOutsideDirectory 'file.txt'
+        Set-Content -LiteralPath $outsideFile -Value 'secret'
+
+        # 'decoy' points outside the repository, but 'linked' points at a path that is
+        # lexically inside the repository (through 'decoy'). A resolver that only
+        # rechecks the final substituted component - rather than every segment of the
+        # substituted target - would treat "repo/decoy/nested" as already resolved
+        # and never notice that 'decoy' itself escapes, admitting a file that
+        # physically lives outside the repository because its unresolved path merely
+        # looks local.
+        $decoyPath = Join-Path $repoPath 'decoy'
+        $linkedPath = Join-Path $repoPath 'linked'
+        try {
+            New-Item -Path $decoyPath -ItemType SymbolicLink -Target $outsideDirectory -ErrorAction Stop | Out-Null
+            New-Item -Path $linkedPath -ItemType SymbolicLink -Target (Join-Path $decoyPath 'nested') -ErrorAction Stop | Out-Null
+        }
+        catch {
+            Set-ItResult -Skipped -Because 'this host does not permit creating symbolic links'
+            return
+        }
+
+        $pathThroughLink = Join-Path $linkedPath 'file.txt'
+
+        InModuleScope SubZeroDev.PSGenerator -Parameters @{ Context = $context; PathThroughLink = $pathThroughLink } {
+            param ($Context, $PathThroughLink)
+            Test-PSModuleInspectionPath -Context $Context -Path $PathThroughLink -VisitedRealPaths (New-PSModuleInspectionVisitedPathSet) |
+                Should -BeFalse
+        }
+    }
+
+    It 'terminates a link chain that cycles back on itself instead of looping' {
+        $loopPath = Join-Path $repoPath 'loop.txt'
+        try {
+            New-Item -Path $loopPath -ItemType SymbolicLink -Target $loopPath -ErrorAction Stop | Out-Null
+        }
+        catch {
+            Set-ItResult -Skipped -Because 'this host does not permit creating symbolic links'
+            return
+        }
+
+        InModuleScope SubZeroDev.PSGenerator -Parameters @{ Context = $context; LoopPath = $loopPath } {
+            param ($Context, $LoopPath)
+            $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+            $result = Test-PSModuleInspectionPath -Context $Context -Path $LoopPath -VisitedRealPaths (New-PSModuleInspectionVisitedPathSet)
+            $stopwatch.Stop()
+
+            $result | Should -BeFalse
+            $stopwatch.Elapsed.TotalSeconds | Should -BeLessThan 5
+        }
+    }
+
+    It 'deduplicates the same real file reached through two different admitted paths, scoped per caller' {
+        $originalPath = Join-Path $repoPath 'original.txt'
+        Set-Content -LiteralPath $originalPath -Value 'content'
+        $aliasPath = Join-Path $repoPath 'alias.txt'
+        try {
+            New-Item -Path $aliasPath -ItemType SymbolicLink -Target $originalPath -ErrorAction Stop | Out-Null
+        }
+        catch {
+            Set-ItResult -Skipped -Because 'this host does not permit creating symbolic links'
+            return
+        }
+
+        InModuleScope SubZeroDev.PSGenerator -Parameters @{
+            Context      = $context
+            OriginalPath = $originalPath
+            AliasPath    = $aliasPath
+        } {
+            param ($Context, $OriginalPath, $AliasPath)
+            $shared = New-PSModuleInspectionVisitedPathSet
+            Test-PSModuleInspectionPath -Context $Context -Path $OriginalPath -VisitedRealPaths $shared | Should -BeTrue
+            Test-PSModuleInspectionPath -Context $Context -Path $AliasPath -VisitedRealPaths $shared | Should -BeFalse
+
+            $fresh = New-PSModuleInspectionVisitedPathSet
+            Test-PSModuleInspectionPath -Context $Context -Path $AliasPath -VisitedRealPaths $fresh | Should -BeTrue
+        }
+    }
+
+    It 'selects the same alias deterministically regardless of filesystem enumeration order' {
+        $directoryPath = Join-Path $TestDrive 'AliasDirectory'
+        $specificationDirectory = Join-Path $directoryPath 'PSModule'
+        New-Item -Path $specificationDirectory -ItemType Directory -Force | Out-Null
+        $specificationPath = Join-Path $specificationDirectory 'PSModule.psd1'
+        Set-Content -LiteralPath $specificationPath -Value '@{ Commands = @() }'
+
+        $originalProject = Join-Path $directoryPath 'zzz-original.csproj'
+        Set-Content -LiteralPath $originalProject -Value (
+            '<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net8.0</TargetFramework></PropertyGroup></Project>'
+        )
+        $aliasProject = Join-Path $directoryPath 'aaa-alias.csproj'
+        try {
+            New-Item -Path $aliasProject -ItemType SymbolicLink -Target $originalProject -ErrorAction Stop | Out-Null
+        }
+        catch {
+            Set-ItResult -Skipped -Because 'this host does not permit creating symbolic links'
+            return
+        }
+
+        $inspection = Get-PSModuleInspection -Specification $specificationPath
+
+        # 'aaa-alias.csproj' sorts before 'zzz-original.csproj' ordinally, so it must
+        # be the survivor regardless of which one the filesystem happens to enumerate
+        # first - proving admission runs against sorted candidates rather than raw
+        # enumeration order. 'zzz-original.csproj' is also created first, so an
+        # enumeration order that favors creation order would select it instead if
+        # candidates were not sorted before admission.
+        @($inspection.Data.DotNetProjects).Count | Should -Be 1
+        $inspection.Data.DotNetProjects[0].Path | Should -Be 'aaa-alias.csproj'
     }
 }
 
@@ -2260,6 +2657,7 @@ Describe 'Container module manifest generation' {
         $outputPath = Join-Path $TestDrive 'manifest-output'
         Set-Content -LiteralPath $specificationPath -Value @'
 @{
+    Id = 'module.manifest-example'
     ModuleName = 'ManifestExample'
     ModuleVersion = '2.3.4'
     Commands = @(
@@ -2276,6 +2674,10 @@ Describe 'Container module manifest generation' {
         try {
             $manifest.Version.ToString() | Should -Be '2.3.4'
             $manifest.PowerShellVersion.ToString() | Should -Be '7.4'
+            $manifest.PrivateData.PSGenerator.GeneratedBy |
+                Should -Be 'SubZeroDev.PSGenerator'
+            $manifest.PrivateData.PSGenerator.SpecificationId |
+                Should -Be 'module.manifest-example'
             $module.ExportedFunctions.Keys | Should -Contain 'Invoke-ManifestExample'
         }
         finally {
@@ -3677,6 +4079,489 @@ Describe 'Inferred command naming' {
     }
 }
 
+Describe 'Inferred command collision diagnostics' {
+    It 'warns once per colliding command and preserves deterministic inference' {
+        $directoryPath = Join-Path $TestDrive 'CollisionDirectory'
+        $scriptsPath = New-Item `
+            -Path (Join-Path $directoryPath 'scripts') `
+            -ItemType Directory `
+            -Force
+        Set-Content `
+            -LiteralPath (Join-Path $scriptsPath 'convertto-json.ps1') `
+            -Value 'param([string] $InputObject)'
+        Set-Content `
+            -LiteralPath (Join-Path $scriptsPath 'write-output.ps1') `
+            -Value 'param([string] $InputObject)'
+
+        $firstWarnings = @()
+        $specification = Initialize-PSModuleSpecification `
+            -Directory $directoryPath `
+            -PassThru `
+            -WarningVariable firstWarnings `
+            -WarningAction SilentlyContinue
+        $firstBytes = [IO.File]::ReadAllBytes($specification.FullName)
+        $definition = Import-PowerShellDataFile -LiteralPath $specification.FullName
+
+        $secondWarnings = @()
+        Initialize-PSModuleSpecification `
+            -Directory $directoryPath `
+            -Force `
+            -WarningVariable secondWarnings `
+            -WarningAction SilentlyContinue
+        $secondBytes = [IO.File]::ReadAllBytes($specification.FullName)
+
+        $definition.Commands.Name | Should -Be @('ConvertTo-Json', 'Write-Output')
+        $firstWarnings.Count | Should -Be 2
+        $firstWarnings[0].Message | Should -Match "ConvertTo-Json.*scripts/convertto-json\.ps1"
+        $firstWarnings[1].Message | Should -Match "Write-Output.*scripts/write-output\.ps1"
+        $firstWarnings[0].Message | Should -Match 'Microsoft\.PowerShell\.Utility\\ConvertTo-Json'
+        $secondWarnings.Count | Should -Be 2
+        [Convert]::ToHexString($secondBytes) |
+            Should -Be ([Convert]::ToHexString($firstBytes))
+    }
+
+    It 'does not warn for a unique inferred command or during WhatIf' {
+        $uniqueDirectory = Join-Path $TestDrive 'UniqueCollisionDirectory'
+        $uniqueScripts = New-Item `
+            -Path (Join-Path $uniqueDirectory 'scripts') `
+            -ItemType Directory `
+            -Force
+        Set-Content `
+            -LiteralPath (Join-Path $uniqueScripts 'subzero-collision-fixture-unique.ps1') `
+            -Value 'param()'
+
+        $uniqueWarnings = @()
+        Initialize-PSModuleSpecification `
+            -Directory $uniqueDirectory `
+            -WarningVariable uniqueWarnings `
+            -WarningAction SilentlyContinue
+
+        $previewDirectory = Join-Path $TestDrive 'PreviewCollisionDirectory'
+        $previewScripts = New-Item `
+            -Path (Join-Path $previewDirectory 'scripts') `
+            -ItemType Directory `
+            -Force
+        Set-Content `
+            -LiteralPath (Join-Path $previewScripts 'convertto-json.ps1') `
+            -Value 'param()'
+        $previewWarnings = @()
+        Initialize-PSModuleSpecification `
+            -Directory $previewDirectory `
+            -WhatIf `
+            -WarningVariable previewWarnings `
+            -WarningAction SilentlyContinue
+
+        $uniqueWarnings.Count | Should -Be 0
+        $previewWarnings.Count | Should -Be 0
+        Test-Path -LiteralPath (
+            Join-Path $previewDirectory 'PSModule' 'PSModule.psd1'
+        ) | Should -BeFalse
+    }
+
+    It 'finds a statically exported command without importing its module' {
+        $modulePathRoot = Join-Path $TestDrive 'StaticModules'
+        $moduleVersionPath = New-Item `
+            -Path (Join-Path $modulePathRoot 'StaticCollisionModule' '1.0.0') `
+            -ItemType Directory `
+            -Force
+        Set-Content `
+            -LiteralPath (Join-Path $moduleVersionPath 'StaticCollisionModule.psm1') `
+            -Value @'
+$global:PSGeneratorCollisionSentinel = $true
+function Invoke-StaticCollisionFixture { param() }
+Export-ModuleMember -Function Invoke-StaticCollisionFixture
+'@
+        Set-Content `
+            -LiteralPath (Join-Path $moduleVersionPath 'StaticCollisionModule.psd1') `
+            -Value @'
+@{
+    RootModule = 'StaticCollisionModule.psm1'
+    ModuleVersion = '1.0.0'
+    FunctionsToExport = @('Invoke-StaticCollisionFixture')
+    CmdletsToExport = @()
+    VariablesToExport = @()
+    AliasesToExport = @()
+}
+'@
+
+        $directoryPath = Join-Path $TestDrive 'StaticCollisionDirectory'
+        $scriptsPath = New-Item `
+            -Path (Join-Path $directoryPath 'scripts') `
+            -ItemType Directory `
+            -Force
+        Set-Content `
+            -LiteralPath (Join-Path $scriptsPath 'static-collision-fixture.ps1') `
+            -Value 'param()'
+
+        $originalModulePath = $env:PSModulePath
+        try {
+            $isolatedModulePath = @(
+                $modulePathRoot
+                $originalModulePath
+            ) -join [IO.Path]::PathSeparator
+            $env:PSModulePath = $isolatedModulePath
+            Remove-Variable `
+                -Name PSGeneratorCollisionSentinel `
+                -Scope Global `
+                -ErrorAction SilentlyContinue
+
+            $warnings = @()
+            Initialize-PSModuleSpecification `
+                -Directory $directoryPath `
+                -WarningVariable warnings `
+                -WarningAction SilentlyContinue
+
+            $warnings.Count | Should -Be 1
+            $warnings[0].Message |
+                Should -Match 'StaticCollisionModule\\Invoke-StaticCollisionFixture'
+            $env:PSModulePath | Should -BeExactly $isolatedModulePath
+            Get-Variable `
+                -Name PSGeneratorCollisionSentinel `
+                -Scope Global `
+                -ErrorAction SilentlyContinue |
+                Should -BeNullOrEmpty
+            Get-Module StaticCollisionModule | Should -BeNullOrEmpty
+        }
+        finally {
+            $env:PSModulePath = $originalModulePath
+            Remove-Module StaticCollisionModule -Force -ErrorAction SilentlyContinue
+            Remove-Variable `
+                -Name PSGeneratorCollisionSentinel `
+                -Scope Global `
+                -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'suppresses only a proven prior generated module' {
+        $directoryPath = Join-Path $TestDrive 'ProvenanceCollisionDirectory'
+        $scriptsPath = New-Item `
+            -Path (Join-Path $directoryPath 'scripts') `
+            -ItemType Directory `
+            -Force
+        Set-Content `
+            -LiteralPath (Join-Path $scriptsPath 'provenance-collision.ps1') `
+            -Value 'param()'
+
+        $null = Initialize-PSModuleDirectory -Directory $directoryPath
+        try {
+            $selfWarnings = @()
+            Initialize-PSModuleSpecification `
+                -Directory $directoryPath `
+                -Force `
+                -WarningVariable selfWarnings `
+                -WarningAction SilentlyContinue
+
+            $selfWarnings.Count | Should -Be 0
+
+            Remove-Module ProvenanceCollisionDirectory -Force
+            $unrelatedModulePath = Join-Path $TestDrive 'ProvenanceCollisionDirectory.psm1'
+            Set-Content -LiteralPath $unrelatedModulePath -Value @'
+function Invoke-ProvenanceCollision { param() }
+Export-ModuleMember -Function Invoke-ProvenanceCollision
+'@
+            Import-Module $unrelatedModulePath -Force
+
+            $unrelatedWarnings = @()
+            Initialize-PSModuleSpecification `
+                -Directory $directoryPath `
+                -Force `
+                -WarningVariable unrelatedWarnings `
+                -WarningAction SilentlyContinue
+
+            $unrelatedWarnings.Count | Should -Be 1
+            $unrelatedWarnings[0].Message |
+                Should -Match 'ProvenanceCollisionDirectory\\Invoke-ProvenanceCollision'
+        }
+        finally {
+            Remove-Module ProvenanceCollisionDirectory -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'keeps one durable specification identity across refreshes' {
+        $directoryPath = Join-Path $TestDrive 'IdentityRefreshDirectory'
+        $scriptsPath = New-Item `
+            -Path (Join-Path $directoryPath 'scripts') `
+            -ItemType Directory `
+            -Force
+        Set-Content `
+            -LiteralPath (Join-Path $scriptsPath 'identity-refresh.ps1') `
+            -Value 'param()'
+
+        $specification = Initialize-PSModuleSpecification `
+            -Directory $directoryPath `
+            -PassThru `
+            -WarningAction SilentlyContinue
+        $firstId = (Import-PowerShellDataFile -LiteralPath $specification.FullName).Id
+
+        Initialize-PSModuleSpecification `
+            -Directory $directoryPath `
+            -Force `
+            -WarningAction SilentlyContinue
+        $secondId = (Import-PowerShellDataFile -LiteralPath $specification.FullName).Id
+
+        $firstId | Should -Match '^directory\.identityrefreshdirectory\.[0-9a-f]{32}$'
+        $secondId | Should -BeExactly $firstId
+    }
+
+    It 'warns when a same-name module was generated from a different directory' {
+        $firstDirectory = Join-Path $TestDrive 'first' 'SharedNameDirectory'
+        $secondDirectory = Join-Path $TestDrive 'second' 'SharedNameDirectory'
+        foreach ($directoryPath in @($firstDirectory, $secondDirectory)) {
+            $scriptsPath = New-Item `
+                -Path (Join-Path $directoryPath 'scripts') `
+                -ItemType Directory `
+                -Force
+            Set-Content `
+                -LiteralPath (Join-Path $scriptsPath 'shared-name-collision.ps1') `
+                -Value 'param()'
+        }
+
+        $null = Initialize-PSModuleDirectory -Directory $firstDirectory
+        try {
+            $firstId = (Import-PowerShellDataFile -LiteralPath (
+                Join-Path $firstDirectory 'PSModule' 'PSModule.psd1'
+            )).Id
+
+            $warnings = @()
+            Initialize-PSModuleSpecification `
+                -Directory $secondDirectory `
+                -WarningVariable warnings `
+                -WarningAction SilentlyContinue
+            $secondId = (Import-PowerShellDataFile -LiteralPath (
+                Join-Path $secondDirectory 'PSModule' 'PSModule.psd1'
+            )).Id
+
+            $secondId | Should -Not -BeExactly $firstId
+            $warnings.Count | Should -Be 1
+            $warnings[0].Message |
+                Should -Match 'SharedNameDirectory\\Invoke-SharedNameCollision'
+        }
+        finally {
+            Remove-Module SharedNameDirectory -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'discovers a manifest installed beneath an unchanged module root' {
+        $modulePathRoot = New-Item `
+            -Path (Join-Path $TestDrive 'CacheModules') `
+            -ItemType Directory `
+            -Force
+        $directoryPath = Join-Path $TestDrive 'CacheCollisionDirectory'
+        $scriptsPath = New-Item `
+            -Path (Join-Path $directoryPath 'scripts') `
+            -ItemType Directory `
+            -Force
+        Set-Content `
+            -LiteralPath (Join-Path $scriptsPath 'cache-collision-fixture.ps1') `
+            -Value 'param()'
+
+        $originalModulePath = $env:PSModulePath
+        try {
+            $env:PSModulePath = @(
+                $modulePathRoot.FullName
+                $originalModulePath
+            ) -join [IO.Path]::PathSeparator
+
+            $beforeWarnings = @()
+            Initialize-PSModuleSpecification `
+                -Directory $directoryPath `
+                -WarningVariable beforeWarnings `
+                -WarningAction SilentlyContinue
+
+            # Installed after the first lookup cached its index, without changing
+            # PSModulePath itself.
+            $installedModulePath = New-Item `
+                -Path (Join-Path $modulePathRoot.FullName 'CacheCollisionModule') `
+                -ItemType Directory `
+                -Force
+            Set-Content `
+                -LiteralPath (Join-Path $installedModulePath 'CacheCollisionModule.psd1') `
+                -Value @'
+@{
+    ModuleVersion = '1.0.0'
+    FunctionsToExport = @('Invoke-CacheCollisionFixture')
+    CmdletsToExport = @()
+    VariablesToExport = @()
+    AliasesToExport = @()
+}
+'@
+
+            $afterWarnings = @()
+            Initialize-PSModuleSpecification `
+                -Directory $directoryPath `
+                -Force `
+                -WarningVariable afterWarnings `
+                -WarningAction SilentlyContinue
+
+            $beforeWarnings.Count | Should -Be 0
+            $afterWarnings.Count | Should -Be 1
+            $afterWarnings[0].Message |
+                Should -Match 'CacheCollisionModule\\Invoke-CacheCollisionFixture'
+        }
+        finally {
+            $env:PSModulePath = $originalModulePath
+        }
+    }
+
+    It 'reflects a modified or removed manifest beneath an unchanged module root' {
+        $modulePathRoot = New-Item `
+            -Path (Join-Path $TestDrive 'CacheChangeModules') `
+            -ItemType Directory `
+            -Force
+        $installedModulePath = New-Item `
+            -Path (Join-Path $modulePathRoot.FullName 'CacheChangeModule') `
+            -ItemType Directory `
+            -Force
+        $manifestPath = Join-Path $installedModulePath 'CacheChangeModule.psd1'
+        $writeManifest = {
+            param ([string] $ExportedName)
+
+            Set-Content -LiteralPath $manifestPath -Value @"
+@{
+    ModuleVersion = '1.0.0'
+    FunctionsToExport = @('$ExportedName')
+    CmdletsToExport = @()
+    VariablesToExport = @()
+    AliasesToExport = @()
+}
+"@
+        }
+
+        # The two names differ in length, so the manifest fingerprint changes even
+        # where the file system reports an unchanged write time.
+        & $writeManifest 'Invoke-CacheChangeBefore'
+
+        $directoryPath = Join-Path $TestDrive 'CacheChangeDirectory'
+        $scriptsPath = New-Item `
+            -Path (Join-Path $directoryPath 'scripts') `
+            -ItemType Directory `
+            -Force
+        Set-Content `
+            -LiteralPath (Join-Path $scriptsPath 'cache-change-after.ps1') `
+            -Value 'param()'
+
+        $originalModulePath = $env:PSModulePath
+        try {
+            $env:PSModulePath = @(
+                $modulePathRoot.FullName
+                $originalModulePath
+            ) -join [IO.Path]::PathSeparator
+
+            $unrelatedWarnings = @()
+            Initialize-PSModuleSpecification `
+                -Directory $directoryPath `
+                -WarningVariable unrelatedWarnings `
+                -WarningAction SilentlyContinue
+
+            & $writeManifest 'Invoke-CacheChangeAfter'
+            $modifiedWarnings = @()
+            Initialize-PSModuleSpecification `
+                -Directory $directoryPath `
+                -Force `
+                -WarningVariable modifiedWarnings `
+                -WarningAction SilentlyContinue
+
+            Remove-Item -LiteralPath $installedModulePath -Recurse -Force
+            $removedWarnings = @()
+            Initialize-PSModuleSpecification `
+                -Directory $directoryPath `
+                -Force `
+                -WarningVariable removedWarnings `
+                -WarningAction SilentlyContinue
+
+            $unrelatedWarnings.Count | Should -Be 0
+            $modifiedWarnings.Count | Should -Be 1
+            $modifiedWarnings[0].Message |
+                Should -Match 'CacheChangeModule\\Invoke-CacheChangeAfter'
+            $removedWarnings.Count | Should -Be 0
+        }
+        finally {
+            $env:PSModulePath = $originalModulePath
+        }
+    }
+
+    It 'preserves an authored specification identity through a refresh' {
+        $directoryPath = Join-Path $TestDrive 'AuthoredIdentityDirectory'
+        $scriptsPath = New-Item `
+            -Path (Join-Path $directoryPath 'scripts') `
+            -ItemType Directory `
+            -Force
+        Set-Content `
+            -LiteralPath (Join-Path $scriptsPath 'authored-identity.ps1') `
+            -Value 'param()'
+
+        $specificationPath = Join-Path $directoryPath 'PSModule' 'PSModule.psd1'
+        $null = New-Item `
+            -Path (Split-Path $specificationPath -Parent) `
+            -ItemType Directory `
+            -Force
+        Set-Content `
+            -LiteralPath $specificationPath `
+            -Value "@{ Id = 'authored.identity'; Commands = @() }"
+
+        Initialize-PSModuleSpecification `
+            -Directory $directoryPath `
+            -Force `
+            -WarningAction SilentlyContinue
+
+        $refreshed = Import-PowerShellDataFile -LiteralPath $specificationPath
+        $refreshed.Id | Should -BeExactly 'authored.identity'
+        $refreshed.Commands.Name | Should -Be 'Invoke-AuthoredIdentity'
+    }
+
+    It 'mints an identity when the existing specification cannot supply one' {
+        $mintedIdentities = foreach ($case in @(
+            @{ Name = 'UnparsableIdentityDirectory'; Content = 'not a PowerShell data file' }
+            @{ Name = 'InvalidIdentityDirectory'; Content = "@{ Id = 'has spaces'; Commands = @() }" }
+        )) {
+            $directoryPath = Join-Path $TestDrive $case.Name
+            $scriptsPath = New-Item `
+                -Path (Join-Path $directoryPath 'scripts') `
+                -ItemType Directory `
+                -Force
+            Set-Content `
+                -LiteralPath (Join-Path $scriptsPath 'minted-identity.ps1') `
+                -Value 'param()'
+
+            $specificationPath = Join-Path $directoryPath 'PSModule' 'PSModule.psd1'
+            $null = New-Item `
+                -Path (Split-Path $specificationPath -Parent) `
+                -ItemType Directory `
+                -Force
+            Set-Content -LiteralPath $specificationPath -Value $case.Content
+
+            Initialize-PSModuleSpecification `
+                -Directory $directoryPath `
+                -Force `
+                -WarningAction SilentlyContinue
+
+            (Import-PowerShellDataFile -LiteralPath $specificationPath).Id
+        }
+
+        $mintedIdentities[0] |
+            Should -Match '^directory\.unparsableidentitydirectory\.[0-9a-f]{32}$'
+        $mintedIdentities[1] |
+            Should -Match '^directory\.invalididentitydirectory\.[0-9a-f]{32}$'
+    }
+}
+
+Describe 'Repository hygiene gate' {
+    It 'passes when the caller enables native command error preference' {
+        $hygieneScript = (Resolve-Path (
+            Join-Path $PSScriptRoot '..' 'build' 'Test-RepositoryHygiene.ps1'
+        )).Path
+
+        # git check-ignore reports "nothing ignored" as exit code 1. With this
+        # preference on and ErrorActionPreference set to Stop, that becomes a
+        # terminating error unless the script opts out for itself.
+        $PSNativeCommandUseErrorActionPreference = $true
+        $ErrorActionPreference = 'Stop'
+
+        $PSNativeCommandUseErrorActionPreference | Should -BeTrue
+        { & $hygieneScript | Out-Null } | Should -Not -Throw
+    }
+}
+
 Describe 'Generated documentation drift' {
     BeforeAll {
         $driftScript = Join-Path $PSScriptRoot '..' 'build' 'Test-Documentation.ps1'
@@ -3823,6 +4708,105 @@ Describe 'Generated documentation drift' {
 
         $result.Failed | Should -BeTrue
         $result.Output | Should -Match 'does not exist'
+    }
+
+    It 'reports an invalid generated-file definition for <Case>' -ForEach @(
+        @{ Case = 'missing Path'; Field = 'Path'; InvalidValue = $null }
+        @{ Case = 'missing Source'; Field = 'Source'; InvalidValue = $null }
+        @{ Case = 'missing Generator'; Field = 'Generator'; InvalidValue = $null }
+        @{ Case = 'missing SourceParameter'; Field = 'SourceParameter'; InvalidValue = $null }
+        @{ Case = 'empty SourceParameter'; Field = 'SourceParameter'; InvalidValue = "''" }
+        @{ Case = 'non-string Path'; Field = 'Path'; InvalidValue = '42' }
+    ) {
+        $readme = "# PSGenerator`n`nBody.`n"
+        $fixture = New-DriftFixture `
+            -Name "InvalidGeneratedDefinition-$($Case.Replace(' ', '-'))" `
+            -Readme $readme `
+            -Generated (Get-ExpectedHomepage -Readme $readme)
+
+        $definition = [ordered] @{
+            Path = "'$((Join-Path $fixture.Root 'index.md') -replace '\\', '\\')'"
+            Source = "'$((Join-Path $fixture.Root 'README.md') -replace '\\', '\\')'"
+            Generator = "'$($homepageScript -replace '\\', '\\')'"
+            SourceParameter = "'ReadmePath'"
+        }
+        if ($null -eq $InvalidValue) {
+            $definition.Remove($Field)
+        }
+        else {
+            $definition[$Field] = $InvalidValue
+        }
+        $definitionLines = @(
+            $definition.GetEnumerator() |
+                ForEach-Object { "            $($_.Key) = $($_.Value)" }
+        )
+        $settings = @"
+@{
+    Terminology = @()
+    ExcludedSegments = @()
+    ExcludedFiles = @()
+    GeneratedFiles = @(
+        @{
+$($definitionLines -join "`n")
+        }
+    )
+}
+"@
+        [IO.File]::WriteAllText(
+            $fixture.Settings,
+            $settings,
+            [Text.UTF8Encoding]::new($false)
+        )
+
+        $result = Invoke-DriftGate -Fixture $fixture
+
+        $result.Failed | Should -BeTrue
+        $result.Output | Should -Match 'Invalid GeneratedFiles entry'
+        $result.Output | Should -Match $Field
+    }
+
+    It 'excludes a relative generated path from authored Markdown scanning' {
+        $root = Join-Path $TestDrive 'GeneratedFileScanExclusion'
+        New-Item -Path $root -ItemType Directory -Force | Out-Null
+        $repositoryReadme = (Resolve-Path (Join-Path $PSScriptRoot '..' 'README.md')).Path
+        $sourcePath = Join-Path $root 'source.txt'
+        [IO.File]::WriteAllText(
+            $sourcePath,
+            [IO.File]::ReadAllText($repositoryReadme),
+            [Text.UTF8Encoding]::new($false)
+        )
+        $generatorPath = Join-Path $root 'generator.ps1'
+        Set-Content -LiteralPath $generatorPath -Value @'
+param([string] $SourcePath)
+([IO.File]::ReadAllText($SourcePath)) -replace "`r`n?", "`n"
+'@
+        $settingsPath = Join-Path $root 'rules.psd1'
+        Set-Content -LiteralPath $settingsPath -Value @"
+@{
+    Terminology = @(
+        @{ Required = 'Canonical'; Variants = @('PSGenerator') }
+    )
+    ExcludedSegments = @()
+    ExcludedFiles = @()
+    GeneratedFiles = @(
+        @{
+            Path = 'README.md'
+            Source = '$sourcePath'
+            Generator = '$generatorPath'
+            SourceParameter = 'SourcePath'
+        }
+    )
+}
+"@
+        $fixture = [pscustomobject] @{
+            Root = $repositoryReadme
+            Settings = $settingsPath
+        }
+
+        $result = Invoke-DriftGate -Fixture $fixture
+
+        $result.Failed | Should -BeFalse
+        $result.Output | Should -Match '0 Markdown file\(s\)'
     }
 
     It 'rewrites the production origin to a root-relative path' {

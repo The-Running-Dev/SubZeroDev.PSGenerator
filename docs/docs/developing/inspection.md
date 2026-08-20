@@ -32,6 +32,19 @@ Recursive inspectors skip paths containing these segments:
 They also skip nested directories containing their own `.git` marker and the current
 generation output directory. Root-only inspectors do not recurse.
 
+Every check compares the candidate's *real* location, not its lexical one: a symlink
+or junction is resolved before any exclusion or containment check runs, so a linked
+file cannot present content from outside the repository root by way of a path that
+merely looks like it belongs inside. A resolution that cycles back on itself is
+rejected rather than followed indefinitely. Path comparisons are case-insensitive on
+Windows and macOS and case-sensitive on Linux, matching each platform's filesystem.
+
+Within one inspector's own traversal, the same real file reached through two
+different admitted paths — for example two links pointing at the same target — is
+only inspected once. This deduplication is scoped to a single inspector's own scan;
+it does not suppress a different inspector, or a later independent check within the
+same inspector, from reading the same file for an unrelated purpose.
+
 ## Dockerfiles
 
 **Inputs:** root `Dockerfile`, `Dockerfile.*`, and `*.Dockerfile`.
@@ -296,3 +309,49 @@ Error
 ```
 
 Use the concise view in CI logs and `-Detailed` during troubleshooting.
+
+## Issues
+
+Plugin execution diagnostics describe whether a plugin ran; issues describe
+problems with the source data a plugin read. `Get-PSModuleInspection` returns
+them separately as `Issues`, without changing the shape of `Data` or
+`PluginExecutions`. Each issue contains:
+
+```text
+Severity
+Code
+Inspector
+Path
+Message
+ExceptionType
+Details
+```
+
+`Severity` is `Warning` or `Error`. `Code` is a stable, machine-readable
+identifier; messages may improve without changing what a code means. Issues are
+ordered by inspector execution order, then repository-relative path, then code.
+
+`Get-PSModuleDiagnostic` keeps its current default output. Pass `-IncludeIssues`
+to also emit issue records, typed `SubZeroDev.PSGenerator.InspectionIssueDiagnostic`,
+after every plugin-execution record in the same stream. The two record types share
+no position guarantee relative to one another beyond that ordering, so distinguish
+them by type rather than by index.
+
+An authoritative input that fails inspection still throws. A caller that only
+wants the message keeps working unchanged; a caller that wants the structured
+detail behind the failure reads it from the caught exception:
+
+```powershell
+try {
+    Get-PSModuleInspection -Specification ./PSModule/PSModule.psd1
+}
+catch {
+    $issues = $_.Exception.Data['PSModule.InspectionIssues']
+}
+```
+
+`Issues` is never populated on that exception directly, because
+`Get-PSModuleInspection` never returns a result for a failed inspection; reading
+`$_.Exception.Data['PSModule.InspectionIssues']` is the documented way to reach
+the same typed records `Issues` would have held on success, including every issue
+recorded before the fatal one.

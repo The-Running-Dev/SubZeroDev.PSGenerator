@@ -34,5 +34,6 @@ function New-PSModuleBuildContext {
         Artifacts         = [ordered] @{}
         RenderRequests    = [System.Collections.Generic.List[string]]::new()
         PluginExecutions  = [System.Collections.Generic.List[object]]::new()
+        InspectionIssues  = [System.Collections.Generic.List[object]]::new()
     }
 }

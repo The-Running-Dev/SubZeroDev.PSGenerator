@@ -1,0 +1,63 @@
+{
+  "CapturedAtUtc": "2026-07-28T18:57:28.0250337Z",
+  "Repository": {
+    "FullName": "The-Running-Dev/SubZeroDev.PSGenerator",
+    "DefaultBranch": "main",
+    "AllowSquashMerge": true,
+    "AllowMergeCommit": false,
+    "AllowRebaseMerge": true,
+    "DeleteBranchOnMerge": true
+  },
+  "Ruleset": {
+    "id": 19771450,
+    "name": "Main",
+    "target": "branch",
+    "source_type": "Repository",
+    "source": "The-Running-Dev/SubZeroDev.PSGenerator",
+    "enforcement": "active",
+    "conditions": {
+      "ref_name": {
+        "exclude": [],
+        "include": [
+          "~DEFAULT_BRANCH"
+        ]
+      }
+    },
+    "rules": [
+      {
+        "type": "deletion"
+      },
+      {
+        "type": "non_fast_forward"
+      },
+      {
+        "type": "pull_request",
+        "parameters": {
+          "required_approving_review_count": 0,
+          "dismiss_stale_reviews_on_push": true,
+          "required_reviewers": [],
+          "require_code_owner_review": false,
+          "require_last_push_approval": false,
+          "required_review_thread_resolution": true,
+          "allowed_merge_methods": [
+            "squash",
+            "rebase"
+          ]
+        }
+      }
+    ],
+    "node_id": "RRS_lACqUmVwb3NpdG9yec5OCiIwzgEtsDo",
+    "created_at": "2026-07-26T20:16:14.162+03:00",
+    "updated_at": "2026-07-26T20:23:52.445+03:00",
+    "bypass_actors": [],
+    "current_user_can_bypass": "never",
+    "_links": {
+      "self": {
+        "href": "https://api.github.com/repos/The-Running-Dev/SubZeroDev.PSGenerator/rulesets/19771450"
+      },
+      "html": {
+        "href": "https://github.com/The-Running-Dev/SubZeroDev.PSGenerator/rules/19771450"
+      }
+    }
+  }
+}

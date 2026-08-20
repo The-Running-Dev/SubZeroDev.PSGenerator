@@ -1,3 +1,10 @@
 /artifacts/
 /docs-template/
 /examples/Minimal/artifacts/
+
+# .NET build output
+bin/
+obj/
+
+# Personal Claude Code overrides. The project settings beside it stay tracked.
+/.claude/settings.local.json
