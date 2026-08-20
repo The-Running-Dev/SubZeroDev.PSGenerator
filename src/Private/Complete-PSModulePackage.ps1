@@ -6,9 +6,10 @@ function Complete-PSModulePackage {
     )
 
     $requiredPaths = [ordered] @{
-        Manifest = Join-Path $Context.OutputPath "$($Context.Model.ModuleName).psd1"
-        Loader   = Join-Path $Context.OutputPath "$($Context.Model.ModuleName).psm1"
-        Metadata = Join-Path $Context.OutputPath 'Metadata' 'model.json'
+        Manifest     = Join-Path $Context.OutputPath "$($Context.Model.ModuleName).psd1"
+        Loader       = Join-Path $Context.OutputPath "$($Context.Model.ModuleName).psm1"
+        Metadata     = Join-Path $Context.OutputPath 'Metadata' 'model.json'
+        OutputMarker = Join-Path $Context.OutputPath 'Metadata' 'output.json'
     }
 
     foreach ($requiredPath in $requiredPaths.GetEnumerator()) {
@@ -17,6 +18,14 @@ function Complete-PSModulePackage {
                 "Generated PSModule package is incomplete: $($requiredPath.Key) '$($requiredPath.Value)' was not found."
             )
         }
+    }
+
+    $ownership = Test-PSModuleOutputOwnership -OutputPath $Context.OutputPath
+    if ($ownership.State -ne 'Owned') {
+        throw [System.IO.InvalidDataException]::new(
+            "Generated PSModule package has invalid ownership metadata at " +
+            "'$($requiredPaths.OutputMarker)'."
+        )
     }
 
     foreach ($artifactName in @('Manifest', 'Metadata')) {

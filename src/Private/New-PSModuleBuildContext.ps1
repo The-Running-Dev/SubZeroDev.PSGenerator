@@ -28,6 +28,7 @@ function New-PSModuleBuildContext {
         SpecificationPath = $resolvedSpecificationPath
         OutputPath        = $resolvedOutputPath
         DirectoryPath    = $directoryPath
+        ForceOutputReset = $false
         Specification     = $specification
         Inspection        = [ordered] @{}
         Model             = $null

@@ -114,7 +114,8 @@ artifacts/PSModule/
 ├── Documentation/
 │   └── <CommandName>.md
 ├── Metadata/
-│   └── model.json
+│   ├── model.json
+│   └── output.json
 ├── Public/
 │   └── <CommandName>.ps1
 └── Scripts/                 # only when directory scripts are packaged
@@ -128,9 +129,17 @@ Output location may be overridden:
 Build-PSModule -Output ./dist
 ```
 
-Each build overwrites previously generated output.
+Each build replaces missing, empty, PSGenerator-marked, or recognized pre-marker
+generated output. A non-empty directory that is not recognized as generated output
+is preserved unless `-Force` is explicit. Filesystem roots, the inspected source
+directory and its ancestors, linked output directories, existing files, and output
+overlapping the source `scripts` tree are always rejected, including with `-Force`.
 
-The generator validates the specification before clearing the selected output directory. It then writes a module manifest whose root module, version, and exported functions match the normalized model.
+The generator validates the specification before clearing an admitted output
+directory. Immediately after reset it writes `Metadata/output.json`, then writes a
+module manifest whose root module, version, and exported functions match the
+normalized model. The marker records generated-output ownership and is required in a
+completed package.
 
 ---
 

@@ -8,17 +8,16 @@ function Resolve-PSModuleInspectionRealPath {
 
     $full = [IO.Path]::GetFullPath($Path)
     $root = [IO.Path]::GetPathRoot($full)
-    $segments = @($full.Substring($root.Length).Split(
-        [IO.Path]::DirectorySeparatorChar,
-        [IO.Path]::AltDirectorySeparatorChar,
-        [StringSplitOptions]::RemoveEmptyEntries
-    ))
-
-    $resolved = $root.TrimEnd(
+    $separators = [char[]] @(
         [IO.Path]::DirectorySeparatorChar,
         [IO.Path]::AltDirectorySeparatorChar
     )
-    if (-not $resolved) { $resolved = [string] [IO.Path]::DirectorySeparatorChar }
+    $segments = @($full.Substring($root.Length).Split(
+        $separators,
+        [StringSplitOptions]::RemoveEmptyEntries
+    ))
+
+    $resolved = $root
 
     $remaining = [System.Collections.Generic.Stack[string]]::new()
     for ($i = $segments.Count - 1; $i -ge 0; $i--) {
@@ -72,20 +71,29 @@ function Resolve-PSModuleInspectionRealPath {
 
         $targetRoot = [IO.Path]::GetPathRoot($target.FullName)
         $targetSegments = @($target.FullName.Substring($targetRoot.Length).Split(
-            [IO.Path]::DirectorySeparatorChar,
-            [IO.Path]::AltDirectorySeparatorChar,
+            $separators,
             [StringSplitOptions]::RemoveEmptyEntries
         ))
         for ($i = $targetSegments.Count - 1; $i -ge 0; $i--) {
             $remaining.Push($targetSegments[$i])
         }
 
-        $resolved = $targetRoot.TrimEnd(
-            [IO.Path]::DirectorySeparatorChar,
-            [IO.Path]::AltDirectorySeparatorChar
-        )
-        if (-not $resolved) { $resolved = [string] [IO.Path]::DirectorySeparatorChar }
+        $resolved = $targetRoot
     }
 
-    return $resolved
+    $resolvedRoot = [IO.Path]::GetPathRoot($resolved)
+    $resolvedForComparison = $resolved.TrimEnd($separators)
+    $rootForComparison = $resolvedRoot.TrimEnd($separators)
+    $comparison = if ($IsLinux) {
+        [StringComparison]::Ordinal
+    }
+    else {
+        [StringComparison]::OrdinalIgnoreCase
+    }
+
+    if ([string]::Equals($resolvedForComparison, $rootForComparison, $comparison)) {
+        return $resolvedRoot
+    }
+
+    return $resolvedForComparison
 }

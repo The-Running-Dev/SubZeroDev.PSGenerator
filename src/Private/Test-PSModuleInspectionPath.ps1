@@ -51,8 +51,10 @@ function Test-PSModuleInspectionPath {
     if ($realPath.StartsWith($realOutputPrefix, $comparison)) { return $false }
 
     $segments = @($realPath.Substring($realDirectoryPath.Length).Split(
-        [IO.Path]::DirectorySeparatorChar,
-        [IO.Path]::AltDirectorySeparatorChar,
+        [char[]] @(
+            [IO.Path]::DirectorySeparatorChar,
+            [IO.Path]::AltDirectorySeparatorChar
+        ),
         [StringSplitOptions]::RemoveEmptyEntries
     ))
     if ($segments | Where-Object { $excludedSegments.Contains($_) }) {
