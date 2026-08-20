@@ -40,6 +40,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v6
 
+      # verification: true
       - name: Build image
         run: |
           docker build --tag psgenerator:ci .
@@ -51,6 +52,7 @@ jobs:
       # This checks the image from the outside as a consumer would: pwsh as the
       # entry point, the module resolvable by name, and every manifest command
       # present.
+      # verification: true
       - name: Smoke test image
         run: |
           $version = docker run --rm psgenerator:ci -NoLogo -NoProfile -Command '$PSVersionTable.PSVersion.ToString()'

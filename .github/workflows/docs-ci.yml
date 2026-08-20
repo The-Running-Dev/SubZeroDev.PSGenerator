@@ -30,6 +30,7 @@ jobs:
             - name: Check out Repository
               uses: actions/checkout@v6
 
+            # verification: true
             - name: Build Documentation (verify)
               run: /template/scripts/docs-build.ps1 -SourceDocs ./docs -OutputPath artifacts/docs
 
