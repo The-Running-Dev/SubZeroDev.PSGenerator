@@ -61,6 +61,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v6
 
+      # verification: true
       - name: Run static analysis and formatting checks
         shell: pwsh
         run: ./build/Invoke-Quality.ps1 -InstallDependencies
@@ -73,6 +74,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v6
 
+      # verification: true
       - name: Validate Markdown links and terminology
         shell: pwsh
         run: ./build/Test-Documentation.ps1
@@ -101,6 +103,7 @@ jobs:
           Install-Module Pester -RequiredVersion 5.5.0 -Scope CurrentUser -Force -SkipPublisherCheck -ErrorAction Stop
           Import-Module Pester -RequiredVersion 5.5.0 -Force -ErrorAction Stop
 
+      # verification: true
       - name: Run tests
         shell: pwsh
         run: |
@@ -214,6 +217,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v6
 
+      # verification: true
       - name: Build, install, and import package
         shell: pwsh
         run: ./build/Test-GeneratorNuGetPackage.ps1 -InstallDependencies
@@ -240,6 +244,7 @@ jobs:
           Install-Module Pester -RequiredVersion 5.5.0 -Scope CurrentUser -Force -SkipPublisherCheck -ErrorAction Stop
           Import-Module Pester -RequiredVersion 5.5.0 -Force -ErrorAction Stop
 
+      # verification: true
       - name: Run container end-to-end tests
         shell: pwsh
         run: |
