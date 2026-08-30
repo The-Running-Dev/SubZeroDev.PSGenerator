@@ -1,0 +1,38 @@
+{
+  "manifestHash": "f62ee75e8dca97944d9e8286c443d3f47a23c8a1aa9264426065b25e98a0c78f",
+  "generated": "2026-08-30",
+  "gates": [
+    {
+      "name": "PowerShell quality",
+      "command": "./build/Invoke-Quality.ps1 -InstallDependencies"
+    },
+    {
+      "name": "Documentation links and terminology",
+      "command": "./build/Test-Documentation.ps1"
+    },
+    {
+      "name": "Pester (ubuntu-latest / windows-latest)",
+      "command": "package + Invoke-Pester against ./tests"
+    },
+    {
+      "name": "PowerShell NuGet package",
+      "command": "./build/Test-GeneratorNuGetPackage.ps1 -InstallDependencies"
+    },
+    {
+      "name": "Container end-to-end",
+      "command": "Invoke-Pester against ./tests-e2e (needs Docker; the tests build their own fixture image, nothing needs to be built first)"
+    },
+    {
+      "name": "Build image",
+      "command": "docker build --tag psgenerator:ci ."
+    },
+    {
+      "name": "Smoke test image",
+      "command": "run the workflow step's script verbatim against psgenerator:ci - BOTH assertions: PSVersion matches ^7.4., and Compare-Object of (Get-Command -Module SubZeroDev.PSGenerator).Name against Test-ModuleManifest ./src/SubZeroDev.PSGenerator.psd1 exported functions returns nothing"
+    },
+    {
+      "name": "Build Documentation (verify)",
+      "command": "docker run --rm -v \"${PWD}:/workspace\" -w /workspace --entrypoint pwsh ghcr.io/the-running-dev/docs-template:latest -NoLogo -NoProfile -File /template/scripts/docs-build.ps1 -SourceDocs ./docs -OutputPath artifacts/docs (needs Docker. NOT ./docs.ps1 -BuildOnly: that only assembles the image and never runs the site build, so it exits 0 on a repository whose docs cannot build)"
+    }
+  ]
+}
