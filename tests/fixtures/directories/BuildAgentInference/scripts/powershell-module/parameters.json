@@ -1,0 +1,74 @@
+{
+  "Docker": {
+    "Configuration": {
+      "Type": "string",
+      "Mandatory": false,
+      "Default": "Release",
+      "Description": "Build configuration. Compatible overlap: also declared by the NUKE schema's \"Configuration\" property, with the same meaning and type."
+    },
+    "Targets": {
+      "Type": "string[]",
+      "Mandatory": false,
+      "Default": null,
+      "Description": "Targets to execute."
+    },
+    "Tags": {
+      "Type": "List<string>",
+      "Mandatory": false,
+      "Default": null,
+      "Description": "Optional labels applied to the produced artifact."
+    },
+    "RegistryToken": {
+      "Type": "string",
+      "Mandatory": false,
+      "Default": null,
+      "Secret": true,
+      "Description": "Registry authentication token. Never written to logs."
+    },
+    "ImageTag": {
+      "Type": "string",
+      "Mandatory": false,
+      "Default": "latest",
+      "Description": "Tag applied to the built image."
+    },
+    "MaxBuildArgs": {
+      "Type": "int?",
+      "Mandatory": false,
+      "Default": null,
+      "Description": "Maximum number of build-time arguments accepted."
+    }
+  },
+  "Forge": {
+    "Configuration": {
+      "Type": "string",
+      "Mandatory": false,
+      "Default": "Release",
+      "Description": "Build configuration. Compatible overlap: also declared by the NUKE schema's \"Configuration\" property, with the same meaning and type."
+    },
+    "Targets": {
+      "Type": "string[]",
+      "Mandatory": false,
+      "Default": null,
+      "Description": "Targets to execute."
+    },
+    "Tags": {
+      "Type": "List<string>",
+      "Mandatory": false,
+      "Default": null,
+      "Description": "Optional labels applied to the produced artifact."
+    },
+    "RegistryToken": {
+      "Type": "string",
+      "Mandatory": false,
+      "Default": null,
+      "Secret": true,
+      "Description": "Registry authentication token. Never written to logs."
+    },
+    "OutputDirectory": {
+      "Type": "string",
+      "Mandatory": false,
+      "Default": "artifacts/forge",
+      "Description": "Forge output directory."
+    }
+  }
+}

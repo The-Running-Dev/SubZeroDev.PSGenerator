@@ -1,0 +1,47 @@
+{
+  "generated": "2026-08-30",
+  "branch": "feature/build-agent-inference-fixture",
+  "commit": "6a086d6",
+  "gates": [
+    {
+      "name": "PowerShell quality (test.yml: Run static analysis and formatting checks)",
+      "status": "Passed",
+      "detail": "./build/Invoke-Quality.ps1 -InstallDependencies -> exit 0. Repository hygiene checks passed across 237 tracked path(s). PowerShell quality checks passed with PSScriptAnalyzer 1.25.0 across 5 owned source roots."
+    },
+    {
+      "name": "Documentation links and terminology (test.yml: Validate Markdown links and terminology)",
+      "status": "Passed",
+      "detail": "./build/Test-Documentation.ps1 -> no terminating error. Documentation checks passed across 69 Markdown file(s)."
+    },
+    {
+      "name": "Pester (test.yml: Run tests)",
+      "status": "Passed",
+      "detail": "Packaged via ./build/New-GeneratorModulePackage.ps1, PSGENERATOR_MODULE_PATH set, Invoke-Pester over ./tests with JaCoCo coverage. RESULT=Passed Passed=267 Failed=0 Skipped=13. COVERAGE=94.7596675099386% against the 85% MINIMUM_PACKAGED_COVERAGE_PERCENT threshold. Run on windows-latest-equivalent (this host); the ubuntu-latest matrix leg was not run on Linux, though its extra coverage assertion was reproduced here."
+    },
+    {
+      "name": "PowerShell NuGet package (test.yml: Build, install, and import package)",
+      "status": "Passed",
+      "detail": "./build/Test-GeneratorNuGetPackage.ps1 -InstallDependencies -> no terminating error. Verified NuGet package 'SubZeroDev.PSGenerator.1.0.0.nupkg' by installing and importing it from a local repository. Produced artifacts/packages/SubZeroDev.PSGenerator.1.0.0.nupkg (75551 bytes)."
+    },
+    {
+      "name": "Container end-to-end (test.yml: Run container end-to-end tests)",
+      "status": "Passed",
+      "detail": "Invoke-Pester over ./tests-e2e -> RESULT=Passed Passed=6 Failed=0 Skipped=0, completed in 10.58s. Fixture image subzerodev-psgenerator-minimal:local built by the tests themselves; all six cases green including Docker run with arguments/environment/mount, portable container options, host secret mount, and the no-Docker preview path."
+    },
+    {
+      "name": "Build image (container.yml: Build image)",
+      "status": "Passed",
+      "detail": "docker build --tag psgenerator:ci . -> BUILD_IMAGE_EXIT=0. Exported manifest list sha256:4dbbf678eec76a9ee5fb68ec0afdf36ef7bd684a53bfd19a2167e81e2f952c4b, naming to docker.io/library/psgenerator:ci done."
+    },
+    {
+      "name": "Smoke test image (container.yml: Smoke test image)",
+      "status": "Passed",
+      "detail": "Ran the step's own script verbatim against psgenerator:ci -> SMOKE_EXIT=0. Image runs PowerShell 7.4.6 and exposes 9 commands. Compare-Object against Test-ModuleManifest ./src/SubZeroDev.PSGenerator.psd1 exported functions returned no differences."
+    },
+    {
+      "name": "Build Documentation (verify) (docs-ci.yml: Build Documentation (verify))",
+      "status": "Passed",
+      "detail": "docker run against ghcr.io/the-running-dev/docs-template:latest with the repo mounted at /workspace, running /template/scripts/docs-build.ps1 -SourceDocs ./docs -OutputPath artifacts/docs, i.e. the workflow's own command rather than the ./docs.ps1 -BuildOnly substitute. DOCS_SITE_BUILD_EXIT=0. [SUCCESS] Generated static files in \"artifacts\". [DOCS-BUILD] Done. Static site available at '/workspace/artifacts/docs'."
+    }
+  ]
+}

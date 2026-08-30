@@ -86,8 +86,9 @@ Implement the compatibility path in this order:
   representative `.csproj` graph, NUKE schemas, C# build/parameter classes,
   `Update-ModuleParameters.ps1` behavior, PowerShell dispatch/module contract, and
   empty PSModule specification. Record the current regression explicitly:
-  inspection finds NUKE projects but produces no command candidates and incorrectly
-  reports `$schema` as a parameter.
+  inspection finds NUKE/C# build evidence but none of it yet materializes into
+  commands (the historical `$schema`-as-a-parameter leak is already fixed).
+  See [`tests/fixtures/directories/BuildAgentInference`](../tests/fixtures/directories/BuildAgentInference).
 - [ ] Define a single evidence-merging contract instead of treating any inspector as
   the complete source of truth. Collect command and parameter evidence from existing
   module manifests/exports, executable `.ps1` scripts, PowerShell parameter

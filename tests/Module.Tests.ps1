@@ -3705,6 +3705,71 @@ Describe 'Maintained directory integration fixtures' {
             Remove-Module BuildAgentFixture -Force -ErrorAction SilentlyContinue
         }
     }
+
+    It 'inspects NUKE/C# build evidence but does not yet infer commands from it' {
+        # Baseline regression for design/planning/build-agent-evidence-design.md.
+        # This fixture is the same shape as BuildAgent, minus the authored spec.
+        # Update this test, not delete it, once evidence merging and candidate
+        # materialization land (see that design's delivery slices) - it exists to
+        # make that change visible, not to pin today's behavior as permanent.
+        $directoryPath = Join-Path $TestDrive 'BuildAgentInferenceDirectory'
+        Copy-Item -LiteralPath (Join-Path $fixtureRoot 'BuildAgentInference') `
+            -Destination $directoryPath -Recurse
+        $specificationPath = Join-Path $directoryPath 'PSModule' 'PSModule.psd1'
+
+        $inspection = Get-PSModuleInspection -Specification $specificationPath
+
+        try {
+            # Build evidence is already discovered ...
+            $buildProject = $inspection.Data.DotNetProjects | Where-Object Path -eq 'src/Build/Build.csproj'
+            $buildProject.IsExecutable | Should -BeTrue
+            $buildProject.ProjectReferences.Path | Should -Be 'src/Common/Common.csproj'
+            ($inspection.Data.DotNetProjects |
+                Where-Object Path -eq 'src/Build.Tests/Build.Tests.csproj').IsTestProject |
+                Should -BeTrue
+            $inspection.Data.Nuke.IsConfigured | Should -BeTrue
+            $inspection.Data.Nuke.Targets | Should -Be @('Docker', 'Forge', 'Test')
+            $inspection.Data.Nuke.ConfiguredParameterNames | Should -Be @('Configuration', 'ImageTag')
+            $inspection.Data.Nuke.ParameterNames | Should -Be @(
+                'Configuration'
+                'ImageTag'
+                'OutputDirectory'
+                'RegistryToken'
+                'Target'
+            )
+
+            # ... the historical $schema-as-a-parameter leak stays fixed ...
+            $inspection.Data.Nuke.ParameterNames | Should -Not -Contain '$schema'
+            $inspection.Data.Nuke.ConfiguredParameterNames | Should -Not -Contain '$schema'
+
+            # ... but none of the NUKE/C# evidence reaches the generated module yet:
+            # the C# parameter classes and the generated parameters.json are not
+            # inspected at all, so nothing about the Docker or Forge build types
+            # becomes a command. An empty specification does trigger candidate
+            # scanning of scripts/powershell-module/, which is a separate,
+            # already-shipped mechanism unrelated to this design - it correctly
+            # infers BuildAgent.psm1's three exports, but also, incorrectly,
+            # Update-ModuleParameters (a known, pre-existing gap: script inference
+            # does not yet honor the .FUNCTIONALITY Maintenance tag). Both facts are
+            # asserted here so a fix to either shows up as a test failure demanding
+            # this baseline be revisited, rather than silently going unnoticed.
+            # These four are inferred from scripts/powershell-module/ alone. If this
+            # ever grows a fifth command, it did not come from Docker/Forge NUKE/C#
+            # evidence today - re-derive why before updating this assertion.
+            $commands = @(Initialize-PSModuleDirectory -Directory $directoryPath -ListCommands)
+            $commands.Name | Sort-Object | Should -Be @(
+                'Invoke-BuildDispatch'
+                'Invoke-DockerBuild'
+                'Invoke-ForgeBuild'
+                'Update-ModuleParameters'
+            )
+        }
+        finally {
+            # The fixture spec authors no ModuleName, so the generated module is
+            # named after the copied directory leaf, not after the fixture.
+            Remove-Module BuildAgentInferenceDirectory -Force -ErrorAction SilentlyContinue
+        }
+    }
 }
 
 Describe 'Minimal runnable container example' {
