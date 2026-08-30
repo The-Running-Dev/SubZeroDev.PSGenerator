@@ -1143,7 +1143,9 @@ Describe 'Container module build context' {
             $context.OutputPath | Should -Be ([System.IO.Path]::GetFullPath($OutputPath))
             $context.DirectoryPath | Should -Be (Split-Path $SpecificationPath -Parent)
             $context.Specification.Commands[0].Name | Should -Be 'Invoke-Example'
-            $context.Inspection.Count | Should -Be 0
+            $context.Inspection.Count | Should -Be 1
+            $context.Inspection.Contains('CommandEvidence') | Should -BeTrue
+            @($context.Inspection['CommandEvidence']).Count | Should -Be 0
         }
     }
 
