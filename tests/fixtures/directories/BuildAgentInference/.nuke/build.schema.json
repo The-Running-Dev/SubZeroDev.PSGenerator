@@ -1,0 +1,52 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "definitions": {
+    "ExecutableTarget": {
+      "type": "string",
+      "enum": ["Docker", "Forge", "Test"]
+    },
+    "Configuration": {
+      "type": "string",
+      "enum": ["Debug", "Release"]
+    },
+    "NukeBuild": {
+      "properties": {
+        "Configuration": {
+          "description": "Build configuration.",
+          "$ref": "#/definitions/Configuration"
+        },
+        "Target": {
+          "type": "array",
+          "description": "Targets to execute.",
+          "items": {
+            "$ref": "#/definitions/ExecutableTarget"
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "properties": {
+        "RegistryToken": {
+          "type": "string",
+          "description": "Registry authentication token.",
+          "default": "Secrets must be entered separately"
+        },
+        "ImageTag": {
+          "type": "string",
+          "description": "Tag applied to the built image.",
+          "default": "latest"
+        },
+        "OutputDirectory": {
+          "type": "string",
+          "description": "Forge output directory. Intentional conflict: ForgeBuildParams.cs defaults this to 'out'.",
+          "default": "artifacts/forge"
+        }
+      }
+    },
+    {
+      "$ref": "#/definitions/NukeBuild"
+    }
+  ]
+}

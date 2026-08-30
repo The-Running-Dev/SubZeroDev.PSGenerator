@@ -1,0 +1,10 @@
+{
+  "Docker": {
+    "Configuration": { "Type": "string", "Mandatory": false, "Default": "Release" },
+    "ImageTag": { "Type": "string", "Mandatory": false, "Default": "latest" }
+  },
+  "Forge": {
+    "Configuration": { "Type": "string", "Mandatory": false, "Default": "Release" },
+    "OutputDirectory": { "Type": "string", "Mandatory": false, "Default": "artifacts/forge" }
+  }
+}

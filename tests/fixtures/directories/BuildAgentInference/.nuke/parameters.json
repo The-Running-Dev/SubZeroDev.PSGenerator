@@ -1,0 +1,5 @@
+{
+  "$schema": "build.schema.json",
+  "Configuration": "Release",
+  "ImageTag": "dev"
+}
