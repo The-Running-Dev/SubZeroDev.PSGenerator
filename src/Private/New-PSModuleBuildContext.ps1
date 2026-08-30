@@ -30,7 +30,9 @@ function New-PSModuleBuildContext {
         DirectoryPath    = $directoryPath
         ForceOutputReset = $false
         Specification     = $specification
-        Inspection        = [ordered] @{}
+        Inspection        = [ordered] @{
+            CommandEvidence = [System.Collections.Generic.List[object]]::new()
+        }
         Model             = $null
         Artifacts         = [ordered] @{}
         RenderRequests    = [System.Collections.Generic.List[string]]::new()

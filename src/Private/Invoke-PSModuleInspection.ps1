@@ -26,5 +26,11 @@ function Invoke-PSModuleInspection {
     }
 
     $null = Invoke-PSModulePluginPipeline -Context $context -Path $pluginRoots -Stage Inspectors
+
+    # Redaction runs once, after every inspector has finished and before any
+    # caller (Get-PSModuleInspection or otherwise) can observe Context.Inspection,
+    # per design/planning/build-agent-evidence-design.md's evidence model.
+    Protect-PSModuleCommandEvidenceSecret -Context $context
+
     return $context
 }
