@@ -1,7 +1,7 @@
 {
   "generated": "2026-08-30",
-  "branch": "fix/80-initialize-psmoduledirectory-no-commands-key",
-  "commit": "a8de3de",
+  "branch": "fix/81-maintenance-tag-script-inference",
+  "commit": "b538bb5",
   "gates": [
     {
       "name": "PowerShell quality",
@@ -16,7 +16,7 @@
     {
       "name": "Pester (ubuntu-latest / windows-latest)",
       "status": "Passed",
-      "detail": "Packaged-module Pester run against ./tests: Tests Passed: 268, Failed: 0, Skipped: 13 (host cannot create symbolic links), NotRun: 0, completed in 233.46s. Supplementary run with CodeCoverage enabled against the packaged module: Result=Passed Passed=268 Failed=0 CoveragePercent=94.7615606936416 (minimum 85%)."
+      "detail": "Packaged-module Pester run against ./tests: Result=Passed Passed=268 Failed=0 Skipped=13 NotRun=0. CodeCoverage.CoveragePercent=94.7653429602888 (minimum 85)."
     },
     {
       "name": "PowerShell NuGet package",
@@ -26,17 +26,17 @@
     {
       "name": "Container end-to-end",
       "status": "Passed",
-      "detail": "Pester against ./tests-e2e: Describing Container module end-to-end workflow - 6 tests, Tests Passed: 6, Failed: 0, Skipped: 0, NotRun: 0, completed in 12.84s."
+      "detail": "Pester against ./tests-e2e: Tests Passed: 6, Failed: 0, Skipped: 0, NotRun: 0, completed in 15.32s."
     },
     {
       "name": "Build image",
       "status": "Passed",
-      "detail": "docker build --tag psgenerator:ci . completed successfully; image build log shows 'Installed SubZeroDev.PSGenerator 1.0.0 with 9 commands.' and naming to docker.io/library/psgenerator:ci done."
+      "detail": "docker build --tag psgenerator:ci . completed successfully; image built and named docker.io/library/psgenerator:ci."
     },
     {
       "name": "Smoke test image",
       "status": "Passed",
-      "detail": "version=7.4.6 (matches ^7.4.); PASS: exported commands match manifest (Compare-Object of `(Get-Command -Module SubZeroDev.PSGenerator).Name` against Test-ModuleManifest exported functions returned nothing)."
+      "detail": "Image runs PowerShell 7.4.6 (matches ^7.4.) and exposes 9 commands; Compare-Object of exported commands against the module manifest returned nothing."
     },
     {
       "name": "Build Documentation (verify)",

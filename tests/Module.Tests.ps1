@@ -3763,21 +3763,21 @@ Describe 'Maintained directory integration fixtures' {
             # inspected at all, so nothing about the Docker or Forge build types
             # becomes a command. An empty specification does trigger candidate
             # scanning of scripts/powershell-module/, which is a separate,
-            # already-shipped mechanism unrelated to this design - it correctly
-            # infers BuildAgent.psm1's three exports, but also, incorrectly,
-            # Update-ModuleParameters (a known, pre-existing gap: script inference
-            # does not yet honor the .FUNCTIONALITY Maintenance tag). Both facts are
-            # asserted here so a fix to either shows up as a test failure demanding
-            # this baseline be revisited, rather than silently going unnoticed.
-            # These four are inferred from scripts/powershell-module/ alone. If this
-            # ever grows a fifth command, it did not come from Docker/Forge NUKE/C#
-            # evidence today - re-derive why before updating this assertion.
+            # already-shipped mechanism unrelated to this design - it infers
+            # BuildAgent.psm1's three exports and correctly excludes
+            # Update-ModuleParameters, whose .FUNCTIONALITY Maintenance tag marks
+            # it as a generator script rather than a public command. This is
+            # asserted here so a regression in either shows up as a test failure
+            # demanding this baseline be revisited, rather than silently going
+            # unnoticed. These three are inferred from scripts/powershell-module/
+            # alone. If this ever grows a fourth command, it did not come from
+            # Docker/Forge NUKE/C# evidence today - re-derive why before updating
+            # this assertion.
             $commands = @(Initialize-PSModuleDirectory -Directory $directoryPath -ListCommands)
             $commands.Name | Sort-Object | Should -Be @(
                 'Invoke-BuildDispatch'
                 'Invoke-DockerBuild'
                 'Invoke-ForgeBuild'
-                'Update-ModuleParameters'
             )
         }
         finally {

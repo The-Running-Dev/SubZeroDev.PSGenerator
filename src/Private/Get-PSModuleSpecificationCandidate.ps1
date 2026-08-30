@@ -93,6 +93,9 @@ function Get-PSModuleSpecificationCandidate {
         if (@($parseErrors).Count -gt 0) { continue }
 
         if ($file.Extension -eq '.ps1') {
+            $helpContent = $ast.GetHelpContent()
+            if ($helpContent -and $helpContent.Functionality.Trim() -eq 'Maintenance') { continue }
+
             $name = ConvertTo-PSModuleCommandName -FileBaseName $file.BaseName
             if ($commandNames.Add($name)) {
                 $commands.Add([ordered]@{
