@@ -3,7 +3,7 @@
 ## Status
 
 Accepted. All findings from independent review are resolved; see
-[the peer review](../peer-review.md) and
+[the peer review](../../peer-review.md) and
 [the implementation plan](next-engineering-set-implementation-plan.md).
 
 ## Purpose

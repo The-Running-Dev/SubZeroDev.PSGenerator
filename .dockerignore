@@ -6,6 +6,9 @@
 artifacts
 docs
 examples
+design
+Specifications.md
+TODO.md
 planning
 tests
 tests-e2e
@@ -15,7 +18,5 @@ node_modules
 *.code-workspace
 AGENTS.md
 README.md
-Specifications.md
-TODO.md
 LICENSE
 docs.ps1

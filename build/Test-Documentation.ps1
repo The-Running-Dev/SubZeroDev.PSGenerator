@@ -6,7 +6,7 @@ Runs the repository Markdown link and terminology gate.
 Validates authored Markdown that the documentation site build never sees.
 
 Docusaurus already fails on unresolved links inside docs/, so this gate covers
-the rest: root Markdown such as README.md and TODO.md, and cross-file relative
+the rest: root and design/ Markdown such as README.md and design/30-slices.md, and cross-file relative
 links and heading anchors everywhere.
 
 Relative link targets must exist on disk, and a #fragment must match a heading

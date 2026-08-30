@@ -62,7 +62,7 @@ path filter. Requiring either path-filtered context now would leave unrelated pu
 requests permanently waiting for a check that will never exist.
 
 This was observed, not inferred. At the time of this reading, pull request #66
-changed only `TODO-Next.md` and `planning/`, and reported exactly the eight
+changed only `TODO-Next.md` and `design/planning/`, and reported exactly the eight
 `test.yml` contexts; neither path-filtered context appeared. Pull request #62
 touched `src/`, `docs/`, and `README.md`, and reported all ten, with the names
 above matching character for character, including the `caller / job` prefix on the

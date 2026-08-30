@@ -3,7 +3,7 @@
 ## Status
 
 Accepted. All findings from independent review are resolved; see
-[the peer review](../peer-review.md) and
+[the peer review](../../peer-review.md) and
 [the implementation plan](next-engineering-set-implementation-plan.md).
 
 ## Purpose
@@ -166,7 +166,7 @@ separate from this implementation.
 Making an RC check required would mean adding it to the `Main` branch ruleset
 (ID `19771450`), the same ruleset the quality-safeguards work configured with
 the ten checks required today. That work left one task open:
-`planning/quality-safeguards-implementation-plan.md` records that the
+`quality-safeguards-implementation-plan.md` records that the
 post-change ruleset was captured as a hand-written summary rather than the
 complete API document, so it cannot be diffed against the pre-change archive,
 and `bypass_actors`, `enforcement`, and `conditions` are unverified rather than
