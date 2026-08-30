@@ -8,10 +8,10 @@ for the next engineering set.
 Reviewed at commit `4ee612b`, the head of `agent/plan-next-engineering-set`,
 against base `891785e`.
 
-- [Build-Agent evidence and inference design](planning/build-agent-evidence-design.md)
-- [Inspector hardening design](planning/inspector-hardening-design.md)
-- [Release-candidate validation design](planning/release-candidate-validation-design.md)
-- [Next engineering set implementation plan](planning/next-engineering-set-implementation-plan.md)
+- [Build-Agent evidence and inference design](design/planning/build-agent-evidence-design.md)
+- [Inspector hardening design](design/planning/inspector-hardening-design.md)
+- [Release-candidate validation design](design/planning/release-candidate-validation-design.md)
+- [Next engineering set implementation plan](design/planning/next-engineering-set-implementation-plan.md)
 
 ## Method
 
@@ -25,9 +25,9 @@ inspectors, the existing fixture, and the roadmap the plan claims to advance.
 - **The inspector matrix is complete.** The hardening design's nine inspector
   sections correspond one-to-one with the nine plugins under `src/Plugins/Inspectors`.
   Nothing shipped is unaddressed and nothing addressed is imaginary.
-- **The roadmap counts are accurate.** `TODO.md` §3 has eleven unchecked items
+- **The roadmap counts are accurate.** `design/30-slices.md` §3 has eleven unchecked items
   against two checked, and §4 has six unchecked, exactly as recorded.
-- **The hardening design covers `TODO.md` §4 completely.** All six roadmap items
+- **The hardening design covers `design/30-slices.md` §4 completely.** All six roadmap items
   map onto a section: malformed-input policy, traversal confinement, path
   fixtures, per-inspector behavior, YAML subsets, and Dockerfile parsing.
 - **The release-candidate reuse targets all exist.** Every script the design
@@ -69,7 +69,7 @@ The design anticipates the wrong hazard. It says `Update-ModuleParameters.ps1`
 addresses execution, the thing that is already safe, while leaving inference, the
 thing that actually fires.
 
-This matters beyond the fixture. `TODO.md` §3 and `TODO-Next.md` §3 both record an
+This matters beyond the fixture. `design/30-slices.md` §3 and `TODO-Next.md` §3 both record an
 open item for "the maintenance-script classification that would keep repo tooling
 out of a public command surface". `Update-ModuleParameters.ps1` is precisely that:
 repository tooling that should not become a published command. The design
@@ -256,8 +256,8 @@ This document sits at the repository root and is the only peer review in the tre
 The earlier review of the quality-safeguards work was removed once that work
 merged; its decisions were folded into the designs they affected, so the reasoning
 behind the durable specification identity and the manifest-index fingerprint lives
-in [the collision diagnostics design](planning/command-collision-diagnostics-design.md)
-and [the quality safeguards plan](planning/quality-safeguards-implementation-plan.md)
+in [the collision diagnostics design](design/planning/command-collision-diagnostics-design.md)
+and [the quality safeguards plan](design/planning/quality-safeguards-implementation-plan.md)
 rather than only in a review document.
 
 A review is worth keeping while its findings are open and worth folding into the

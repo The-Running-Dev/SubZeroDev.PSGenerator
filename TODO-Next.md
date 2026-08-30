@@ -26,7 +26,7 @@ Also worth deciding then: whether the image should carry `:1.0.0` alongside
 The first three rename gaps are implemented together in PR
 [#66](https://github.com/The-Running-Dev/SubZeroDev.PSGenerator/pull/66).
 Detailed implementation and evidence live in
-[`planning/quality-safeguards-implementation-plan.md`](planning/quality-safeguards-implementation-plan.md).
+[`design/planning/quality-safeguards-implementation-plan.md`](design/planning/quality-safeguards-implementation-plan.md).
 
 - **Required checks are active on `main`.** Ruleset `Main` (ID `19771450`) now
   requires the ten GitHub Actions contexts below with strict freshness. The
@@ -67,7 +67,7 @@ Detailed implementation and evidence live in
 
 ## 3. Still Open on the v1 Roadmap
 
-Not re-planned here, just so it is not forgotten. `TODO.md` still has:
+Not re-planned here, just so it is not forgotten. `design/30-slices.md` still has:
 
 - **§3 Docker-BuildAgent compatibility** — 11 of 13 items unchecked, and this is
   the largest remaining piece of engineering. Includes the maintenance-script

@@ -101,7 +101,7 @@ After the dependency is installed:
 
 The gate validates authored Markdown that the documentation site build never sees.
 Docusaurus already fails on unresolved links inside `docs/`, so this check covers
-the rest: root Markdown such as `README.md` and `TODO.md`, plus cross-file relative
+the rest: root and `design/` Markdown such as `README.md` and `design/30-slices.md`, plus cross-file relative
 links and heading anchors everywhere.
 
 It reports three rule kinds:

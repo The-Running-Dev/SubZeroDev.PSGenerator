@@ -9,7 +9,7 @@ sidebar_position: 5
 ## Before Starting
 
 1. Read the [Architecture Overview](./overview.md).
-2. Check the engineering roadmap in `TODO.md` at the directory.
+2. Check the engineering roadmap in `design/30-slices.md` at the directory.
 3. Check documentation work in [Documentation Roadmap](./TODO.md).
 4. Confirm an open pull request does not already address the same change.
 

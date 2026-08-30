@@ -177,7 +177,7 @@ before writing, so concurrent changes could not be lost.
 Implementation and validation are recorded in PR
 [#66](https://github.com/The-Running-Dev/SubZeroDev.PSGenerator/pull/66).
 Ruleset `Main` remains ID `19771450`; its before/after API evidence is archived
-under [`planning/evidence`](evidence/). The hosted implementation run exposed
+under [`design/planning/evidence`](evidence/). The hosted implementation run exposed
 and passed all ten required contexts on Windows and Linux. Automatic branch
 deletion can only be observed after the pull request is merged.
 
