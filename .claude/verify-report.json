@@ -1,47 +1,44 @@
 {
-  "generated": "2026-08-30",
-  "branch": "fix/81-maintenance-tag-script-inference",
-  "commit": "b538bb5",
   "gates": [
-    {
-      "name": "PowerShell quality",
-      "status": "Passed",
-      "detail": "Repository hygiene checks passed across 253 tracked path(s). PowerShell quality checks passed with PSScriptAnalyzer 1.25.0 across 5 owned source roots."
-    },
-    {
-      "name": "Documentation links and terminology",
-      "status": "Passed",
-      "detail": "Documentation checks passed across 74 Markdown file(s)."
-    },
-    {
-      "name": "Pester (ubuntu-latest / windows-latest)",
-      "status": "Passed",
-      "detail": "Packaged-module Pester run against ./tests: Result=Passed Passed=268 Failed=0 Skipped=13 NotRun=0. CodeCoverage.CoveragePercent=94.7653429602888 (minimum 85)."
-    },
-    {
-      "name": "PowerShell NuGet package",
-      "status": "Passed",
-      "detail": "Verified NuGet package 'SubZeroDev.PSGenerator.1.0.0.nupkg' by installing and importing it from a local repository."
-    },
-    {
-      "name": "Container end-to-end",
-      "status": "Passed",
-      "detail": "Pester against ./tests-e2e: Tests Passed: 6, Failed: 0, Skipped: 0, NotRun: 0, completed in 15.32s."
-    },
-    {
-      "name": "Build image",
-      "status": "Passed",
-      "detail": "docker build --tag psgenerator:ci . completed successfully; image built and named docker.io/library/psgenerator:ci."
-    },
-    {
-      "name": "Smoke test image",
-      "status": "Passed",
-      "detail": "Image runs PowerShell 7.4.6 (matches ^7.4.) and exposes 9 commands; Compare-Object of exported commands against the module manifest returned nothing."
-    },
-    {
-      "name": "Build Documentation (verify)",
-      "status": "Passed",
-      "detail": "docker run against ghcr.io/the-running-dev/docs-template:latest with docs-build.ps1: '[SUCCESS] Generated static files in \"artifacts\".' and '[DOCS-BUILD] Done. Static site available at '/workspace/artifacts/docs'.'"
-    }
+  {
+    "name": "PowerShell quality",
+    "status": "Passed",
+    "detail": "Repository hygiene checks passed across 253 tracked path(s). PowerShell quality checks passed with PSScriptAnalyzer 1.25.0 across 5 owned source roots."
+  },
+  {
+    "name": "Documentation links and terminology",
+    "status": "Passed",
+    "detail": "Documentation checks passed across 74 Markdown file(s)."
+  },
+  {
+    "name": "Pester (ubuntu-latest / windows-latest)",
+    "status": "Passed",
+    "detail": "Tests completed in 375.16s. Tests Passed: 268, Failed: 0, Skipped: 13, NotRun: 0. RESULT: Passed. Coverage: 94.7653429602888% (2,770 analyzed commands across 80 files; required minimum 85%). Run locally against windows-latest-equivalent host only (this environment); the CI matrix also runs ubuntu-latest, which did not execute here."
+  },
+  {
+    "name": "PowerShell NuGet package",
+    "status": "Passed",
+    "detail": "Verified NuGet package 'SubZeroDev.PSGenerator.1.0.0.nupkg' by installing and importing it from a local repository. Package written to artifacts/packages/SubZeroDev.PSGenerator.1.0.0.nupkg (75608 bytes)."
+  },
+  {
+    "name": "Container end-to-end",
+    "status": "Passed",
+    "detail": "Tests completed in 17.77s. Tests Passed: 6, Failed: 0, Skipped: 0, NotRun: 0. RESULT: Passed. Suite: embeds and installs the generated module from /PSModule; installs the generated Markdown command reference unchanged; runs the generated command through Docker with arguments, environment, and a mount; runs portable container options through Docker; mounts a host secret through Docker; provides generated help and previews without running Docker."
+  },
+  {
+    "name": "Build image",
+    "status": "Passed",
+    "detail": "docker build --tag psgenerator:ci . exited 0. Image exported and named docker.io/library/psgenerator:ci (manifest sha256:3cd7c7705e3015e5d9aef5004bbd2c2ed3facf5fa73594cc3fc02b62fd752466)."
+  },
+  {
+    "name": "Smoke test image",
+    "status": "Passed",
+    "detail": "Image runs PowerShell 7.4.6 and exposes 9 commands. Both assertions passed: PSVersion matches ^7.4., and Compare-Object of exported module commands against the manifest's ExportedFunctions returned no differences."
+  },
+  {
+    "name": "Build Documentation (verify)",
+    "status": "Passed",
+    "detail": "docs-build.ps1 completed via ghcr.io/the-running-dev/docs-template:latest. Docusaurus client and server compiled successfully (server 17.41s, client 33.90s). [SUCCESS] Generated static files in \"artifacts\". [DOCS-BUILD] Done. Static site available at '/workspace/artifacts/docs'."
+  }
   ]
 }
