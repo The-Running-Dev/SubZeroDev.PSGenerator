@@ -140,12 +140,12 @@ inference, it is the strongest reading the evidence supports, and a correction f
 owner outranks it.
 
 ### 2026-07-24 — PowerShell 7.4 is the minimum supported version
-Context: The module shipped at `PowerShellVersion = '7.0'` (`bf91add`, 2026-07-23).
-Three-argument `Join-Path` in `src/SubZeroDev.PSGenerator.psm1` and
+Context: The module shipped at `PowerShellVersion = '7.0'` (`bf91add`, 2026-07-23). The
+three-argument `Join-Path` building the built-in plugin root in what is now
 `src/Public/Build-PSModule.ps1` already excluded Windows PowerShell 5.1 by construction —
-`-AdditionalChildPath` is 6.0 and later — so the open question was never whether to
-require PowerShell 7, but which 7.x to actually guarantee, and whether "minimum" would
-mean a floor that nothing exercises.
+`-AdditionalChildPath` is 6.0 and later, and the call was present at the time this was
+decided — so the open question was never whether to require PowerShell 7, but which 7.x
+to actually guarantee, and whether "minimum" would mean a floor that nothing exercises.
 Chosen: 7.4, declared in the generator manifest and in every generated manifest, and
 enforced by `build/Test-PowerShellBaseline.ps1`, which requires **exactly** 7.4.x and
 refuses to run on a newer runtime. `Dockerfile` pins 7.4.6 by SHA-256 rather than a
