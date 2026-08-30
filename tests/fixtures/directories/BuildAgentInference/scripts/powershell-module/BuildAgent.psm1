@@ -43,9 +43,17 @@ function Invoke-BuildDispatch {
         [ValidateSet('Docker', 'Forge')]
         [string] $BuildType
     )
-    switch ($BuildType) {
-        'Docker' { Invoke-DockerBuild @PSBoundParameters }
-        'Forge' { Invoke-ForgeBuild @PSBoundParameters }
+    # BuildType selects the target command; it is not a parameter of the target
+    # command, so it must not be forwarded with the rest of the bound parameters.
+    $forwarded = @{}
+    foreach ($entry in $PSBoundParameters.GetEnumerator()) {
+        if ($entry.Key -ne 'BuildType') { $forwarded[$entry.Key] = $entry.Value }
+    }
+    if ($PSCmdlet.ShouldProcess("$BuildType build", 'Dispatch')) {
+        switch ($BuildType) {
+            'Docker' { Invoke-DockerBuild @forwarded }
+            'Forge' { Invoke-ForgeBuild @forwarded }
+        }
     }
 }
 

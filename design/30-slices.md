@@ -82,7 +82,7 @@ Observed source contracts:
 
 Implement the compatibility path in this order:
 
-- [x] Add a maintained Docker-BuildAgent-shaped fixture containing the smallest
+- [ ] Add a maintained Docker-BuildAgent-shaped fixture containing the smallest
   representative `.csproj` graph, NUKE schemas, C# build/parameter classes,
   `Update-ModuleParameters.ps1` behavior, PowerShell dispatch/module contract, and
   empty PSModule specification. Record the current regression explicitly:

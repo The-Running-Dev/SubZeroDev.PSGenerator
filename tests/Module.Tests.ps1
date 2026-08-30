@@ -3765,7 +3765,9 @@ Describe 'Maintained directory integration fixtures' {
             )
         }
         finally {
-            Remove-Module BuildAgentInferenceFixture -Force -ErrorAction SilentlyContinue
+            # The fixture spec authors no ModuleName, so the generated module is
+            # named after the copied directory leaf, not after the fixture.
+            Remove-Module BuildAgentInferenceDirectory -Force -ErrorAction SilentlyContinue
         }
     }
 }

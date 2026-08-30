@@ -40,7 +40,7 @@
         },
         "OutputDirectory": {
           "type": "string",
-          "description": "Forge output directory. Intentional conflict: ForgeBuildParams.cs defaults this to 'out'.",
+          "description": "Forge output directory.",
           "default": "artifacts/forge"
         }
       }

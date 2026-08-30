@@ -25,6 +25,7 @@ namespace Fixture.BuildAgent.Common
         public List<string> Tags { get; set; }
 
         /// <summary>Registry authentication token. Never written to logs.</summary>
+        [Parameter]
         [Secret]
         public string RegistryToken { get; set; }
     }
