@@ -10,6 +10,32 @@ this section rot. `/track` turns these into issues.
 
 ---
 
+### 2026-08-30 — Re-install: adopt the kit's post-2026-08-20 delegation and model-tier-gate policy
+Context: The kit retired its High-volume/haiku tier and now delegates branch-commit-push-PR-opening, review-thread resolution, milestone/project creation, and Done-when checkbox ticking without asking (kit commit a12aac7 and related, landed after this repository's 2026-08-20 install). This repository's `AGENTS.md` still stated the pre-a12aac7 policy: approval required before pushing/opening/merging PRs, review-thread resolution scoped to the "do next todo" loop only, milestones/projects needing approval, checkbox-ticking reserved to the owner, and no model-tier-mismatch gate in the over-powered direction. Per `AGENTS.md`'s own reconciliation rule the target's stated policy wins by default — but this cluster read as staleness relative to a deliberate kit-wide policy shift, not a considered local override, and was put to the owner as such.
+Chosen: Adopt the kit's current policy in full: retire the High-volume/haiku tier (folding its work into Implementation); delegate branch/commit/push/PR-opening for all work with no separate ask; delegate `/resolve`'s Defect-class thread resolution as a blanket rule, not only inside the "do next todo" loop; carve out issue closing/commenting/editing and milestone/project creation (in a repository the owner owns); delegate Done-when checkbox ticking to `/slice`; and add the work-start/session-boundary banner protocol, gating a model-tier mismatch in both the under- and over-powered directions. This supersedes the checkbox/merge framing in the 2026-08-04 "autonomous 'do next todo' loop" decision below — merging is still reserved to the owner, but checkbox-ticking no longer is.
+Rejected: **Keep the repository's stricter, pre-shift policy** — defensible as a considered local override, but the owner confirmed it was staleness rather than a deliberate choice. **Split the cluster and decide each authorization boundary separately** — offered and declined in favor of one bundled decision, since all eight sub-points trace to the same upstream policy shift.
+Reversibility: cheap — reverting `AGENTS.md`'s wording reverts the policy; nothing external (branch permissions, GitHub settings) was changed.
+
+### 2026-08-30 — Re-install: backported five kit sections this repository lacked entirely
+Context: The 2026-08-20 install predated five additions to the kit's `AGENTS.md`: the Vendor model aliases table, the Third-party text (prompt-injection) caution, the design-freeze mechanism (`design/FROZEN.md` plus its Hard Rules and Source-of-truth carve-outs), the general Marked regions framework, and two Hard Rules ("could I have answered this myself", "never hand back a diff to type in"). None conflicted with anything this repository's `AGENTS.md` already stated.
+Chosen: Add all five verbatim (vocabulary adapted from "slice" to this repository's "item," per its existing convention). `codex/PROFILES.md`, which Vendor model aliases points to, was not installed — this repository has shown no Codex use — and the section says so rather than citing a file that does not exist here.
+Rejected: **Add everything except the design freeze** — considered, since this repository has never needed to freeze `design/`; not chosen, since the freeze commands (`/freeze`, `/unfreeze`) were being installed as core command files in the same pass regardless, and documenting the mechanism they implement costs nothing extra. **Skip all five and revisit later** — declined; nothing in them requires the repository to change behavior today, only to know the option exists.
+Reversibility: cheap
+
+### 2026-08-30 — Re-install: routing table, stale `done.md`, and three untracked test files
+Context: `tools/Sync-Kit.ps1 -DryRun` surfaced three mechanical gaps from the 2026-08-20 install: the Command routing table was missing rows for seven commands whose core files this pass adds or updates (`/code-review`, `/fix`, `/freeze`, `/unfreeze`, `/clean`, `/install-code-review-agent`, `/kit-sync`) and had `/kit-help` pinned to the retired haiku tier; `.claude/commands/done.md` remained on disk after the kit renamed `/done` to `/clean` (commit d2ff850); and three Pester test files (`Read-DesignState.Tests.ps1`, `Test-DesignState.Tests.ps1`, `Update-DesignProjection.Tests.ps1`) existed in the kit at the 2026-08-20 recorded commit but were never copied into this repository — confirmed by the absence of any add-then-delete in this repository's own git history, so a gap in that install rather than a deliberate removal.
+Chosen: Sync the routing table to the kit's current rows and tiers; delete `done.md`; add the three test files.
+Rejected: **Leave the three test files out** — would leave `Read-DesignState.ps1`, `Test-DesignState.ps1` and `Update-DesignProjection.ps1` (all present and updated in this pass) without their kit-authored coverage, for no reason this repository chose. **Leave `done.md` in place** — risks someone invoking a command the kit no longer maintains.
+Reversibility: cheap
+
+### 2026-08-30 — Re-install: added `Measure-Session.ps1`'s `SessionEnd`/`UserPromptSubmit` hooks
+Context: `.claude/settings.json` had no `hooks` key. `tools/Measure-Session.ps1`, already present, provides a per-session cost report and a prompt-time size warning, but only functions as a `SessionEnd`/`UserPromptSubmit` hook pair.
+Chosen: Install both hooks, touching only the `hooks` key; `model: opusplan` is untouched.
+Rejected: **Skip the hooks** — offered; declined since pwsh 7 is on `PATH` and nothing else claims either event.
+Reversibility: cheap
+
+---
+
 ### 2026-08-04 — Version 1 policy decisions, moved from the roadmap
 Context: These five were stated as a `## Version 1 policy decisions` list at the top of
 `TODO.md`, which is a roadmap. A decision register inside a work queue is a decision

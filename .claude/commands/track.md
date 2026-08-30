@@ -141,6 +141,14 @@ It writes `design/state/work/<issue>.md` records and nothing else — never an i
 
 Where the script is unavailable, say so and name the mirror refresh as a step that **did not run**, the same convention `Test-DesignDrift.ps1`'s unavailability already follows above.
 
+**Regenerate the projection in the same breath, on exit 0.** `design/state-index.md`'s `outstanding` region is a projection of the `WorkRef` records this step just wrote, and a projection nothing regenerates is a projection nothing keeps matching them (`ProjectionStale`, blocking):
+
+```powershell
+pwsh ./tools/Update-DesignProjection.ps1
+```
+
+Run it — a real run, not `-DryRun` — whenever `Update-WorkMirror.ps1` wrote at least one record, so the mirror and its projection land in the same commit. `MirrorStale` staying reported (never blocking) for the commit that follows is expected and is not this step's concern (`design/20-contract.md` § *The divergence classes*) — this step exists only to keep the *projection* from going stale, not to chase `MirroredAt` into never firing at all.
+
 ## Bugs and stories are not synced
 
 `/track` only syncs *from* `design/`. A **bug** has no upstream document — the issue is its origin — and a **story** that is not a slice of an existing design has none either. Both are filed by hand from `.github/ISSUE_TEMPLATE/`, which carries the same narrative-then-agent-block shape pre-filled.
