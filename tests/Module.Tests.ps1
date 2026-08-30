@@ -3553,6 +3553,22 @@ Export-ModuleMember -Function @('Test-DirectoryTool')
         (Get-Content -LiteralPath $specificationPath -Raw).Trim() | Should -Be $authoredSource
     }
 
+    It 'refreshes a specification with no Commands key at all' {
+        $directoryPath = Join-Path $TestDrive 'NoCommandsKeyDirectory'
+        $specificationDirectory = New-Item -Path (Join-Path $directoryPath 'PSModule') -ItemType Directory -Force
+        $scriptsPath = New-Item -Path (Join-Path $directoryPath 'scripts') -ItemType Directory -Force
+        $specificationPath = Join-Path $specificationDirectory 'PSModule.psd1'
+        Set-Content -LiteralPath $specificationPath -Value '@{}'
+        Set-Content -LiteralPath (Join-Path $scriptsPath 'run-tool.ps1') -Value 'param([string] $Value)'
+
+        Initialize-PSModuleDirectory -Directory $directoryPath | Out-Null
+
+        $refreshed = Import-PowerShellDataFile $specificationPath
+        $refreshed.Commands.Name | Should -Be 'Invoke-RunTool'
+        Test-Path -LiteralPath (Join-Path $directoryPath 'artifacts' 'PSModule' 'Public' 'Invoke-RunTool.ps1') |
+            Should -BeTrue
+    }
+
     It 'refreshes a legacy generated scaffold using only scripts-directory sources' {
         $directoryPath = Join-Path $TestDrive 'LegacyGeneratedDirectory'
         $specificationDirectory = New-Item -Path (Join-Path $directoryPath 'PSModule') -ItemType Directory -Force
