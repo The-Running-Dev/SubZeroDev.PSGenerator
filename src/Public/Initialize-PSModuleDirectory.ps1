@@ -111,7 +111,11 @@ function Initialize-PSModuleDirectory {
                 -not $existingDefinition.ContainsKey('Commands') -or
                 @($existingDefinition.Commands).Count -eq 0
             )
-            $existingCommands = @($existingDefinition.Commands)
+            $existingCommands = @(
+                if ($existingDefinition.ContainsKey('Commands')) {
+                    $existingDefinition.Commands
+                }
+            )
             $isMarkedGeneratedSpecification = (
                 $existingDefinition.ContainsKey('GeneratedBy') -and
                 $existingDefinition.GeneratedBy -eq 'SubZeroDev.PSGenerator'
