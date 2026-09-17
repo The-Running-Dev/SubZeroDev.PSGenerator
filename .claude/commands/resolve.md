@@ -7,7 +7,7 @@ argument-hint: [pr number]
 **Per-repo companion:** `.claude/commands/resolve-local.md`. Read it now, if it exists — an absent,
 empty, or frontmatter-only file is no companion, and this file then stands alone.
 It may override: `vocabulary`, `tightened-authorization`. It may never override anything in
-[`.claude/COMPANIONS.md`](../COMPANIONS.md) § *Never*, which is also where these categories are defined.
+[`.claude/COMPANIONS.md`](https://github.com/The-Running-Dev/SubZeroDev.AgentKit/blob/main/.claude/COMPANIONS.md) § *Never*, which is also where these categories are defined.
 <!-- companion:declared:end -->
 
 Work the review comments on pull request **$1** — the current branch's PR if no number is given.
