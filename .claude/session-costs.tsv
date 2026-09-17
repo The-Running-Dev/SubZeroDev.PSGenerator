@@ -1,0 +1,3 @@
+started	session	models	calls	span	active	input	cache_create	cache_read	output
+2026-08-30T14:59:17	3d1b24b3-05dc-4e8b-8794-42b77585ed4f	claude-sonnet-5	136	00:37:42	00:22:16	272	383525	22437567	170626
+2026-08-30T15:37:28	84c8162f-e292-40da-bf76-1f020bdc4475	claude-sonnet-5	42	00:03:55	00:03:55	82	159725	4599805	22948
