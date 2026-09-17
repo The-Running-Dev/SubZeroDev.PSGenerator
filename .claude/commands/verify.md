@@ -6,7 +6,7 @@ description: Discover this repository's gates, run them, and report honestly wha
 **Per-repo companion:** `.claude/commands/verify-local.md`. Read it now, if it exists — an absent,
 empty, or frontmatter-only file is no companion, and this file then stands alone.
 It may override: `vocabulary`, `extra-steps`, `gate-commands`. It may never override anything in
-[`.claude/COMPANIONS.md`](../COMPANIONS.md) § *Never*, which is also where these categories are defined.
+[`.claude/COMPANIONS.md`](https://github.com/The-Running-Dev/SubZeroDev.AgentKit/blob/main/.claude/COMPANIONS.md) § *Never*, which is also where these categories are defined.
 <!-- companion:declared:end -->
 
 Run the checks this repository actually has, and report the result without softening it.

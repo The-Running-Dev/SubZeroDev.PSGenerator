@@ -6,7 +6,7 @@ description: Adversarial review of the design doc. Run in a fresh session, ideal
 **Per-repo companion:** `.claude/commands/redteam-local.md`. Read it now, if it exists — an absent,
 empty, or frontmatter-only file is no companion, and this file then stands alone.
 It may override: `vocabulary`, `document-map`. It may never override anything in
-[`.claude/COMPANIONS.md`](../COMPANIONS.md) § *Never*, which is also where these categories are defined.
+[`.claude/COMPANIONS.md`](https://github.com/The-Running-Dev/SubZeroDev.AgentKit/blob/main/.claude/COMPANIONS.md) § *Never*, which is also where these categories are defined.
 <!-- companion:declared:end -->
 
 Read `design/00-brief.md` and `design/10-design.md`.

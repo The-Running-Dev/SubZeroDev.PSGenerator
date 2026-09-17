@@ -7,7 +7,7 @@ argument-hint: [target repo path]
 **Per-repo companion:** `.claude/commands/install-code-review-agent-local.md`. Read it now, if it exists — an absent,
 empty, or frontmatter-only file is no companion, and this file then stands alone.
 It may override: `extra-steps`, `tightened-authorization`. It may never override anything in
-[`.claude/COMPANIONS.md`](../COMPANIONS.md) § *Never*, which is also where these categories are defined.
+[`.claude/COMPANIONS.md`](https://github.com/The-Running-Dev/SubZeroDev.AgentKit/blob/main/.claude/COMPANIONS.md) § *Never*, which is also where these categories are defined.
 <!-- companion:declared:end -->
 
 Install Anthropic's official `claude-code-action` into a GitHub repository, so pull requests get an automated Claude review. **$1** is the target repository path; default to the current repository if not given.
