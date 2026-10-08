@@ -41,20 +41,14 @@ their current origin.
 Run `./docs.ps1` to serve a baked image, or `./docs.ps1 -Live` to bind-mount the
 authored Markdown and configuration for local editing.
 
-In CI, `docs.yml` carries the triggers and calls one of two reusable workflows
-that run every step inside `ghcr.io/the-running-dev/docs-template:latest`. A pull
-request calls `docs-ci.yml`, which builds the site and archives the Pages
-artifact without publishing, so a break in the deploy path is caught before
-merge. A push to `main` calls `docs-deploy.yml`, which builds, uploads, and
-deploys to GitHub Pages.
-
-Both prefer the repository secret `REGISTRY_TOKEN` and fall back to the
-workflow's `GITHUB_TOKEN`. `REGISTRY_TOKEN` must have `read:packages`; the
-fallback works only when the published package grants this repository read
-access.
-
-`docs-ci.yml` and `docs-deploy.yml` are installed from Docusaurus-Template and
-kept byte-identical to it, so `setup-docs-workflow.ps1` stays safe to re-run.
+In CI, `docs.yml` carries the triggers and calls the shared `docs.yml` reusable
+workflow from `The-Running-Dev/GitHub-ActionTemplates`, which runs every step inside
+the `ghcr.io/the-running-dev/build-agent` image. A pull request runs only the
+`docs / Build` job, which runs `./build/Test-Documentation.ps1`, builds the site, and
+archives the Pages artifact without publishing, so a break in the deploy path is
+caught before merge. A push to `main` also runs `docs / Deploy`, which deploys to
+GitHub Pages. The caller grants `contents: read`, `pages: write`, and `id-token: write`
+at job level; the Deploy job is skipped on pull requests.
 
 ## Import the Development Module
 
