@@ -7,6 +7,10 @@ Runs the pinned PSScriptAnalyzer version against repository-owned PowerShell sou
 build tooling, examples, and tests. The shared settings file contains the enforced
 correctness, safety, and formatting rules.
 
+CI runs the same analysis through the shared PowerShell CI workflow, with the roots
+listed in the powershell job of .github/workflows/test.yml, so keep the two in step.
+The repository-hygiene gate runs there as a pre-build script.
+
 .PARAMETER InstallDependencies
 Installs the pinned PSScriptAnalyzer version for the current user when unavailable.
 #>
@@ -47,13 +51,11 @@ Import-Module PSScriptAnalyzer `
 $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $settingsPath = Join-Path $repositoryRoot '.config' 'PSScriptAnalyzerSettings.psd1'
 $analysisRoots = @(
-    @{ Path = 'src'; ExcludeRules = @() }
-    @{ Path = 'build'; ExcludeRules = @() }
-    @{ Path = 'examples'; ExcludeRules = @() }
-    # Pester BeforeAll variables are consumed in generated test scopes, which the
-    # analyzer cannot follow reliably.
-    @{ Path = 'tests'; ExcludeRules = @('PSUseDeclaredVarsMoreThanAssignments') }
-    @{ Path = 'tests-e2e'; ExcludeRules = @('PSUseDeclaredVarsMoreThanAssignments') }
+    @{ Path = 'src' }
+    @{ Path = 'build' }
+    @{ Path = 'examples' }
+    @{ Path = 'tests' }
+    @{ Path = 'tests-e2e' }
 )
 
 $findings = @(
@@ -62,9 +64,6 @@ $findings = @(
             Path = Join-Path $repositoryRoot $root.Path
             Recurse = $true
             Settings = $settingsPath
-        }
-        if ($root.ExcludeRules.Count -gt 0) {
-            $parameters.ExcludeRule = $root.ExcludeRules
         }
         Invoke-ScriptAnalyzer @parameters
     }

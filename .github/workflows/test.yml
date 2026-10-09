@@ -1,20 +1,46 @@
 name: Test
 
+# Static analysis, Pester and syntax checks run in the shared PowerShell CI workflow on both
+# operating systems. The jobs below need Docker, the .NET SDK or a NuGet package, which the
+# shared workflow does not cover.
+
 on:
   pull_request:
   push:
     branches:
       - main
 
-permissions:
-  actions: read
-  checks: write
-  contents: read
+permissions: {}
 
 jobs:
+  powershell:
+    permissions:
+      contents: read
+    uses: The-Running-Dev/GitHub-ActionTemplates/.github/workflows/pwsh-ci.yml@v0
+    with:
+      os: '["ubuntu-latest", "windows-latest"]'
+      paths: |
+        src
+        build
+        examples
+        tests
+        tests-e2e
+      analyzer: true
+      analyzer-settings: .config/PSScriptAnalyzerSettings.psd1
+      # The tests import the packaged module that Initialize-PackagedModule stages.
+      pre-build: |
+        ./build/Test-RepositoryHygiene.ps1
+        ./build/Initialize-PackagedModule.ps1
+      tests: tests
+      coverage: artifacts/module/SubZeroDev.PSGenerator
+      minimum-coverage: '85'
+      artifact-name: pester-reports
+
   powershell-baseline:
     name: PowerShell 7.4 baseline (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
 
     strategy:
       fail-fast: false
@@ -26,201 +52,49 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: Set up .NET 8
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 8.0.x
 
-      - name: Install and validate PowerShell 7.4 baseline
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $toolPath = Join-Path $PWD 'artifacts' 'pwsh-7.4'
-          dotnet tool install PowerShell --version 7.4.17 --tool-path $toolPath
-          if ($LASTEXITCODE -ne 0) {
-            throw "Installing the PowerShell 7.4 baseline failed with exit code $LASTEXITCODE."
-          }
-
-          $executable = if ($IsWindows) {
-            Join-Path $toolPath 'pwsh.exe'
-          }
-          else {
-            Join-Path $toolPath 'pwsh'
-          }
-          & $executable -NoLogo -NoProfile -File ./build/Test-PowerShellBaseline.ps1
-          if ($LASTEXITCODE -ne 0) {
-            throw "PowerShell 7.4 baseline validation failed with exit code $LASTEXITCODE."
-          }
-
-  quality:
-    name: PowerShell quality
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v6
-
       # verification: true
-      - name: Run static analysis and formatting checks
-        shell: pwsh
-        run: ./build/Invoke-Quality.ps1 -InstallDependencies
+      - name: Install and validate PowerShell 7.4 baseline
+        run: pwsh -NoProfile -File ./build/Invoke-PowerShellBaseline.ps1
 
   documentation:
     name: Documentation links and terminology
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       # verification: true
       - name: Validate Markdown links and terminology
-        shell: pwsh
-        run: ./build/Test-Documentation.ps1
-
-  pester:
-    name: Pester (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    env:
-      MINIMUM_PACKAGED_COVERAGE_PERCENT: '85'
-
-    strategy:
-      fail-fast: false
-      matrix:
-        os:
-          - ubuntu-latest
-          - windows-latest
-
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v6
-
-      - name: Install and import Pester
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          Install-Module Pester -RequiredVersion 5.5.0 -Scope CurrentUser -Force -SkipPublisherCheck -ErrorAction Stop
-          Import-Module Pester -RequiredVersion 5.5.0 -Force -ErrorAction Stop
-
-      # verification: true
-      - name: Run tests
-        shell: pwsh
-        run: |
-          $packageRoot = './artifacts/module/SubZeroDev.PSGenerator'
-          $packagedManifest = ./build/New-GeneratorModulePackage.ps1 -Output $packageRoot
-          $env:PSGENERATOR_MODULE_PATH = $packagedManifest.FullName
-
-          $reportDirectory = './artifacts/test-results/${{ matrix.os }}'
-          New-Item -ItemType Directory -Path $reportDirectory -Force | Out-Null
-
-          $configuration = New-PesterConfiguration
-          $configuration.Run.Path = './tests'
-          $configuration.Run.Exit = $false
-          $configuration.Run.PassThru = $true
-          $configuration.Output.Verbosity = 'Detailed'
-          $configuration.TestResult.Enabled = $true
-          $configuration.TestResult.OutputFormat = 'NUnit3'
-          $configuration.TestResult.OutputPath = Join-Path $reportDirectory 'unit-tests.xml'
-
-          if ('${{ matrix.os }}' -eq 'ubuntu-latest') {
-            $configuration.CodeCoverage.Enabled = $true
-            $configuration.CodeCoverage.Path = $packageRoot
-            $configuration.CodeCoverage.OutputFormat = 'JaCoCo'
-            $configuration.CodeCoverage.OutputPath = Join-Path $reportDirectory 'coverage.xml'
-            $configuration.CodeCoverage.CoveragePercentTarget = [double]::Parse(
-              $env:MINIMUM_PACKAGED_COVERAGE_PERCENT,
-              [Globalization.CultureInfo]::InvariantCulture
-            )
-          }
-
-          $result = Invoke-Pester -Configuration $configuration
-          if ($result.Result -ne 'Passed') {
-            throw "Pester completed with result '$($result.Result)'."
-          }
-          if ('${{ matrix.os }}' -eq 'ubuntu-latest') {
-            $minimum = [double]::Parse(
-              $env:MINIMUM_PACKAGED_COVERAGE_PERCENT,
-              [Globalization.CultureInfo]::InvariantCulture
-            )
-            $commandCoverage = [double] $result.CodeCoverage.CoveragePercent
-            if ($commandCoverage -lt $minimum) {
-              throw "Packaged-generator command coverage $commandCoverage% is below the required $minimum%."
-            }
-          }
-
-      - name: Publish unit test report
-        if: ${{ !cancelled() && env.ACT != 'true' }}
-        uses: dorny/test-reporter@v2
-        with:
-          name: Pester (${{ matrix.os }}) unit tests
-          path: artifacts/test-results/${{ matrix.os }}/unit-tests.xml
-          reporter: dotnet-nunit
-          fail-on-empty: true
-          use-actions-summary: true
-
-      - name: Publish coverage summary
-        if: ${{ always() && matrix.os == 'ubuntu-latest' && env.ACT != 'true' }}
-        shell: pwsh
-        run: |
-          $coveragePath = './artifacts/test-results/ubuntu-latest/coverage.xml'
-          if (-not (Test-Path -LiteralPath $coveragePath -PathType Leaf)) {
-            throw "Coverage report was not found: '$coveragePath'."
-          }
-
-          [xml] $coverage = Get-Content -LiteralPath $coveragePath -Raw
-          $lineCounter = @($coverage.report.counter) |
-            Where-Object { $_.type -eq 'LINE' } |
-            Select-Object -First 1
-
-          if ($null -eq $lineCounter) {
-            throw "Coverage report '$coveragePath' does not contain a LINE counter."
-          }
-
-          $covered = [int] $lineCounter.covered
-          $missed = [int] $lineCounter.missed
-          $total = $covered + $missed
-          $rawPercentage = if ($total -eq 0) { 0 } else { ($covered / $total) * 100 }
-          $percentage = [math]::Round($rawPercentage, 2)
-          $minimum = [double]::Parse(
-            $env:MINIMUM_PACKAGED_COVERAGE_PERCENT,
-            [Globalization.CultureInfo]::InvariantCulture
-          )
-          $status = if ($rawPercentage -ge $minimum) { 'Pass' } else { 'Fail' }
-
-          @"
-          ## Pester code coverage
-
-          | Covered lines | Missed lines | Total lines | Coverage | Required | Status |
-          | ---: | ---: | ---: | ---: | ---: | :--- |
-          | $covered | $missed | $total | $percentage% | $minimum% | $status |
-          "@ | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY
-
-          Write-Host "::notice title=Pester line coverage::$percentage% ($covered/$total lines; minimum $minimum%)"
-          if ($rawPercentage -lt $minimum) {
-            throw "Packaged-generator line coverage $percentage% is below the required $minimum%."
-          }
-
-      - name: Upload unit test and coverage reports
-        if: ${{ always() && env.ACT != 'true' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: pester-reports-${{ matrix.os }}
-          path: artifacts/test-results/${{ matrix.os }}
-          if-no-files-found: error
+        run: pwsh -NoProfile -File ./build/Test-Documentation.ps1
 
   nuget-package:
     name: PowerShell NuGet package
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       # verification: true
       - name: Build, install, and import package
-        shell: pwsh
-        run: ./build/Test-GeneratorNuGetPackage.ps1 -InstallDependencies
+        run: pwsh -NoProfile -File ./build/Test-GeneratorNuGetPackage.ps1 -InstallDependencies
 
       - name: Upload NuGet package
         uses: actions/upload-artifact@v4
@@ -232,43 +106,26 @@ jobs:
   container-e2e:
     name: Container end-to-end
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
-
-      - name: Install and import Pester
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          Install-Module Pester -RequiredVersion 5.5.0 -Scope CurrentUser -Force -SkipPublisherCheck -ErrorAction Stop
-          Import-Module Pester -RequiredVersion 5.5.0 -Force -ErrorAction Stop
+        with:
+          persist-credentials: false
 
       # verification: true
       - name: Run container end-to-end tests
-        shell: pwsh
-        run: |
-          $reportDirectory = './artifacts/test-results/container-e2e'
-          New-Item -ItemType Directory -Path $reportDirectory -Force | Out-Null
-
-          $configuration = New-PesterConfiguration
-          $configuration.Run.Path = './tests-e2e'
-          $configuration.Run.Exit = $true
-          $configuration.Output.Verbosity = 'Detailed'
-          $configuration.TestResult.Enabled = $true
-          $configuration.TestResult.OutputFormat = 'NUnit3'
-          $configuration.TestResult.OutputPath = Join-Path $reportDirectory 'container-e2e.xml'
-          Invoke-Pester -Configuration $configuration
+        run: pwsh -NoProfile -File ./build/Invoke-ContainerEndToEnd.ps1 -InstallDependencies
 
       - name: Publish container end-to-end test report
         if: ${{ !cancelled() && env.ACT != 'true' }}
-        uses: dorny/test-reporter@v2
+        uses: The-Running-Dev/GitHub-ActionTemplates/actions/test-report@v0
         with:
-          name: Container end-to-end tests
-          path: artifacts/test-results/container-e2e/container-e2e.xml
-          reporter: dotnet-nunit
-          fail-on-empty: true
-          use-actions-summary: true
+          results: artifacts/test-results/container-e2e/container-e2e.xml
+          title: Container end-to-end tests
+          fail-on-missing: 'true'
 
       - name: Upload container end-to-end test report
         if: ${{ always() && env.ACT != 'true' }}
