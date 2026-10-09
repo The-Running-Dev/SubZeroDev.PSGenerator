@@ -1,3 +1,8 @@
+# Pester BeforeAll variables are consumed in generated test scopes, which the analyzer
+# cannot follow reliably.
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '')]
+param ()
+
 BeforeAll {
     $manifestPath = if (
         -not [string]::IsNullOrWhiteSpace($env:PSGENERATOR_MODULE_PATH)

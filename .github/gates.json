@@ -1,0 +1,60 @@
+{
+  "gates": [
+    {
+      "name": "image / Build image",
+      "command": "docker build --tag psgenerator:ci ."
+    },
+    {
+      "name": "image / Smoke test image",
+      "command": "pwsh -NoProfile -File ./build/Test-ContainerImage.ps1 -Image psgenerator:ci"
+    },
+    {
+      "name": "powershell / ./build/Test-RepositoryHygiene.ps1",
+      "command": "pwsh -NoProfile -File ./build/Test-RepositoryHygiene.ps1"
+    },
+    {
+      "name": "powershell / ./build/Initialize-PackagedModule.ps1",
+      "command": "pwsh -NoProfile -File ./build/Initialize-PackagedModule.ps1"
+    },
+    {
+      "name": "powershell / PSScriptAnalyzer src",
+      "command": "pwsh -NoProfile -Command \"Invoke-ScriptAnalyzer -Path 'src' -Recurse -Settings '.config/PSScriptAnalyzerSettings.psd1' -EnableExit\""
+    },
+    {
+      "name": "powershell / PSScriptAnalyzer build",
+      "command": "pwsh -NoProfile -Command \"Invoke-ScriptAnalyzer -Path 'build' -Recurse -Settings '.config/PSScriptAnalyzerSettings.psd1' -EnableExit\""
+    },
+    {
+      "name": "powershell / PSScriptAnalyzer examples",
+      "command": "pwsh -NoProfile -Command \"Invoke-ScriptAnalyzer -Path 'examples' -Recurse -Settings '.config/PSScriptAnalyzerSettings.psd1' -EnableExit\""
+    },
+    {
+      "name": "powershell / PSScriptAnalyzer tests",
+      "command": "pwsh -NoProfile -Command \"Invoke-ScriptAnalyzer -Path 'tests' -Recurse -Settings '.config/PSScriptAnalyzerSettings.psd1' -EnableExit\""
+    },
+    {
+      "name": "powershell / PSScriptAnalyzer tests-e2e",
+      "command": "pwsh -NoProfile -Command \"Invoke-ScriptAnalyzer -Path 'tests-e2e' -Recurse -Settings '.config/PSScriptAnalyzerSettings.psd1' -EnableExit\""
+    },
+    {
+      "name": "powershell / Pester tests",
+      "command": "pwsh -NoProfile -Command \"Invoke-Pester -Configuration @{ Run = @{ Path = @('tests'); Exit = [bool]1 } }\""
+    },
+    {
+      "name": "powershell-baseline / Install and validate PowerShell 7.4 baseline",
+      "command": "pwsh -NoProfile -File ./build/Invoke-PowerShellBaseline.ps1"
+    },
+    {
+      "name": "documentation / Validate Markdown links and terminology",
+      "command": "pwsh -NoProfile -File ./build/Test-Documentation.ps1"
+    },
+    {
+      "name": "nuget-package / Build, install, and import package",
+      "command": "pwsh -NoProfile -File ./build/Test-GeneratorNuGetPackage.ps1 -InstallDependencies"
+    },
+    {
+      "name": "container-e2e / Run container end-to-end tests",
+      "command": "pwsh -NoProfile -File ./build/Invoke-ContainerEndToEnd.ps1 -InstallDependencies"
+    }
+  ]
+}

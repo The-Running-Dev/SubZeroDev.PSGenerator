@@ -37,11 +37,11 @@ if ($LASTEXITCODE -ne 0) {
     throw "Building the local CI runner image failed with exit code $LASTEXITCODE."
 }
 
+# The powershell job calls the shared PowerShell CI workflow, which act cannot resolve
+# offline. Run ./build/Invoke-Quality.ps1 and the Pester suite directly for that coverage.
 foreach ($job in @(
         'powershell-baseline',
-        'quality',
         'documentation',
-        'pester',
         'nuget-package',
         'container-e2e')) {
     $actArguments = @(
@@ -51,7 +51,7 @@ foreach ($job in @(
         '--platform', "ubuntu-latest=$runnerImage"
         '--pull=false'
     )
-    if ($job -in @('powershell-baseline', 'pester')) {
+    if ($job -eq 'powershell-baseline') {
         $actArguments += @('--matrix', 'os:ubuntu-latest')
     }
 
