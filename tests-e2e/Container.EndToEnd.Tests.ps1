@@ -1,3 +1,8 @@
+# Pester BeforeAll variables are consumed in generated test scopes, which the analyzer
+# cannot follow reliably.
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '')]
+param ()
+
 BeforeAll {
     $directoryRoot = Split-Path $PSScriptRoot -Parent
     $generatorManifest = Join-Path $directoryRoot 'src' 'SubZeroDev.PSGenerator.psd1'

@@ -200,11 +200,13 @@ Install Docker and `act`, then run:
 The script builds `.act/Dockerfile` as a local runner and runs:
 
 - PowerShell 7.4 baseline on the Ubuntu matrix leg;
-- PowerShell quality;
 - documentation links and terminology;
-- Ubuntu Pester and coverage;
 - NuGet package verification; and
 - container end-to-end tests.
+
+The `powershell` job calls the shared PowerShell CI workflow (analysis, hygiene, Pester and
+coverage on Ubuntu and Windows), which `act` cannot resolve offline. Run
+`./build/Invoke-Quality.ps1` and the Pester suite directly for that coverage.
 
 `act` uses Linux containers and does not reproduce the hosted Windows runner.
 GitHub Actions remains authoritative for Windows.
@@ -213,10 +215,9 @@ GitHub Actions remains authoritative for Windows.
 
 GitHub Actions publishes:
 
-- Windows and Ubuntu NUnit test reports;
-- container end-to-end NUnit results;
+- Windows and Ubuntu test reports in the job summary;
+- container end-to-end test results in the job summary and as an artifact;
 - a JaCoCo line-coverage report and summary; and
 - the generated `.nupkg` as a workflow artifact.
 
-The packaged generator must remain at or above the configured 85% command and line
-coverage thresholds.
+The packaged generator must remain at or above the configured 85% line coverage threshold.
