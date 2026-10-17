@@ -19,7 +19,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Validate release version
-        uses: The-Running-Dev/GitHub-ActionTemplates/actions/assert-tag-version@v0
+        uses: The-Running-Dev/GitHub-ActionTemplates/actions/assert-tag-version@v1
         with:
           manifest: src/SubZeroDev.PSGenerator.psd1
           tag: ${{ github.ref_name }}
