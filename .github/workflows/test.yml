@@ -16,7 +16,7 @@ jobs:
   powershell:
     permissions:
       contents: read
-    uses: The-Running-Dev/GitHub-ActionTemplates/.github/workflows/pwsh-ci.yml@v0
+    uses: The-Running-Dev/GitHub-ActionTemplates/.github/workflows/pwsh-ci.yml@v1
     with:
       os: '["ubuntu-latest", "windows-latest"]'
       paths: |
@@ -121,7 +121,7 @@ jobs:
 
       - name: Publish container end-to-end test report
         if: ${{ !cancelled() && env.ACT != 'true' }}
-        uses: The-Running-Dev/GitHub-ActionTemplates/actions/test-report@v0
+        uses: The-Running-Dev/GitHub-ActionTemplates/actions/test-report@v1
         with:
           results: artifacts/test-results/container-e2e/container-e2e.xml
           title: Container end-to-end tests
